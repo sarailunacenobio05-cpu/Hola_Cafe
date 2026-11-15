@@ -1,0 +1,945 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #fdfaf6;
+  }
+  body {
+    @apply antialiased;
+    color: #231815;
+    background: #fdfaf6;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  button, input, select, textarea {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom subtle scrollbars for touch/desktop */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D2C0B0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A48268;
+}
+
+/* Figma Auth System Styles (Node ID 42:1048 & Suite) */
+.login-page {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 40px 24px;
+  background: #fdfaf6;
+}
+
+.ambient-glow {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  border-radius: 9999px;
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+.ambient-glow--top {
+  top: -64px;
+  left: -48px;
+  background: rgba(229, 152, 25, 0.1);
+}
+
+.ambient-glow--bottom {
+  right: -48px;
+  bottom: -64px;
+  background: rgba(215, 178, 151, 0.25);
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 449px);
+  min-height: 526px;
+  padding: 41px;
+  border: 1px solid #e8dfd8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 20px 25px -5px rgba(35, 24, 21, 0.05),
+    0 8px 10px -6px rgba(35, 24, 21, 0.05);
+}
+
+.brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 24px;
+}
+
+.brand {
+  position: relative;
+  display: flex;
+  width: 210px;
+  height: 88px;
+  align-items: flex-start;
+  justify-content: center;
+  padding-bottom: 8px;
+  border: 0;
+  background: transparent;
+}
+
+.logo-frame {
+  position: relative;
+  display: block;
+  width: 165px;
+  height: 81px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.connection-status {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #e59819;
+}
+
+.connection-status span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #e59819;
+  opacity: 0.75;
+  animation: connection-pulse 2s ease-out infinite;
+}
+
+.heading-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.heading-copy h1 {
+  color: #231815;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.6px;
+  white-space: nowrap;
+}
+
+.heading-copy p {
+  color: #7c6e65;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-align: center;
+}
+
+.login-form,
+.field {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+.field--password {
+  padding-top: 16px;
+}
+
+.field-label {
+  color: #231815;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.24px;
+}
+
+.input-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.input-wrap input {
+  width: 100%;
+  height: 44px;
+  padding: 11.5px 45px 11.5px 41px;
+  border: 1px solid #e8dfd8;
+  border-radius: 12px;
+  outline: none;
+  background: #fdfcfa;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: #231815;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: normal;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.input-wrap input:focus {
+  border-color: #e59819;
+  box-shadow: 0 0 0 3px rgba(229, 152, 25, 0.13);
+}
+
+.field-icon {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  color: #7c6e65;
+}
+
+.field-icon--email {
+  top: 18px;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+}
+
+.field-icon--lock {
+  top: 18px;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #7c6e65;
+  cursor: pointer;
+}
+
+.session-options {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+}
+
+.remember-option {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.24px;
+  white-space: nowrap;
+  color: #231815;
+  cursor: pointer;
+}
+
+.remember-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0 8px 0 0;
+  border-radius: 2.5px;
+  accent-color: #e59819;
+}
+
+.text-link,
+.register-link {
+  border: 0;
+  background: transparent;
+  color: #d97706;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.24px;
+  cursor: pointer;
+}
+
+.text-link:hover,
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.submit-button {
+  display: flex;
+  width: 100%;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #e59819;
+  box-shadow:
+    0 4px 6px -1px rgba(229, 152, 25, 0.25),
+    0 2px 4px -2px rgba(229, 152, 25, 0.25);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.14px;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+  cursor: pointer;
+}
+
+.submit-button:hover {
+  background: #d98d12;
+}
+
+.submit-button:active {
+  transform: translateY(1px);
+}
+
+.register-link {
+  display: block;
+  width: 100%;
+  height: 35px;
+  margin-top: 14px;
+  padding: 0;
+  text-align: center;
+}
+
+@keyframes connection-pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+  }
+  #printable-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0 auto;
+    padding: 0;
+  }
+}
+
+
+/* ==========================================================================
+   Figma Cocina KDS System Styles (Exact Figma Tokens)
+   ========================================================================== */
+
+.kds-shell {
+  min-height: 100dvh;
+  padding: 64px 0 74px;
+  background: #faf7f2;
+}
+
+.kds-topbar {
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px 0 279px;
+  border-bottom: 1px solid #e8dfd8;
+  background: #3e2723;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.kds-brand {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 250px;
+  height: 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(50, 31, 28, 0.5);
+}
+
+.kds-brand-logo {
+  display: flex;
+  width: 88px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: 1px solid rgba(253, 230, 138, 0.4);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.kds-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.kds-brand-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.kds-brand-info strong {
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 18.75px;
+  white-space: nowrap;
+}
+
+.kds-brand-info span {
+  padding-top: 2px;
+  color: #e59819;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 11px;
+  letter-spacing: 0.55px;
+}
+
+.kds-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: 14px;
+}
+
+.kds-breadcrumb strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+}
+
+.kds-user-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kds-notifications {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 8px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.kds-notifications > span {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  display: flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #dc2626;
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.kds-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 13px;
+  border-left: 1px solid #e8dfd8;
+  color: white;
+}
+
+.kds-avatar {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(229, 152, 25, 0.4);
+}
+
+.kds-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.kds-profile-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.kds-profile-copy strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 16.25px;
+}
+
+.kds-profile-copy small {
+  font-size: 11px;
+  line-height: 16.5px;
+  color: #d7ccc8;
+}
+
+.kds-main-content {
+  width: 100%;
+  padding: 24px 48px 32px;
+}
+
+.kds-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.kds-page-heading h1 {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: normal;
+  color: #231815;
+}
+
+.kds-page-heading p {
+  max-width: 520px;
+  margin-top: 6px;
+  color: #745853;
+  font-size: 14px;
+  line-height: normal;
+}
+
+.kds-indicators {
+  display: flex;
+  gap: 8px;
+}
+
+.kds-indicators > div {
+  display: flex;
+  min-width: 85px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid #e8dfd8;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.kds-indicators span {
+  color: #745853;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.kds-indicators strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: normal;
+  color: #231815;
+}
+
+.kds-indicators .amber {
+  color: #d97706;
+}
+
+.kds-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding: 16px;
+  border: 1px solid #e8dfd8;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.kds-filters button {
+  flex: none;
+  padding: 9px 16px;
+  border: 1px solid #e8dfd8;
+  border-radius: 8px;
+  background: #faf7f2;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: normal;
+  color: #231815;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.kds-filters button:hover {
+  background: #f0ebe4;
+}
+
+.kds-filters button.active {
+  border-color: #e59819;
+  background: #e59819;
+  color: white;
+  font-weight: 700;
+}
+
+.kds-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kds-order-card {
+  display: flex;
+  min-width: 0;
+  min-height: 289px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid #e8dfd8;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.kds-order-card--new {
+  border: 2px solid #e59819;
+}
+
+.kds-order-card--preparing {
+  border: 1px solid #e8dfd8;
+}
+
+.kds-order-card--ready {
+  border: 2px solid #047857;
+}
+
+.kds-order-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kds-order-title strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: #231815;
+}
+
+.kds-order-title span,
+.kds-order-meta > span:last-child {
+  color: #745853;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.kds-order-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.kds-order-meta > span:last-child {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.kds-status {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.kds-status--new {
+  background: #e59819;
+  color: white;
+}
+
+.kds-status--preparing {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.kds-status--ready {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.kds-divider {
+  height: 1px;
+  margin: 12px 0;
+  background: #e8dfd8;
+}
+
+.kds-dish-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kds-dish {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.kds-quantity {
+  display: flex;
+  width: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #f5ebe1;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: #231815;
+}
+
+.kds-dish-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kds-dish-content > strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: normal;
+  color: #231815;
+}
+
+.kds-note {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: normal;
+}
+
+.kds-note--allergy {
+  border-color: #fecaca;
+  background: #fff5f5;
+  color: #dc2626;
+}
+
+.kds-order-action {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  background: #e59819;
+  border: none;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.kds-order-action:hover {
+  background: #d98d12;
+}
+
+.kds-order-action--ready {
+  border: 1px solid #e8dfd8;
+  background: #faf7f2;
+  color: #231815;
+}
+
+.kds-order-action--ready:hover {
+  background: #f0ebe4;
+}
+
+.kds-empty-state {
+  grid-column: 1 / -1;
+  padding: 48px;
+  text-align: center;
+  color: #745853;
+  font-weight: 500;
+}
+
+.kds-session-footer {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 74px;
+  align-items: flex-start;
+  padding: 12px 24px;
+  background: #3e2723;
+}
+
+.kds-session-footer button {
+  display: flex;
+  width: 231px;
+  height: 50px;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #d7ccc8;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.kds-session-footer button:hover {
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+}
+
+@media (max-width: 900px) {
+  .kds-topbar {
+    padding-left: 231px;
+  }
+  .kds-brand {
+    width: 215px;
+  }
+  .kds-breadcrumb {
+    display: none;
+  }
+  .kds-orders-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kds-shell {
+    padding-top: 76px;
+  }
+  .kds-topbar {
+    height: 76px;
+    padding: 0 14px;
+  }
+  .kds-brand {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .kds-brand-logo {
+    width: 70px;
+    height: 44px;
+  }
+  .kds-brand-info,
+  .kds-profile-copy,
+  .kds-chevron {
+    display: none;
+  }
+  .kds-profile {
+    padding-left: 10px;
+  }
+  .kds-main-content {
+    padding: 20px 16px 28px;
+  }
+  .kds-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .kds-page-heading p {
+    max-width: none;
+  }
+  .kds-indicators {
+    width: 100%;
+  }
+  .kds-indicators > div {
+    min-width: 0;
+    flex: 1;
+  }
+  .kds-orders-grid {
+    grid-template-columns: 1fr;
+  }
+  .kds-session-footer button {
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+}
