@@ -129,7 +129,6 @@ export const CobroRapidoModal: React.FC = () => {
 
         <div className="flex items-center gap-4">
           <button
-            onClick={() => alert('Alerta de Barra atendida.')}
             className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Bell className="w-3.5 h-3.5 fill-current" />
@@ -227,7 +226,6 @@ export const CobroRapidoModal: React.FC = () => {
                       {it.cantidad > 1 ? `Sub: ${fmt(it.precioCents)} c/u` : it.categoria}
                     </span>
                     <button
-                      onClick={() => alert(`Modificar producto: ${it.nombre}`)}
                       disabled={pagado}
                       className="flex items-center gap-1 text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -253,7 +251,6 @@ export const CobroRapidoModal: React.FC = () => {
                 Descuento {DESCUENTO_PCT}%
               </button>
               <button
-                onClick={() => alert('Nota agregada al ticket: Factura solicitada.')}
                 disabled={pagado}
                 className="py-2.5 px-3 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
               >

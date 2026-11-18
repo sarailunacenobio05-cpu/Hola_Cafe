@@ -2,17 +2,20 @@ import { FormEvent, useState } from "react";
 import { useApp } from "../context/AppContext";
 import logoImg from "../img/logo.png";
 import { Mail, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { validarCorreo } from "../utils/validaciones";
 
 export const RecuperarPasswordView = () => {
   const { setActiveView } = useApp();
   const [email, setEmail] = useState("barista@holacafe.com");
+  const [emailError, setEmailError] = useState("");
   const [sent, setSent] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (email) {
-      setSent(true);
-    }
+    const errCorreo = validarCorreo(email);
+    setEmailError(errCorreo);
+    if (errCorreo) return;
+    setSent(true);
   }
 
   return (
@@ -70,13 +73,22 @@ export const RecuperarPasswordView = () => {
                   type="email"
                   name="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmail(val);
+                    setEmailError(validarCorreo(val));
+                  }}
                   placeholder="barista@holacafe.com"
                   autoComplete="email"
                   aria-label="Correo electrónico"
                   required
                 />
               </span>
+              {emailError && (
+                <span className="text-xs text-red-600 font-semibold mt-1 block">
+                  {emailError}
+                </span>
+              )}
             </label>
 
             <button className="submit-button" type="submit">

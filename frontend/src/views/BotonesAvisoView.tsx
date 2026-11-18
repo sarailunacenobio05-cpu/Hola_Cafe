@@ -307,7 +307,6 @@ export const BotonesAvisoView: React.FC = () => {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => alert(`Configuración de botón ${device.id}`)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-[#e59819] hover:text-[#e59819] text-[#231815] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                           title="Editar botón"
                         >

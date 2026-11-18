@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Plus } from 'lucide-react';
-import { MenuItem } from '../../types';
+import { X } from 'lucide-react';
+import { validarRequerido, validarPrecio } from '../../utils/validaciones';
 
 export const ProductoModal: React.FC = () => {
   const { isProductoModalOpen, closeProductModal, editingProduct, saveProduct } = useApp();
 
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [category, setCategory] = useState('Bebidas frías');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('70.00');
+  const [priceError, setPriceError] = useState('');
   const [status, setStatus] = useState<'DISPONIBLE' | 'AGOTADO' | 'OCULTO'>('DISPONIBLE');
   const [options, setOptions] = useState<string[]>(['Natural', 'Vainilla']);
   const [newOptionInput, setNewOptionInput] = useState('');
@@ -33,6 +35,8 @@ export const ProductoModal: React.FC = () => {
       setOptions(['Natural', 'Vainilla']);
       setAllowKitchenNotes(true);
     }
+    setNameError('');
+    setPriceError('');
   }, [editingProduct, isProductoModalOpen]);
 
   if (!isProductoModalOpen) return null;
@@ -50,6 +54,12 @@ export const ProductoModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const errName = validarRequerido(name, 'nombre del producto');
+    const errPrice = validarPrecio(price);
+    setNameError(errName);
+    setPriceError(errPrice);
+    if (errName || errPrice) return;
+
     saveProduct({
       name,
       category,
@@ -65,7 +75,6 @@ export const ProductoModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Header */}
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-stone-900 text-base">
@@ -83,21 +92,28 @@ export const ProductoModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
           
-          {/* Row 1: Name and Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-stone-700 mb-1">Nombre del producto</label>
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setName(val);
+                  setNameError(validarRequerido(val, 'nombre del producto'));
+                }}
                 required
                 placeholder="Ej. Cold Brew"
                 className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
               />
+              {nameError && (
+                <span className="text-xs text-red-600 font-semibold mt-1 block">
+                  {nameError}
+                </span>
+              )}
             </div>
 
             <div>
@@ -119,19 +135,18 @@ export const ProductoModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block font-bold text-stone-700 mb-1">Descripción</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              required
               placeholder="Descripción de ingredientes y sabor..."
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium resize-none"
             />
           </div>
 
-          {/* Price & Availability */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-stone-700 mb-1">Precio (MXN)</label>
@@ -139,11 +154,20 @@ export const ProductoModal: React.FC = () => {
                 type="number"
                 step="0.5"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPrice(val);
+                  setPriceError(validarPrecio(val));
+                }}
                 required
                 placeholder="70.00"
                 className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-bold text-stone-900"
               />
+              {priceError && (
+                <span className="text-xs text-red-600 font-semibold mt-1 block">
+                  {priceError}
+                </span>
+              )}
             </div>
 
             <div>
@@ -160,7 +184,6 @@ export const ProductoModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Variants tags */}
           <div>
             <label className="block font-bold text-stone-700 mb-1">
               Opciones o variantes (opcional)
@@ -210,7 +233,6 @@ export const ProductoModal: React.FC = () => {
             </p>
           </div>
 
-          {/* Kitchen specs switch */}
           <div className="pt-2">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -225,7 +247,6 @@ export const ProductoModal: React.FC = () => {
             </label>
           </div>
 
-          {/* Actions */}
           <div className="pt-4 border-t border-stone-100 flex items-center justify-end gap-2">
             <button
               type="button"

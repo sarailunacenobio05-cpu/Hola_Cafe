@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   CreditCard
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 interface CatalogProduct {
   id: string;
@@ -134,10 +135,13 @@ export const ComanderoView: React.FC = () => {
 
   const categories = [
     { label: 'Todos (28)', icon: <Coffee className="w-3.5 h-3.5" /> },
-    { label: 'Cafetería Especialidad', icon: <Coffee className="w-3.5 h-3.5" /> },
-    { label: 'Repostería y Pan', icon: <Layers className="w-3.5 h-3.5" /> },
-    { label: 'Bebidas Frías', icon: <CupSoda className="w-3.5 h-3.5" /> },
-    { label: 'Desayunos', icon: <Utensils className="w-3.5 h-3.5" /> }
+    { label: 'Alimentos salados' },
+    { label: 'Opciones frescas', icon: <Layers className="w-3.5 h-3.5" /> },
+    { label: 'Dulces',  },
+    { label: 'Mini hotcakes', icon: <Utensils className="w-3.5 h-3.5" /> },
+    { label: 'Opciones sin café', icon: <Utensils className="w-3.5 h-3.5" /> },
+    { label: 'Bebidas calientes',  icon: <Coffee className="w-3.5 h-3.5" /> },
+    { label: 'Bebidas frías', icon: <CupSoda className="w-3.5 h-3.5" />}
   ];
 
   const handleAddToCart = (product: CatalogProduct) => {
@@ -208,7 +212,6 @@ export const ComanderoView: React.FC = () => {
         {/* Right: Alerta Barra + User + Logout */}
         <div className="flex items-center gap-4">
           <button
-            onClick={() => alert('Alerta de Barra atendida.')}
             className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Bell className="w-3.5 h-3.5 fill-current" />
@@ -273,7 +276,7 @@ export const ComanderoView: React.FC = () => {
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C7D73]" />
               <input
                 type="text"
-                placeholder="Buscar producto o código..."
+                placeholder="Buscar producto ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#D5C7BA] rounded-xl text-xs sm:text-sm font-medium text-[#1E110A] focus:outline-none focus:ring-2 focus:ring-amber-500/20"
@@ -364,7 +367,6 @@ export const ComanderoView: React.FC = () => {
 
               {/* Nota General Button */}
               <button
-                onClick={() => alert('Nota general para cocina: Comensal alérgico a los cacahuates y mesa con prisa.')}
                 className="px-3.5 py-1.5 bg-white border border-[#D5C7BA] hover:bg-stone-50 text-[#1E110A] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
               >
                 <FileText className="w-3.5 h-3.5 text-[#8C7D73]" />
@@ -481,8 +483,12 @@ export const ComanderoView: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
-                  setActiveView('cocina');
-                  alert('¡Comanda de Mesa 02 enviada a Cocina!');
+                  Swal.fire({
+                    title: 'Cocina',
+                    text: 'Pedido enviado correctamente a cocina',
+                    icon: 'success',
+                    confirmButtonColor: '#7B3F00',
+                  });
                 }}
                 className="py-3 bg-[#9E5416] hover:bg-[#86440E] text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
               >
@@ -501,7 +507,6 @@ export const ComanderoView: React.FC = () => {
             {/* Secondary actions: Dividir Cuenta | Pre-cuenta */}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
-                onClick={() => alert('Dividiendo cuenta en 2 comensales.')}
                 className="py-2 px-3 bg-white hover:bg-stone-50 border border-[#D5C7BA] rounded-xl text-xs font-bold text-[#1E110A] flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Split className="w-3.5 h-3.5 text-[#8C7D73]" />

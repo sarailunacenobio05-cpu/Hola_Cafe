@@ -13,6 +13,7 @@ import {
   UtensilsCrossed, 
   Store 
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export const MapaMesasView: React.FC = () => {
   const { 
@@ -71,7 +72,14 @@ export const MapaMesasView: React.FC = () => {
         <div className="flex items-center gap-4">
           {/* Alerta Barra red pill button */}
           <button
-            onClick={() => alert('Alerta de Barra atendida.')}
+          onClick={() => {
+              Swal.fire({
+                title: 'Alerta de Barra',
+                text: 'Alerta de Barra atendida correctamente.',
+                icon: 'success',
+                confirmButtonColor: '#7B3F00',
+              });
+            }}
             className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Bell className="w-3.5 h-3.5 fill-current" />
@@ -178,14 +186,16 @@ export const MapaMesasView: React.FC = () => {
                   <p className="text-xs text-[#8C7D73] mt-0.5">4 Pax</p>
                 </div>
                 <span className="bg-[#3A1F13] text-white text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                  ATENDIDO
+                  Atender
                 </span>
               </div>
 
               <div className="py-6 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
+                <div 
+                className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
                   <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                  <span>ATENDIDO</span>
+                  <span>Atender</span>
+                  
                 </div>
                 <p className="text-xs text-[#8C7D73]">
                   Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
@@ -194,7 +204,6 @@ export const MapaMesasView: React.FC = () => {
             </div>
 
             <button
-              onClick={() => alert('Atendiendo llamado de Mesa M01')}
               className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
             >
               Atender
@@ -280,15 +289,12 @@ export const MapaMesasView: React.FC = () => {
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M04</h3>
                   <p className="text-xs text-[#8C7D73] mt-0.5">2 Pax</p>
                 </div>
-                <span className="bg-[#FFF3E0] border border-[#FDE8C8] text-[#D97706] text-[10px] font-black px-2 py-0.5 rounded-md">
-                  Cuenta
-                </span>
               </div>
 
               <div className="py-4 space-y-1">
                 <p className="text-xs text-[#DF7B1B] font-bold flex items-center gap-1">
-                  <Receipt className="w-3.5 h-3.5 text-[#DF7B1B]" />
-                  <span>Pidiendo Cuenta</span>
+                  <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
+                  <span>Atendiendo</span>
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl font-black text-[#1E110A]">$1,240.00</span>
@@ -317,19 +323,20 @@ export const MapaMesasView: React.FC = () => {
           <div className="bg-white rounded-2xl border-2 border-[#D32F2F] p-4 flex flex-col justify-between shadow-2xs">
             <div>
               <div className="flex items-start justify-between">
-                <div>
+                <div >
+                 
                   <h3 className="text-xl font-black text-[#D32F2F] leading-tight">M05</h3>
                   <p className="text-xs text-[#8C7D73] mt-0.5">4 Pax</p>
                 </div>
                 <span className="bg-[#3A1F13] text-white text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                  ATENDIDO
+                  Atender
                 </span>
               </div>
 
               <div className="py-6 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
                   <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                  <span>ATENDIDO</span>
+                  <span>Atender</span>
                 </div>
                 <p className="text-xs text-[#8C7D73]">
                   Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
@@ -338,7 +345,6 @@ export const MapaMesasView: React.FC = () => {
             </div>
 
             <button
-              onClick={() => alert('Atendiendo llamado de Mesa M05')}
               className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
             >
               Atender
@@ -346,7 +352,9 @@ export const MapaMesasView: React.FC = () => {
           </div>
 
           {/* CARD M06 (Reservada) */}
-          <div className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs">
+          <div 
+         
+          className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs">
             <div>
               <div className="flex items-start justify-between">
                 <div>
@@ -368,7 +376,14 @@ export const MapaMesasView: React.FC = () => {
             </div>
 
             <button
-              onClick={() => alert('Detalle de Reserva: Familia Morales\nFecha: Hoy · 20:30 hrs\nLugares: 6')}
+            onClick={() => {
+              Swal.fire({
+                title: 'Detalles',
+                text: 'Detalle de Reserva: Familia Morales\nFecha: Hoy · 20:30 hrs\nLugares: 6',
+                icon: 'info',
+                confirmButtonColor: '#7B3F00',
+              });
+            }}
               className="w-full py-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
             >
               Detalle Reserva

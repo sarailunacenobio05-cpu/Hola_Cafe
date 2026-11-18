@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useApp } from "../context/AppContext";
 import logoImg from "../img/logo.png";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, User } from "lucide-react";
+import { validarCorreo, validarPassword } from "../utils/validaciones";
 
 export const RegistroView = () => {
   const { setActiveView, login } = useApp();
@@ -9,23 +10,31 @@ export const RegistroView = () => {
   const [email, setEmail] = useState("barista@holacafe.com");
   const [password, setPassword] = useState("HolaCafe#2026");
   const [confirmPassword, setConfirmPassword] = useState("HolaCafe#2026");
+  const [nombreError, setNombreError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
-    setError("");
+    const errNombre = !nombre.trim() ? "El nombre completo es obligatorio." : "";
+    const errCorreo = validarCorreo(email);
+    const errPass = validarPassword(password);
+    const errConfirm = password !== confirmPassword ? "Las contraseñas no coinciden." : "";
+
+    setNombreError(errNombre);
+    setEmailError(errCorreo);
+    setPasswordError(errPass);
+    setConfirmError(errConfirm);
+
+    if (errNombre || errCorreo || errPass || errConfirm) return;
     login(email);
   }
 
   return (
     <main className="login-page">
-      {/* Exact ambient glows from Figma */}
       <div className="ambient-glow ambient-glow--top" aria-hidden="true" />
       <div className="ambient-glow ambient-glow--bottom" aria-hidden="true" />
 
@@ -53,12 +62,6 @@ export const RegistroView = () => {
           </p>
         </div>
 
-        {error && (
-          <div className="mb-3 p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs text-center font-medium">
-            {error}
-          </div>
-        )}
-
         <form className="login-form" onSubmit={handleSubmit}>
           <label className="field">
             <span className="field-label">Nombre completo</span>
@@ -68,13 +71,22 @@ export const RegistroView = () => {
                 type="text"
                 name="name"
                 value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNombre(val);
+                  setNombreError(!val.trim() ? "El nombre completo es obligatorio." : "");
+                }}
                 placeholder="Daniel Huerta"
                 autoComplete="name"
                 aria-label="Nombre completo"
                 required
               />
             </span>
+            {nombreError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {nombreError}
+              </span>
+            )}
           </label>
 
           <label className="field pt-3">
@@ -85,13 +97,22 @@ export const RegistroView = () => {
                 type="email"
                 name="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmail(val);
+                  setEmailError(validarCorreo(val));
+                }}
                 placeholder="barista@holacafe.com"
                 autoComplete="email"
                 aria-label="Correo o usuario"
                 required
               />
             </span>
+            {emailError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {emailError}
+              </span>
+            )}
           </label>
 
           <label className="field field--password">
@@ -102,7 +123,14 @@ export const RegistroView = () => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPassword(val);
+                  setPasswordError(validarPassword(val));
+                  if (confirmPassword) {
+                    setConfirmError(val !== confirmPassword ? "Las contraseñas no coinciden." : "");
+                  }
+                }}
                 autoComplete="new-password"
                 aria-label="Contraseña"
                 required
@@ -117,6 +145,11 @@ export const RegistroView = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </span>
+            {passwordError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {passwordError}
+              </span>
+            )}
           </label>
 
           <label className="field field--password">
@@ -127,7 +160,11 @@ export const RegistroView = () => {
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setConfirmPassword(val);
+                  setConfirmError(password !== val ? "Las contraseñas no coinciden." : "");
+                }}
                 autoComplete="new-password"
                 aria-label="Confirmar contraseña"
                 required
@@ -142,6 +179,11 @@ export const RegistroView = () => {
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </span>
+            {confirmError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {confirmError}
+              </span>
+            )}
           </label>
 
           <button className="submit-button" type="submit">

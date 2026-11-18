@@ -2,22 +2,29 @@ import { FormEvent, useState } from "react";
 import { useApp } from "../context/AppContext";
 import logoImg from "../img/logo.png";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { validarCorreo, validarPassword } from "../utils/validaciones";
 
 export const LoginView = () => {
   const { login, setActiveView } = useApp();
   const [email, setEmail] = useState("barista@holacafe.com");
   const [password, setPassword] = useState("HolaCafe#2026");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberSession, setRememberSession] = useState(true);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const errCorreo = validarCorreo(email);
+    const errPass = validarPassword(password);
+    setEmailError(errCorreo);
+    setPasswordError(errPass);
+    if (errCorreo || errPass) return;
     login(email);
   }
 
   return (
     <main className="login-page" data-node-id="42:1048">
-      {/* Exact ambient glows from Figma */}
       <div className="ambient-glow ambient-glow--top" aria-hidden="true" />
       <div className="ambient-glow ambient-glow--bottom" aria-hidden="true" />
 
@@ -47,12 +54,21 @@ export const LoginView = () => {
                 type="text"
                 name="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmail(val);
+                  setEmailError(validarCorreo(val));
+                }}
                 autoComplete="username"
                 aria-label="Correo o usuario"
                 required
               />
             </span>
+            {emailError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {emailError}
+              </span>
+            )}
           </label>
 
           <label className="field field--password">
@@ -63,7 +79,11 @@ export const LoginView = () => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPassword(val);
+                  setPasswordError(validarPassword(val));
+                }}
                 autoComplete="current-password"
                 aria-label="Contraseña"
                 required
@@ -78,6 +98,11 @@ export const LoginView = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </span>
+            {passwordError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {passwordError}
+              </span>
+            )}
           </label>
 
           <div className="session-options">
@@ -112,7 +137,6 @@ export const LoginView = () => {
           ¿No tienes una cuenta? Registrarse
         </button>
 
-        {/* Demo Fast Login Pills */}
         <div className="mt-3 pt-3 border-t border-[#e8dfd8] flex items-center justify-center gap-2">
           <span className="text-[10px] font-bold text-[#7c6e65] uppercase tracking-wider">Demo:</span>
           <button

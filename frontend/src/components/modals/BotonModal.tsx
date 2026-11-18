@@ -1,18 +1,35 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, Radio, Info } from 'lucide-react';
+import { validarRequerido } from '../../utils/validaciones';
 
 export const BotonModal: React.FC = () => {
   const { isBotonModalOpen, closeAddBotonModal, saveBoton, tables } = useApp();
 
   const [id, setId] = useState('BOT-M17');
+  const [idError, setIdError] = useState('');
   const [name, setName] = useState('Botón de terraza');
+  const [nameError, setNameError] = useState('');
   const [tableId, setTableId] = useState('M01');
 
   if (!isBotonModalOpen) return null;
 
+  const validarIdBoton = (val: string) => {
+    if (!val.trim()) return 'El identificador del dispositivo es obligatorio.';
+    if (!/^BOT-[A-Z0-9]+$/i.test(val.trim())) {
+      return 'El formato debe iniciar con BOT- (ej. BOT-M17).';
+    }
+    return '';
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const errId = validarIdBoton(id);
+    const errName = validarRequerido(name, 'nombre del botón');
+    setIdError(errId);
+    setNameError(errName);
+    if (errId || errName) return;
+
     saveBoton({
       id,
       name,
@@ -24,7 +41,6 @@ export const BotonModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Header */}
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-stone-900 text-base">Agregar botón</h3>
@@ -38,10 +54,8 @@ export const BotonModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
           
-          {/* Physical instruction banner */}
           <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
             <Radio className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
             <div>
@@ -59,14 +73,24 @@ export const BotonModal: React.FC = () => {
             <input
               type="text"
               value={id}
-              onChange={(e) => setId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setId(val);
+                setIdError(validarIdBoton(val));
+              }}
               required
               placeholder="Ej. BOT-M17"
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-mono font-medium"
             />
-            <span className="text-[10px] text-stone-400 mt-0.5 block">
-              Introduce el ID único tal como aparece en la etiqueta.
-            </span>
+            {idError ? (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {idError}
+              </span>
+            ) : (
+              <span className="text-[10px] text-stone-400 mt-0.5 block">
+                Introduce el ID único tal como aparece en la etiqueta.
+              </span>
+            )}
           </div>
 
           <div>
@@ -76,14 +100,24 @@ export const BotonModal: React.FC = () => {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setName(val);
+                setNameError(validarRequerido(val, 'nombre del botón'));
+              }}
               required
               placeholder="Ej. Botón de terraza"
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
             />
-            <span className="text-[10px] text-stone-400 mt-0.5 block">
-              Usa un nombre fácil de reconocer para el personal.
-            </span>
+            {nameError ? (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {nameError}
+              </span>
+            ) : (
+              <span className="text-[10px] text-stone-400 mt-0.5 block">
+                Usa un nombre fácil de reconocer para el personal.
+              </span>
+            )}
           </div>
 
           <div>
@@ -111,7 +145,6 @@ export const BotonModal: React.FC = () => {
             <span>La batería y el estado de conexión se mostrarán al recibir la primera señal del botón.</span>
           </div>
 
-          {/* Footer buttons */}
           <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
             <span className="text-[11px] text-stone-400">* Campos obligatorios</span>
             <div className="flex items-center gap-2">

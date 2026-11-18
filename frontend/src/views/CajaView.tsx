@@ -8,6 +8,7 @@ import {
   Printer,
   Bell
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 interface CorteRow {
   id: string;
@@ -153,7 +154,14 @@ export const CajaView: React.FC = () => {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => alert(`Imprimiendo comprobante de corte ${corte.id} (${corte.fecha}).`)}
+                          onClick={() => {
+                                            Swal.fire({
+                                              title: 'Ticket',
+                                              text: 'Imprimir ticket',
+                                              icon: 'success',
+                                              confirmButtonColor: '#7B3F00',
+                                            });
+                                          }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold text-[#1E110A] transition-colors shadow-2xs"
                         >
                           <Printer className="w-3.5 h-3.5 text-[#8C7D73]" />

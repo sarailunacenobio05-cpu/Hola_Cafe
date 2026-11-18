@@ -1,36 +1,45 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Key } from 'lucide-react';
+import { X } from 'lucide-react';
+import { validarRequerido, validarPassword } from '../../utils/validaciones';
 
 export const UsuarioModal: React.FC = () => {
   const { isUsuarioModalOpen, closeAddUserModal, saveUser } = useApp();
 
   const [name, setName] = useState('Fernanda Ruiz');
+  const [nameError, setNameError] = useState('');
   const [shift, setShift] = useState<'Turno matutino' | 'Turno vespertino' | 'Turno completo'>('Turno vespertino');
   const [username, setUsername] = useState('fruiz');
+  const [usernameError, setUsernameError] = useState('');
   const [role, setRole] = useState<'Mesero' | 'Administrador' | 'Cocinero'>('Mesero');
   const [password, setPassword] = useState('Cafe2026!');
   const [confirmPassword, setConfirmPassword] = useState('Cafe2026!');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
   const [forceChange, setForceChange] = useState(true);
 
   if (!isUsuarioModalOpen) return null;
 
   const handleGeneratePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
-    let res = '';
-    for (let i = 0; i < 10; i++) {
-      res += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    const res = 'Cafe' + Math.floor(1000 + Math.random() * 9000) + '!';
     setPassword(res);
     setConfirmPassword(res);
+    setPasswordError('');
+    setConfirmError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      alert('Las contraseñas no coinciden');
-      return;
-    }
+    const errName = validarRequerido(name, 'nombre completo');
+    const errUser = validarRequerido(username, 'usuario');
+    const errPass = validarPassword(password);
+    const errConfirm = password !== confirmPassword ? 'Las contraseñas no coinciden.' : '';
+    setNameError(errName);
+    setUsernameError(errUser);
+    setPasswordError(errPass);
+    setConfirmError(errConfirm);
+    if (errName || errUser || errPass || errConfirm) return;
+
     saveUser({
       name,
       shift,
@@ -43,7 +52,6 @@ export const UsuarioModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Header */}
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-stone-900 text-base">Alta de mesero</h3>
@@ -57,10 +65,8 @@ export const UsuarioModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
           
-          {/* Section 1 */}
           <div>
             <h4 className="font-extrabold text-[10px] text-stone-400 uppercase tracking-wider mb-2">
               Datos del mesero
@@ -72,16 +78,24 @@ export const UsuarioModal: React.FC = () => {
                   type="text"
                   value={name}
                   onChange={(e) => {
-                    setName(e.target.value);
-                    const parts = e.target.value.toLowerCase().split(' ');
-                    if (parts.length >= 2) {
+                    const val = e.target.value;
+                    setName(val);
+                    setNameError(validarRequerido(val, 'nombre completo'));
+                    const parts = val.toLowerCase().split(' ');
+                    if (parts.length >= 2 && parts[0] && parts[1]) {
                       setUsername(`${parts[0][0]}${parts[1]}`);
+                      setUsernameError('');
                     }
                   }}
                   required
                   placeholder="Fernanda Ruiz"
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
                 />
+                {nameError && (
+                  <span className="text-xs text-red-600 font-semibold mt-1 block">
+                    {nameError}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -99,7 +113,6 @@ export const UsuarioModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 2 */}
           <div className="pt-2 border-t border-stone-100">
             <h4 className="font-extrabold text-[10px] text-stone-400 uppercase tracking-wider mb-2">
               Credenciales de acceso
@@ -110,14 +123,24 @@ export const UsuarioModal: React.FC = () => {
                 <input
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setUsername(val);
+                    setUsernameError(validarRequerido(val, 'usuario'));
+                  }}
                   required
                   placeholder="fruiz"
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium font-mono"
                 />
-                <span className="text-[10px] text-stone-400 mt-0.5 block">
-                  Con este usuario inicia sesión. Debe ser único.
-                </span>
+                {usernameError ? (
+                  <span className="text-xs text-red-600 font-semibold mt-1 block">
+                    {usernameError}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-stone-400 mt-0.5 block">
+                    Con este usuario inicia sesión. Debe ser único.
+                  </span>
+                )}
               </div>
 
               <div>
@@ -131,7 +154,6 @@ export const UsuarioModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Passwords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -147,11 +169,24 @@ export const UsuarioModal: React.FC = () => {
                 <input
                   type="text"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPassword(val);
+                    setPasswordError(validarPassword(val));
+                    if (confirmPassword) {
+                      setConfirmError(val !== confirmPassword ? 'Las contraseñas no coinciden.' : '');
+                    }
+                  }}
                   required
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-mono text-stone-800"
                 />
-                <span className="text-[10px] text-stone-400 mt-0.5 block">Mínimo 8 caracteres.</span>
+                {passwordError ? (
+                  <span className="text-xs text-red-600 font-semibold mt-1 block">
+                    {passwordError}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-stone-400 mt-0.5 block">Mínimo 8 caracteres.</span>
+                )}
               </div>
 
               <div>
@@ -159,15 +194,23 @@ export const UsuarioModal: React.FC = () => {
                 <input
                   type="text"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setConfirmPassword(val);
+                    setConfirmError(password !== val ? 'Las contraseñas no coinciden.' : '');
+                  }}
                   required
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-mono text-stone-800"
                 />
+                {confirmError && (
+                  <span className="text-xs text-red-600 font-semibold mt-1 block">
+                    {confirmError}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Toggle */}
           <div className="pt-2">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -182,7 +225,6 @@ export const UsuarioModal: React.FC = () => {
             </label>
           </div>
 
-          {/* Actions */}
           <div className="pt-4 border-t border-stone-100 flex items-center justify-end gap-2">
             <button
               type="button"
