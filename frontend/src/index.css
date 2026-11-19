@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-grayscale-1: #fcfcfc;
+    --color-grayscale-2: #f9f9f9;
+    --color-grayscale-3: #f0f0f0;
+    --color-grayscale-4: #e8e8e8;
+    --color-grayscale-8: #bbbbbb;
+    --color-grayscale-11: #646464;
+    --color-grayscale-12: #202020;
+  }
   html {
     background: #fdfaf6;
   }

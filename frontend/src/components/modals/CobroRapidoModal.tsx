@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { Logo } from '../Logo';
 import { AlertaBarraPopover } from '../AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../UsuarioPerfilNavbar';
+import { ReceiptPrinter, type ReceiptPrinterStage } from '../ui/ReceiptPrinter';
 import {
   LogOut,
   ArrowLeft,
@@ -18,12 +20,46 @@ import {
   ChevronDown,
   Pencil,
   DoorOpen,
+  RotateCcw,
+  Send,
 } from 'lucide-react';
+
+const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    className={className}
+  >
+    <path d="M20.52 3.48A11.86 11.86 0 0 0 12.06 0C5.5 0 .16 5.34.16 11.9c0 2.1.55 4.15 1.59 5.95L0 24l6.33-1.66a11.86 11.86 0 0 0 5.73 1.46h.01c6.56 0 11.9-5.34 11.9-11.9 0-3.18-1.24-6.17-3.45-8.42Zm-8.46 18.3h-.01a9.87 9.87 0 0 1-5.04-1.38l-.36-.21-3.76.99 1-3.66-.24-.38a9.88 9.88 0 0 1-1.51-5.24c0-5.45 4.44-9.89 9.9-9.89 2.64 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.45-4.44 9.87-9.88 9.87Zm5.42-7.41c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.22 3.08.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35Z" />
+  </svg>
+);
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 /* ---------- Configuración ---------- */
 const IVA = 0.16;
 const DESCUENTOS = [0, 5, 10, 15, 20];
 const PROPINAS = [0, 10, 15, 20];
+const PROCESSING_MS = 1400;
+const PRINTING_MS = 2000;
+
+const MESES_TICKET = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+const formatFechaTicket = () => {
+  const now = new Date();
+  const dia = now.getDate().toString().padStart(2, '0');
+  const mes = MESES_TICKET[now.getMonth()];
+  const anio = now.getFullYear();
+  const hora = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dia} ${mes} ${anio} · ${hora}`;
+};
 
 type MetodoId = 'terminal' | 'efectivo' | 'qr';
 
@@ -59,7 +95,6 @@ export const CobroRapidoModal: React.FC = () => {
   const {
     isCobroModalOpen,
     cerrarCobroModal,
-    mostrarTicketModal,
     liberarMesaDirectamente,
     activeTableId,
     tables,
@@ -72,6 +107,40 @@ export const CobroRapidoModal: React.FC = () => {
   const [menuDescuentoAbierto, setMenuDescuentoAbierto] = useState(false);
   const [metodo, setMetodo] = useState<MetodoId>('terminal');
   const [pagado, setPagado] = useState(false);
+  const [pagoActivo, setPagoActivo] = useState(false);
+  const [printerStage, setPrinterStage] = useState<ReceiptPrinterStage>('processing');
+  const [printRun, setPrintRun] = useState(0);
+  const [fechaPago, setFechaPago] = useState('');
+  const [mostrarWhatsApp, setMostrarWhatsApp] = useState(false);
+  const [telefonoWhatsApp, setTelefonoWhatsApp] = useState('');
+
+  const bloqueado = pagoActivo || pagado;
+  const metodoActual = METODOS.find((m) => m.id === metodo) ?? METODOS[0];
+
+  useEffect(() => {
+    if (!pagoActivo) return;
+    setPrinterStage('processing');
+    const toPrinting = setTimeout(() => setPrinterStage('printing'), PROCESSING_MS);
+    const toComplete = setTimeout(() => {
+      setPrinterStage('complete');
+      setPagado(true);
+    }, PROCESSING_MS + PRINTING_MS);
+
+    return () => {
+      clearTimeout(toPrinting);
+      clearTimeout(toComplete);
+    };
+  }, [pagoActivo, printRun]);
+
+  useEffect(() => {
+    if (!isCobroModalOpen) {
+      setPagoActivo(false);
+      setPagado(false);
+      setPrinterStage('processing');
+      setMostrarWhatsApp(false);
+      setTelefonoWhatsApp('');
+    }
+  }, [isCobroModalOpen]);
 
   const activeTable = tables.find((t) => t.id === activeTableId);
 
@@ -93,9 +162,241 @@ export const CobroRapidoModal: React.FC = () => {
   const lineas = comanda.items.length;
   const articulos = comanda.items.reduce((s, it) => s + it.cantidad, 0);
 
+  const handleProcesarPago = () => {
+    setMenuDescuentoAbierto(false);
+    setFechaPago(formatFechaTicket());
+    setPagoActivo(true);
+    setPrintRun((n) => n + 1);
+  };
+
+  const handleRepetirImpresion = () => {
+    setPrinterStage('processing');
+    setPrintRun((n) => n + 1);
+  };
+
   const handleCerrar = () => {
+    setPagoActivo(false);
     setPagado(false);
+    setPrinterStage('processing');
+    setMostrarWhatsApp(false);
+    setTelefonoWhatsApp('');
     cerrarCobroModal();
+  };
+
+  const handleImprimirFisico = () => {
+    const fecha = fechaPago || formatFechaTicket();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    const itemsRows = comanda.items
+      .map(
+        (it) => `
+          <tr>
+            <td class="desc">${it.cantidad}x ${escapeHtml(it.nombre)}</td>
+            <td class="amt">${escapeHtml(fmt(it.cantidad * it.precioCents))}</td>
+          </tr>`,
+      )
+      .join('');
+
+    const descuentoRow =
+      descuentoPct > 0
+        ? `<tr class="muted"><td>Descuento (${descuentoPct}%)</td><td class="amt">-${escapeHtml(fmt(totales.descuento))}</td></tr>`
+        : '';
+
+    const propinaRow =
+      propinaPct > 0
+        ? `<tr class="muted"><td>Propina (${propinaPct}%)</td><td class="amt">${escapeHtml(fmt(totales.propina))}</td></tr>`
+        : '';
+
+    const html = `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Ticket #${comanda.ticket} - ¡Hola, Café!</title>
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 4mm;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #111;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .ticket {
+      width: 72mm;
+      margin: 0 auto;
+      padding: 6px 2px;
+    }
+    .center { text-align: center; }
+    .brand {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      margin: 0;
+    }
+    .sub {
+      font-size: 11px;
+      color: #555;
+      margin: 2px 0 0;
+    }
+    hr {
+      border: 0;
+      border-top: 1px dashed #777;
+      margin: 10px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 2px 0;
+      vertical-align: top;
+    }
+    .desc {
+      padding-right: 8px;
+    }
+    .amt {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .muted {
+      color: #444;
+    }
+    .total td {
+      font-weight: 700;
+      font-size: 13px;
+      padding-top: 6px;
+    }
+    .meta {
+      font-size: 11px;
+      color: #444;
+    }
+    .code {
+      margin-top: 14px;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <div class="center">
+      <p class="brand">¡HOLA, CAFÉ!</p>
+      <p class="sub">Café Central · Gracias por tu visita</p>
+    </div>
+    <hr />
+    <table>
+      <tbody>
+        ${itemsRows}
+      </tbody>
+    </table>
+    <hr />
+    <table>
+      <tbody>
+        <tr class="muted"><td>Subtotal</td><td class="amt">${escapeHtml(fmt(totales.subtotal))}</td></tr>
+        ${descuentoRow}
+        <tr class="muted"><td>IVA (16%)</td><td class="amt">${escapeHtml(fmt(totales.iva))}</td></tr>
+        ${propinaRow}
+        <tr class="total"><td>Total pagado</td><td class="amt">${escapeHtml(fmt(totales.total))}</td></tr>
+      </tbody>
+    </table>
+    <hr />
+    <table class="meta">
+      <tbody>
+        <tr><td>Folio</td><td class="amt">#${comanda.ticket}</td></tr>
+        <tr><td>Mesa / Mesero</td><td class="amt">M${escapeHtml(comanda.mesa)} · ${escapeHtml(comanda.mesero)}</td></tr>
+        <tr><td>Pagado con</td><td class="amt">${escapeHtml(metodoActual.titulo)}</td></tr>
+        <tr><td>Fecha</td><td class="amt">${escapeHtml(fecha)}</td></tr>
+      </tbody>
+    </table>
+    <div class="center">
+      <p class="code">HC ${comanda.ticket}</p>
+      <p class="sub">Este ticket no es un comprobante fiscal.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const cleanup = () => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    };
+
+    const triggerPrint = () => {
+      const win = iframe.contentWindow;
+      if (!win) {
+        cleanup();
+        return;
+      }
+      win.onafterprint = cleanup;
+      win.focus();
+      win.print();
+      setTimeout(cleanup, 60000);
+    };
+
+    setTimeout(triggerPrint, 120);
+  };
+
+  const handleEnviarWhatsApp = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const fecha = fechaPago || formatFechaTicket();
+    const lineasItems = comanda.items
+      .map((it) => `• ${it.cantidad}x ${it.nombre} — ${fmt(it.cantidad * it.precioCents)}`)
+      .join('\n');
+
+    const lineasMensaje = [
+      '*¡Hola, Café!* ☕',
+      '_Ticket de compra_',
+      '──────────────────',
+      `*Folio:* #${comanda.ticket}`,
+      `*Mesa:* ${comanda.mesa}`,
+      `*Mesero:* ${comanda.mesero}`,
+      `*Fecha:* ${fecha}`,
+      '──────────────────',
+      lineasItems,
+      '──────────────────',
+      `Subtotal: ${fmt(totales.subtotal)}`,
+      ...(descuentoPct > 0 ? [`Descuento (${descuentoPct}%): -${fmt(totales.descuento)}`] : []),
+      `IVA (16%): ${fmt(totales.iva)}`,
+      ...(propinaPct > 0 ? [`Propina (${propinaPct}%): ${fmt(totales.propina)}`] : []),
+      `*Total pagado: ${fmt(totales.total)} MXN*`,
+      `*Pagado con:* ${metodoActual.titulo}`,
+      '──────────────────',
+      '¡Gracias por tu visita!',
+    ];
+
+    const soloDigitos = telefonoWhatsApp.replace(/\D/g, '');
+    const numeroDestino =
+      soloDigitos.length === 10 ? `52${soloDigitos}` : soloDigitos;
+    const baseUrl = numeroDestino ? `https://wa.me/${numeroDestino}` : 'https://wa.me/';
+    const url = `${baseUrl}?text=${encodeURIComponent(lineasMensaje.join('\n'))}`;
+
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleLiberarMesa = () => {
@@ -203,7 +504,7 @@ export const CobroRapidoModal: React.FC = () => {
                       {it.cantidad > 1 ? `Sub: ${fmt(it.precioCents)} c/u` : it.categoria}
                     </span>
                     <button
-                      disabled={pagado}
+                      disabled={bloqueado}
                       className="flex items-center gap-1 text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Pencil className="w-3 h-3" />
@@ -218,7 +519,7 @@ export const CobroRapidoModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMenuDescuentoAbierto((v) => !v)}
-                disabled={pagado}
+                disabled={bloqueado}
                 className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-colors disabled:opacity-50 ${
                   descuentoPct > 0
                     ? 'bg-[#7B3F00] text-white border-[#7B3F00]'
@@ -232,7 +533,7 @@ export const CobroRapidoModal: React.FC = () => {
                 <ChevronDown className={`w-4 h-4 transition-transform ${menuDescuentoAbierto ? 'rotate-180' : ''}`} />
               </button>
 
-              {menuDescuentoAbierto && !pagado && (
+              {menuDescuentoAbierto && !bloqueado && (
                 <div className="mt-2 bg-white border border-[#D5C7BA] rounded-xl shadow-lg p-1.5 grid grid-cols-5 gap-1.5 animate-in fade-in duration-100">
                   {DESCUENTOS.map((pct) => (
                     <button
@@ -296,7 +597,7 @@ export const CobroRapidoModal: React.FC = () => {
                   <button
                     key={pct}
                     onClick={() => setPropinaPct(pct)}
-                    disabled={pagado}
+                    disabled={bloqueado}
                     className={`py-2.5 px-1 rounded-xl text-center border transition-all disabled:opacity-60 ${
                       propinaPct === pct
                         ? 'bg-[#8B4513] text-white border-[#8B4513] shadow-xs'
@@ -325,80 +626,268 @@ export const CobroRapidoModal: React.FC = () => {
           </section>
         </div>
 
-        {/* ===== DERECHA: Método y Acciones ===== */}
+        {/* ===== DERECHA: Método / Impresora de Ticket y Acciones ===== */}
         <div className="space-y-5 lg:sticky lg:top-24">
 
-          <section className="bg-white border border-[#E5DCD3] rounded-2xl p-5 space-y-3 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider">Método de Pago</h3>
-              <span className="text-[11px] text-[#8C7D73]">Toque para seleccionar</span>
-            </div>
+          <AnimatePresence mode="wait">
+            {!pagoActivo ? (
+              <motion.section
+                key="selector-metodo"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="bg-white border border-[#E5DCD3] rounded-2xl p-5 space-y-3 shadow-2xs"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Método de Pago</h3>
+                  <span className="text-[11px] text-[#8C7D73]">Toque para seleccionar</span>
+                </div>
 
-            <div className="space-y-2">
-              {METODOS.map(({ id, titulo, detalle, icon: Icon, color }) => {
-                const activo = metodo === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setMetodo(id)}
-                    disabled={pagado}
-                    className={`w-full p-3.5 rounded-xl flex items-center justify-between transition-all text-left ${
-                      activo
-                        ? 'bg-[#FFF7ED] border-2 border-[#8B4513] shadow-xs'
-                        : 'bg-white border-2 border-[#E5DCD3] hover:border-[#D5C7BA]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl bg-white border border-[#E5DCD3] flex items-center justify-center ${color}`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold">{titulo}</p>
-                        <p className="text-[11px] text-[#8C7D73]">{detalle}</p>
-                      </div>
-                    </div>
-                    {activo && (
-                      <span className="bg-[#8B4513] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Seleccionado
+                <div className="space-y-2">
+                  {METODOS.map(({ id, titulo, detalle, icon: Icon, color }) => {
+                    const activo = metodo === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setMetodo(id)}
+                        disabled={bloqueado}
+                        className={`w-full p-3.5 rounded-xl flex items-center justify-between transition-all text-left ${
+                          activo
+                            ? 'bg-[#FFF7ED] border-2 border-[#8B4513] shadow-xs'
+                            : 'bg-white border-2 border-[#E5DCD3] hover:border-[#D5C7BA]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl bg-white border border-[#E5DCD3] flex items-center justify-center ${color}`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold">{titulo}</p>
+                            <p className="text-[11px] text-[#8C7D73]">{detalle}</p>
+                          </div>
+                        </div>
+                        {activo && (
+                          <span className="bg-[#8B4513] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Seleccionado
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.section>
+            ) : (
+              <motion.section
+                key="impresora-ticket"
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                className="bg-white/75 border border-[#E5DCD3] rounded-2xl px-4 pt-6 pb-2 shadow-2xs flex flex-col items-center"
+              >
+                <ReceiptPrinter.Root stage={printerStage}>
+                  <ReceiptPrinter.Machine>
+                    <ReceiptPrinter.Header>
+                      <span className="font-mono text-[11px] font-medium tracking-[0.12em] text-grayscale-1/80">
+                        HOLA CAFÉ·POS
                       </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+                      <button
+                        className="rounded-full border border-grayscale-1/20 px-2.5 py-1 text-[11px] font-medium text-grayscale-1/80 transition hover:bg-grayscale-1/10 inline-flex items-center gap-1"
+                        onClick={handleRepetirImpresion}
+                        type="button"
+                      >
+                        <RotateCcw aria-hidden="true" className="w-3 h-3" strokeWidth={2.5} />
+                        Repetir
+                      </button>
+                    </ReceiptPrinter.Header>
+
+                    <ReceiptPrinter.Screen>
+                      <div className="space-y-4">
+                        <div className="flex justify-between gap-4 text-sm">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">Mesa {comanda.mesa} · Ticket #{comanda.ticket}</p>
+                            <p className="text-grayscale-8 text-xs truncate">{metodoActual.titulo}</p>
+                          </div>
+                          <strong className="font-medium shrink-0">{fmt(totales.total)}</strong>
+                        </div>
+                        <ReceiptPrinter.Status>
+                          {printerStage === 'processing'
+                            ? 'Procesando pago...'
+                            : printerStage === 'printing'
+                              ? 'Imprimiendo tu ticket...'
+                              : 'Pago completado'}
+                        </ReceiptPrinter.Status>
+                      </div>
+                    </ReceiptPrinter.Screen>
+                  </ReceiptPrinter.Machine>
+
+                  <ReceiptPrinter.Output>
+                    <ReceiptPrinter.Paper id="printable-ticket" className="text-[12px] leading-relaxed">
+                      <p className="text-center text-[11px] font-semibold tracking-[0.2em]">¡HOLA, CAFÉ!</p>
+                      <p className="mt-1 text-center text-[11px] text-grayscale-11">Gracias por tu visita</p>
+                      <hr className="my-4 border-dashed border-grayscale-8" />
+                      <dl className="space-y-1.5">
+                        {comanda.items.map((it) => (
+                          <div key={it.id} className="flex justify-between gap-4">
+                            <dt className="truncate">{it.cantidad}x {it.nombre}</dt>
+                            <dd className="shrink-0">{fmt(it.cantidad * it.precioCents)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <hr className="my-4 border-dashed border-grayscale-8" />
+                      <dl className="space-y-1.5">
+                        <div className="flex justify-between gap-4 text-grayscale-11">
+                          <dt>Subtotal</dt>
+                          <dd>{fmt(totales.subtotal)}</dd>
+                        </div>
+                        {descuentoPct > 0 && (
+                          <div className="flex justify-between gap-4 text-grayscale-11">
+                            <dt>Descuento ({descuentoPct}%)</dt>
+                            <dd>-{fmt(totales.descuento)}</dd>
+                          </div>
+                        )}
+                        <div className="flex justify-between gap-4 text-grayscale-11">
+                          <dt>IVA (16%)</dt>
+                          <dd>{fmt(totales.iva)}</dd>
+                        </div>
+                        {propinaPct > 0 && (
+                          <div className="flex justify-between gap-4 text-grayscale-11">
+                            <dt>Propina ({propinaPct}%)</dt>
+                            <dd>{fmt(totales.propina)}</dd>
+                          </div>
+                        )}
+                        <div className="flex justify-between gap-4 font-semibold pt-1">
+                          <dt>Total pagado</dt>
+                          <dd>{fmt(totales.total)}</dd>
+                        </div>
+                      </dl>
+                      <hr className="my-4 border-dashed border-grayscale-8" />
+                      <dl className="space-y-1 text-[11px] text-grayscale-11">
+                        <div className="flex justify-between gap-4">
+                          <dt>Folio</dt>
+                          <dd>#{comanda.ticket}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt>Mesa / Mesero</dt>
+                          <dd>M{comanda.mesa} · {comanda.mesero}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt>Pagado con</dt>
+                          <dd className="truncate">{metodoActual.titulo}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt>Fecha</dt>
+                          <dd>{fechaPago}</dd>
+                        </div>
+                      </dl>
+                      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-grayscale-8">
+                        HC {comanda.ticket}
+                      </p>
+                    </ReceiptPrinter.Paper>
+                  </ReceiptPrinter.Output>
+                </ReceiptPrinter.Root>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           <section className="space-y-3">
             <button
-              onClick={() => setPagado(true)}
-              disabled={pagado}
+              onClick={handleProcesarPago}
+              disabled={bloqueado}
               className={`w-full py-4 rounded-2xl font-black text-base shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                pagado ? 'bg-[#059669] text-white cursor-default' : 'bg-[#7B3F00] hover:bg-[#683500] text-white'
+                pagado
+                  ? 'bg-[#059669] text-white cursor-default'
+                  : pagoActivo
+                    ? 'bg-[#8B4513] text-white cursor-wait opacity-90'
+                    : 'bg-[#7B3F00] hover:bg-[#683500] text-white'
               }`}
             >
               {pagado ? <CheckCircle2 className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              <span>{pagado ? 'Pago registrado ✓' : `Procesar Pago (${fmt(totales.total)} MXN)`}</span>
+              <span>
+                {pagado
+                  ? 'Pago registrado ✓'
+                  : pagoActivo
+                    ? printerStage === 'processing'
+                      ? 'Procesando pago...'
+                      : 'Imprimiendo ticket...'
+                    : `Procesar Pago (${fmt(totales.total)} MXN)`}
+              </span>
             </button>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => mostrarTicketModal(activeTableId || 'M04')}
-                className="py-2.5 px-3 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Printer className="w-4 h-4 text-[#8C7D73]" />
-                Imprimir Ticket
-              </button>
-              <button
-                onClick={handleLiberarMesa}
-                disabled={!pagado}
-                title={pagado ? '' : 'Primero procesa el pago'}
-                className="py-2.5 px-3 bg-[#EDE3D8] hover:bg-[#E3D5C6] rounded-xl text-xs font-bold text-[#7B3F00] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <DoorOpen className="w-4 h-4" />
-                Liberar Mesa {comanda.mesa}
-              </button>
-            </div>
+            {pagoActivo && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleImprimirFisico}
+                    disabled={printerStage !== 'complete'}
+                    className="py-2.5 px-3 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Printer className="w-4 h-4 text-[#8C7D73]" />
+                    Imprimir físico
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarWhatsApp((v) => !v)}
+                    disabled={printerStage !== 'complete'}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border ${
+                      mostrarWhatsApp
+                        ? 'bg-[#16A34A] border-[#16A34A] text-white'
+                        : 'bg-[#ECFDF5] border-[#86EFAC] text-[#15803D] hover:bg-[#DCFCE7]'
+                    }`}
+                  >
+                    <WhatsAppIcon className="w-4 h-4" />
+                    Enviar por WhatsApp
+                  </button>
+                </div>
+
+                {mostrarWhatsApp && printerStage === 'complete' && (
+                  <form
+                    onSubmit={handleEnviarWhatsApp}
+                    className="bg-white border border-[#BBF7D0] rounded-xl p-3 space-y-2 shadow-2xs"
+                  >
+                    <label className="block text-[11px] font-bold text-[#15803D]">
+                      Número de WhatsApp del cliente (opcional)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center flex-1 border border-[#D5C7BA] rounded-lg overflow-hidden bg-[#FAF8F5] focus-within:border-[#16A34A] focus-within:bg-white">
+                        <span className="px-2.5 text-xs font-bold text-[#6E5A4E] border-r border-[#E5DCD3] select-none">
+                          +52
+                        </span>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="10 dígitos (o dejar vacío)"
+                          value={telefonoWhatsApp}
+                          onChange={(e) => setTelefonoWhatsApp(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs bg-transparent outline-none text-[#1E110A] placeholder:text-[#A8988D]"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="px-3.5 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        Enviar
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleLiberarMesa}
+                  disabled={!pagado}
+                  title={pagado ? '' : 'Primero procesa el pago'}
+                  className="w-full py-2.5 px-3 bg-[#EDE3D8] hover:bg-[#E3D5C6] rounded-xl text-xs font-bold text-[#7B3F00] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <DoorOpen className="w-4 h-4" />
+                  Liberar Mesa {comanda.mesa}
+                </button>
+              </div>
+            )}
           </section>
         </div>
       </main>
