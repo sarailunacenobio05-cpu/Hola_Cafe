@@ -1,16 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, Radio, Info } from 'lucide-react';
 import { validarRequerido } from '../../utils/validaciones';
 
 export const BotonModal: React.FC = () => {
-  const { isBotonModalOpen, cerrarAddBotonModal, guardarBoton, tables } = useApp();
+  const { isBotonModalOpen, botonEditando, cerrarAddBotonModal, guardarBoton, tables } = useApp();
 
   const [id, setId] = useState('BOT-M17');
   const [idError, setIdError] = useState('');
   const [name, setName] = useState('Botón de terraza');
   const [nameError, setNameError] = useState('');
   const [tableId, setTableId] = useState('M01');
+
+  useEffect(() => {
+    if (botonEditando) {
+      setId(botonEditando.id);
+      setName(botonEditando.name);
+      setTableId(botonEditando.tableId || 'M01');
+    } else {
+      setId('BOT-M17');
+      setName('Botón de terraza');
+      setTableId('M01');
+    }
+    setIdError('');
+    setNameError('');
+  }, [botonEditando, isBotonModalOpen]);
 
   if (!isBotonModalOpen) return null;
 
@@ -43,8 +57,14 @@ export const BotonModal: React.FC = () => {
         
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
-            <h3 className="font-extrabold text-stone-900 text-base">Agregar botón</h3>
-            <p className="text-xs text-stone-500">Registra un dispositivo y asígnalo a una mesa.</p>
+            <h3 className="font-extrabold text-stone-900 text-base">
+              {botonEditando ? 'Editar botón de aviso' : 'Agregar botón'}
+            </h3>
+            <p className="text-xs text-stone-500">
+              {botonEditando
+                ? 'Modifica el dispositivo y la mesa asignada.'
+                : 'Registra un dispositivo y asígnalo a una mesa.'}
+            </p>
           </div>
           <button
             onClick={cerrarAddBotonModal}
@@ -56,19 +76,21 @@ export const BotonModal: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
           
-          <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
-            <Radio className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-amber-900 text-xs">Ten el botón físico a la mano</p>
-              <p className="text-[11px] text-amber-800 mt-0.5">
-                Encontrarás su identificador en la etiqueta del dispositivo.
-              </p>
+          {!botonEditando && (
+            <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
+              <Radio className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-900 text-xs">Ten el botón físico a la mano</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Encontrarás su identificador en la etiqueta del dispositivo.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block font-bold text-stone-700 mb-1">
-              Identificador del dispositivo *
+              Dispositivo (ID) *
             </label>
             <input
               type="text"
@@ -95,7 +117,7 @@ export const BotonModal: React.FC = () => {
 
           <div>
             <label className="block font-bold text-stone-700 mb-1">
-              Nombre del botón *
+              Nombre del dispositivo *
             </label>
             <input
               type="text"
@@ -140,10 +162,12 @@ export const BotonModal: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-start gap-2 text-stone-500 text-[11px] pt-1">
-            <Info className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-            <span>La batería y el estado de conexión se mostrarán al recibir la primera señal del botón.</span>
-          </div>
+          {!botonEditando && (
+            <div className="flex items-start gap-2 text-stone-500 text-[11px] pt-1">
+              <Info className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
+              <span>La batería y el estado de conexión se mostrarán al recibir la primera señal del botón.</span>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
             <span className="text-[11px] text-stone-400">* Campos obligatorios</span>
@@ -159,7 +183,7 @@ export const BotonModal: React.FC = () => {
                 type="submit"
                 className="px-5 py-2 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
               >
-                Agregar botón
+                {botonEditando ? 'Guardar cambios' : 'Agregar botón'}
               </button>
             </div>
           </div>

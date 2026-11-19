@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { UsuarioPerfilNavbar } from "../components/UsuarioPerfilNavbar";
 import logoImg from "../img/logo.png";
-import { Bell, ChevronRight, ChevronDown, LogOut } from "lucide-react";
+import { Bell, ChevronRight, LogOut } from "lucide-react";
 
 type Status = "new" | "preparing" | "ready";
 type Note = { text: string; allergy?: boolean };
@@ -236,16 +237,7 @@ export const CocinaKDSView = () => {
             <Bell className="w-4 h-4 text-white" />
             <span>2</span>
           </button>
-          <div className="kds-profile">
-            <div className="w-8 h-8 rounded-full bg-[#523323] text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-400/30">
-              DM
-            </div>
-            <span className="kds-profile-copy">
-              <strong>Dante M.</strong>
-              <small>Cocinero</small>
-            </span>
-            <ChevronDown className="w-3 h-3 text-white/70" />
-          </div>
+          <UsuarioPerfilNavbar variante="oscura" />
         </div>
       </header>
 

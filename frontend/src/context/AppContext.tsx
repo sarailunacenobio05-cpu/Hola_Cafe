@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import {
   User,
   MenuItem,
@@ -26,6 +27,15 @@ export interface BarAlert {
   time: string;
 }
 
+export interface AdminNotificacion {
+  id: string;
+  tipo: 'bateria' | 'corte';
+  titulo: string;
+  mensaje: string;
+  hora: string;
+  vistaDestino: ActiveView;
+}
+
 interface AppContextType {
   currentUser: User | null;
   activeView: ActiveView;
@@ -37,6 +47,8 @@ interface AppContextType {
   CocinaTickets: CocinaTicket[];
   cashClosings: CashClosingRecord[];
   barAlerts: BarAlert[];
+  adminNotificaciones: AdminNotificacion[];
+  mesasAtendidas: Record<string, boolean>;
 
   isCobroModalOpen: boolean;
   isTicketModalOpen: boolean;
@@ -44,6 +56,7 @@ interface AppContextType {
   productoEditando: MenuItem | null;
   isUsuarioModalOpen: boolean;
   isBotonModalOpen: boolean;
+  botonEditando: IoTDevice | null;
   isConfirmBajaModalOpen: boolean;
   usuarioBaja: User | null;
   isConfirmEliminarModalOpen: boolean;
@@ -71,6 +84,9 @@ interface AppContextType {
 
   activarAlertaBarra: (tableId: string, message: string) => void;
   descartarAlertaBarra: (id: string) => void;
+  marcarMesaAtendida: (tableId: string) => void;
+  agregarAdminNotificacion: (notificacion: Omit<AdminNotificacion, 'id' | 'hora'>) => void;
+  descartarAdminNotificacion: (id: string) => void;
 
   mostrarAddProductModal: () => void;
   mostrarEditProductModal: (product: MenuItem) => void;
@@ -89,6 +105,7 @@ interface AppContextType {
   reactivarUser: (userId: string) => void;
 
   mostrarAddBotonModal: () => void;
+  mostrarEditBotonModal: (boton: IoTDevice) => void;
   cerrarAddBotonModal: () => void;
   guardarBoton: (botonData: Partial<IoTDevice>) => void;
 }
@@ -153,9 +170,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
 
   const [barAlerts, setBarAlerts] = useState<BarAlert[]>([
-    { id: 'al-1', tableId: 'M04', message: 'Mesa 04 solicita cuenta', time: '14:31' },
-    { id: 'al-2', tableId: 'M07', message: 'Mesa 07 solicita mesero', time: '14:28' },
+    { id: 'al-1', tableId: 'M01', message: 'Mesa 01 presionó el botón de aviso', time: '14:31' },
+    { id: 'al-2', tableId: 'M05', message: 'Mesa 05 solicita atención del mesero', time: '14:28' },
   ]);
+
+  const [mesasAtendidas, setMesasAtendidas] = useState<Record<string, boolean>>({});
+
+  const [adminNotificaciones, setAdminNotificaciones] = useState<AdminNotificacion[]>(() => {
+    const notifs: AdminNotificacion[] = INITIAL_IOT_DEVICES
+      .filter(d => d.batteryPercentage <= 25)
+      .map(d => ({
+        id: `notif-bat-${d.id}`,
+        tipo: 'bateria' as const,
+        titulo: d.batteryPercentage <= 10 ? `Batería crítica (${d.id})` : `Batería baja (${d.id})`,
+        mensaje: `El botón de ${d.tableId.replace('M', 'Mesa ')} tiene ${d.batteryPercentage}% de batería.`,
+        hora: d.lastConnection,
+        vistaDestino: 'botones-aviso' as ActiveView,
+      }));
+
+    if (INITIAL_CASH_CLOSINGS[0]) {
+      const ultimo = INITIAL_CASH_CLOSINGS[0];
+      notifs.push({
+        id: `notif-corte-${ultimo.id}`,
+        tipo: 'corte',
+        titulo: `Corte de caja ${ultimo.folio}`,
+        mensaje: `Realizado por ${ultimo.responsible} por $${ultimo.totalSales.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        hora: ultimo.date,
+        vistaDestino: 'caja',
+      });
+    }
+    return notifs;
+  });
 
   const [isCobroModalOpen, setIsCobroModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -163,6 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [productoEditando, setProductoEditando] = useState<MenuItem | null>(null);
   const [isUsuarioModalOpen, setIsUsuarioModalOpen] = useState(false);
   const [isBotonModalOpen, setIsBotonModalOpen] = useState(false);
+  const [botonEditando, setBotonEditando] = useState<IoTDevice | null>(null);
   const [isConfirmBajaModalOpen, setIsConfirmBajaModalOpen] = useState(false);
   const [usuarioBaja, setUsuarioBaja] = useState<User | null>(null);
   const [isConfirmEliminarModalOpen, setIsConfirmEliminarModalOpen] = useState(false);
@@ -426,6 +472,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setBarAlerts(prev => [newAlert, ...prev]);
+    setMesasAtendidas(prev => ({ ...prev, [tableId]: false }));
 
     setTables(prev => prev.map(t => {
       if (t.id === tableId) {
@@ -437,10 +484,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return t;
     }));
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: `${tableId.replace('M', 'Mesa ')} presionó el botón`,
+      text: message,
+      showConfirmButton: false,
+      timer: 3500,
+      timerProgressBar: true,
+      background: '#FFF5F5',
+      color: '#1E110A',
+    });
   };
 
   const descartarAlertaBarra = (id: string) => {
+    const alerta = barAlerts.find(a => a.id === id);
+    if (alerta) {
+      setMesasAtendidas(prev => ({ ...prev, [alerta.tableId]: true }));
+    }
     setBarAlerts(prev => prev.filter(a => a.id !== id));
+  };
+
+  const marcarMesaAtendida = (tableId: string) => {
+    setMesasAtendidas(prev => ({ ...prev, [tableId]: true }));
+    setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `${tableId.replace('M', 'Mesa ')} atendida`,
+      showConfirmButton: false,
+      timer: 2200,
+      background: '#FAF8F5',
+      color: '#1E110A',
+    });
+  };
+
+  const agregarAdminNotificacion = (notificacion: Omit<AdminNotificacion, 'id' | 'hora'>) => {
+    const nueva: AdminNotificacion = {
+      ...notificacion,
+      id: `notif-${Date.now()}`,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setAdminNotificaciones(prev => [nueva, ...prev]);
+  };
+
+  const descartarAdminNotificacion = (id: string) => {
+    setAdminNotificaciones(prev => prev.filter(n => n.id !== id));
   };
 
   const mostrarAddProductModal = () => {
@@ -541,23 +633,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const mostrarAddBotonModal = () => {
+    setBotonEditando(null);
+    setIsBotonModalOpen(true);
+  };
+
+  const mostrarEditBotonModal = (boton: IoTDevice) => {
+    setBotonEditando(boton);
     setIsBotonModalOpen(true);
   };
 
   const cerrarAddBotonModal = () => {
     setIsBotonModalOpen(false);
+    setBotonEditando(null);
   };
 
   const guardarBoton = (botonData: Partial<IoTDevice>) => {
-    const newBoton: IoTDevice = {
-      id: botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`,
-      name: botonData.name || 'Botón de Mesa',
-      tableId: botonData.tableId || 'M01',
-      batteryPercentage: 100,
-      status: 'En línea',
-      lastConnection: 'Hace unos segundos'
-    };
-    setIotDevices(prev => [newBoton, ...prev]);
+    if (botonEditando) {
+      setIotDevices(prev =>
+        prev.map(b =>
+          b.id === botonEditando.id
+            ? {
+                ...b,
+                id: botonData.id || b.id,
+                name: botonData.name || b.name,
+                tableId: botonData.tableId || b.tableId,
+              }
+            : b
+        )
+      );
+    } else {
+      const newBoton: IoTDevice = {
+        id: botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`,
+        name: botonData.name || 'Botón de Mesa',
+        tableId: botonData.tableId || 'M01',
+        batteryPercentage: 100,
+        status: 'En línea',
+        lastConnection: 'Hace unos segundos'
+      };
+      setIotDevices(prev => [newBoton, ...prev]);
+    }
     cerrarAddBotonModal();
   };
 
@@ -574,12 +688,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         CocinaTickets,
         cashClosings,
         barAlerts,
+        adminNotificaciones,
+        mesasAtendidas,
         isCobroModalOpen,
         isTicketModalOpen,
         isProductoModalOpen,
         productoEditando,
         isUsuarioModalOpen,
         isBotonModalOpen,
+        botonEditando,
         isConfirmBajaModalOpen,
         usuarioBaja,
         isConfirmEliminarModalOpen,
@@ -602,6 +719,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         liberarMesaDirectamente,
         activarAlertaBarra,
         descartarAlertaBarra,
+        marcarMesaAtendida,
+        agregarAdminNotificacion,
+        descartarAdminNotificacion,
         mostrarAddProductModal,
         mostrarEditProductModal,
         cerrarProductModal,
@@ -617,6 +737,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         confirmarBajaUser,
         reactivarUser,
         mostrarAddBotonModal,
+        mostrarEditBotonModal,
         cerrarAddBotonModal,
         guardarBoton,
       }}

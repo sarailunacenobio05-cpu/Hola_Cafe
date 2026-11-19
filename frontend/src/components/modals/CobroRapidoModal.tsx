@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Logo } from '../Logo';
+import { AlertaBarraPopover } from '../AlertaBarraPopover';
+import { UsuarioPerfilNavbar } from '../UsuarioPerfilNavbar';
 import {
-  Bell,
   LogOut,
   ArrowLeft,
   Receipt,
@@ -14,16 +15,14 @@ import {
   Check,
   CheckCircle2,
   Percent,
-  FileText,
+  ChevronDown,
   Pencil,
-  Wallet,
-  Split,
   DoorOpen,
 } from 'lucide-react';
 
 /* ---------- Configuración ---------- */
 const IVA = 0.16;
-const DESCUENTO_PCT = 10;
+const DESCUENTOS = [0, 5, 10, 15, 20];
 const PROPINAS = [0, 10, 15, 20];
 
 type MetodoId = 'terminal' | 'efectivo' | 'qr';
@@ -43,7 +42,6 @@ const METODOS: {
 /* Comanda de ejemplo (precios en centavos para evitar errores de redondeo) */
 const COMANDA_DEFAULT = {
   mesa: '04',
-  comensales: 2,
   ticket: 1039,
   mesero: 'Carlos R.',
   boton: { id: 'BOT-1', bateria: 88, estado: 'En espera' },
@@ -70,8 +68,8 @@ export const CobroRapidoModal: React.FC = () => {
   } = useApp();
 
   const [propinaPct, setPropinaPct] = useState(10);
-  const [conDescuento, setConDescuento] = useState(false);
-  const [modalidad, setModalidad] = useState<'completo' | 'dividir'>('completo');
+  const [descuentoPct, setDescuentoPct] = useState(0);
+  const [menuDescuentoAbierto, setMenuDescuentoAbierto] = useState(false);
   const [metodo, setMetodo] = useState<MetodoId>('terminal');
   const [pagado, setPagado] = useState(false);
 
@@ -80,30 +78,20 @@ export const CobroRapidoModal: React.FC = () => {
   const comanda = {
     ...COMANDA_DEFAULT,
     mesa: activeTable ? activeTable.number.toString().padStart(2, '0') : COMANDA_DEFAULT.mesa,
-    comensales: activeTable?.guests || COMANDA_DEFAULT.comensales,
     mesero: activeTable?.waiterName || currentUser?.name || COMANDA_DEFAULT.mesero,
   };
 
-  const nombreUsuario = currentUser?.name || 'Carlos R.';
-  const iniciales = nombreUsuario
-    .split(' ')
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
   const totales = useMemo(() => {
     const subtotal = comanda.items.reduce((s, it) => s + it.cantidad * it.precioCents, 0);
-    const descuento = conDescuento ? Math.round((subtotal * DESCUENTO_PCT) / 100) : 0;
+    const descuento = Math.round((subtotal * descuentoPct) / 100);
     const base = subtotal - descuento;
     const propina = Math.round((base * propinaPct) / 100);
     const iva = Math.round(base * IVA);
     return { subtotal, descuento, base, propina, iva, total: base + iva + propina };
-  }, [comanda.items, conDescuento, propinaPct]);
+  }, [comanda.items, descuentoPct, propinaPct]);
 
   const lineas = comanda.items.length;
   const articulos = comanda.items.reduce((s, it) => s + it.cantidad, 0);
-  const porPersona = Math.round(totales.total / comanda.comensales);
 
   const handleCerrar = () => {
     setPagado(false);
@@ -128,19 +116,9 @@ export const CobroRapidoModal: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs transition-colors"
-          >
-            <Bell className="w-3.5 h-3.5 fill-current" />
-            <span>Alerta Barra</span>
-          </button>
+          <AlertaBarraPopover />
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#1E110A]">{nombreUsuario}</span>
-            <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
-              {iniciales}
-            </div>
-          </div>
+          <UsuarioPerfilNavbar />
 
           <button
             onClick={() => { handleCerrar(); logout(); }}
@@ -165,7 +143,6 @@ export const CobroRapidoModal: React.FC = () => {
           </button>
 
           <span className="bg-[#7B3F00] text-white text-sm font-black px-3 py-1 rounded-lg">Mesa {comanda.mesa}</span>
-          <span className="text-xs font-semibold text-[#8C7D73]">({comanda.comensales} Comensales)</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
@@ -237,26 +214,45 @@ export const CobroRapidoModal: React.FC = () => {
               ))}
             </ul>
 
-            <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+            <div className="px-4 pb-4 relative">
               <button
-                onClick={() => setConDescuento((v) => !v)}
+                type="button"
+                onClick={() => setMenuDescuentoAbierto((v) => !v)}
                 disabled={pagado}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${
-                  conDescuento
+                className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-colors disabled:opacity-50 ${
+                  descuentoPct > 0
                     ? 'bg-[#7B3F00] text-white border-[#7B3F00]'
                     : 'bg-white border-[#D5C7BA] text-[#1E110A] hover:bg-stone-50'
                 }`}
               >
-                <Percent className="w-3.5 h-3.5 text-amber-500" />
-                Descuento {DESCUENTO_PCT}%
+                <span className="flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{descuentoPct > 0 ? `Descuento aplicado: ${descuentoPct}%` : 'Aplicar Descuento (0%)'}</span>
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${menuDescuentoAbierto ? 'rotate-180' : ''}`} />
               </button>
-              <button
-                disabled={pagado}
-                className="py-2.5 px-3 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-              >
-                <FileText className="w-3.5 h-3.5 text-[#8C7D73]" />
-                Nota Ticket
-              </button>
+
+              {menuDescuentoAbierto && !pagado && (
+                <div className="mt-2 bg-white border border-[#D5C7BA] rounded-xl shadow-lg p-1.5 grid grid-cols-5 gap-1.5 animate-in fade-in duration-100">
+                  {DESCUENTOS.map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => {
+                        setDescuentoPct(pct);
+                        setMenuDescuentoAbierto(false);
+                      }}
+                      className={`py-2 rounded-lg text-xs font-black transition-all ${
+                        descuentoPct === pct
+                          ? 'bg-[#8B4513] text-white shadow-xs'
+                          : 'bg-[#FAF8F5] text-[#1E110A] hover:bg-[#EFE6DC]'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -274,9 +270,9 @@ export const CobroRapidoModal: React.FC = () => {
                 <span className="text-[#786B63]">Subtotal Alimentos &amp; Bebidas</span>
                 <span className="font-bold">{fmt(totales.subtotal)}</span>
               </div>
-              {conDescuento && (
+              {descuentoPct > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[#786B63]">Descuento ({DESCUENTO_PCT}%)</span>
+                  <span className="text-[#786B63]">Descuento ({descuentoPct}%)</span>
                   <span className="font-bold text-[#D32F2F]">−{fmt(totales.descuento)}</span>
                 </div>
               )}
@@ -329,35 +325,8 @@ export const CobroRapidoModal: React.FC = () => {
           </section>
         </div>
 
-        {/* ===== DERECHA: Modalidad, Método, Acciones ===== */}
+        {/* ===== DERECHA: Método y Acciones ===== */}
         <div className="space-y-5 lg:sticky lg:top-24">
-
-          <section className="bg-white border border-[#E5DCD3] rounded-2xl p-5 space-y-3 shadow-2xs">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider">Modalidad de Cobro</h3>
-            <div className="grid grid-cols-2 gap-2 bg-[#EDE3D8] p-1 rounded-xl">
-              {([
-                { id: 'completo', label: 'Cobro Completo (1 Pago)', icon: Wallet },
-                { id: 'dividir', label: `Dividir Cuenta (${comanda.comensales} Pax)`, icon: Split },
-              ] as const).map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => setModalidad(id)}
-                  disabled={pagado}
-                  className={`py-2.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    modalidad === id ? 'bg-white text-[#7B3F00] shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </button>
-              ))}
-            </div>
-            {modalidad === 'dividir' && (
-              <p className="text-xs text-[#6E5A4E] bg-[#FFF7ED] border border-[#FED7AA] rounded-lg px-3 py-2">
-                Cada comensal paga <strong className="text-[#7B3F00]">{fmt(porPersona)}</strong> ({comanda.comensales} pagos)
-              </p>
-            )}
-          </section>
 
           <section className="bg-white border border-[#E5DCD3] rounded-2xl p-5 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">

@@ -1,26 +1,22 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
-import adminAvatarImg from '../img/admin-avatar.jpg';
+import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
+import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import { 
   Radio, 
   Wifi, 
   WifiOff, 
-  Battery, 
   BatteryWarning, 
   RefreshCw, 
   Plus, 
-  ChevronRight, 
-  ChevronDown, 
   Edit3, 
-  Search,
-  Bell
+  Search
 } from 'lucide-react';
 import { IoTDevice } from '../types';
-import Swal from 'sweetalert2';
 
 export const BotonesAvisoView: React.FC = () => {
-  const { iotDevices, mostrarAddBotonModal, setActiveView } = useApp();
+  const { iotDevices, mostrarAddBotonModal, mostrarEditBotonModal } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
@@ -118,42 +114,8 @@ export const BotonesAvisoView: React.FC = () => {
 
           {/* User profile & notifications */}
           <div className="flex items-center gap-4">
-            <button 
-              type="button" 
-              aria-label="2 notificaciones"
-              className="relative p-1.5 text-[#7C6E65] hover:text-[#231815] transition-colors"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#DC2626] text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs">
-                2
-              </span>
-            </button>
-            <div
-              onClick={() => {
-                Swal.fire({
-                  title: 'Perfil de Administrador',
-                  html: '<p><b>Nombre:</b> Dante M.</p><p><b>Correo:</b> admin@holacafe.com</p><p><b>Rol:</b> Administrador</p>',
-                  icon: 'info',
-                  confirmButtonColor: '#7B3F00',
-                });
-              }}
-              className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
-            ></div>            
-
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D5C7BA] bg-[#231815]">
-                <img 
-                  src={adminAvatarImg} 
-                  alt="Administrador" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-bold text-[#1E110A] leading-tight">Dante M.</p>
-                <p className="text-[10px] text-[#8C7D73] leading-tight">admin@holacafe.com</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#8C7D73]" />
-            </div>
+            <AdminNotificacionesBell />
+            <UsuarioPerfilNavbar />
           </div>
 
         </header>
@@ -281,7 +243,6 @@ export const BotonesAvisoView: React.FC = () => {
                     <th className="py-3.5 px-6">MESA ASIGNADA</th>
                     <th className="py-3.5 px-6">BATERÍA</th>
                     <th className="py-3.5 px-6">ESTADO</th>
-                    <th className="py-3.5 px-6">ÚLTIMA CONEXIÓN</th>
                     <th className="py-3.5 px-6 text-right">ACCIONES</th>
                   </tr>
                 </thead>
@@ -319,14 +280,10 @@ export const BotonesAvisoView: React.FC = () => {
                       <td className="py-4 px-6">
                         {getStatusBadge(device.status)}
                       </td>
-                      <td className="py-4 px-6 text-[#6E5A4E]">
-                        <p>{device.lastConnection}</p>
-                        {device.status === 'Sin conexión' && (
-                          <span className="text-[10px] text-[#A8988D] block">Última batería recibida</span>
-                        )}
-                      </td>
                       <td className="py-4 px-6 text-right">
                         <button
+                          type="button"
+                          onClick={() => mostrarEditBotonModal(device)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-[#e59819] hover:text-[#e59819] text-[#231815] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                           title="Editar botón"
                         >

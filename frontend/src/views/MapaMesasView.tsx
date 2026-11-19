@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Logo } from '../components/Logo';
+import { AlertaBarraPopover } from '../components/AlertaBarraPopover';
+import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import { 
   Bell, 
   LogOut, 
   LayoutGrid, 
   ChefHat, 
-  Receipt, 
   Check, 
   Coffee, 
   Users, 
-  UtensilsCrossed, 
-  Store 
+  UtensilsCrossed
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -19,7 +19,9 @@ export const MapaMesasView: React.FC = () => {
   const { 
     selectTable, 
     setActiveView, 
-    mostrarCobroModal, 
+    mostrarCobroModal,
+    mesasAtendidas,
+    marcarMesaAtendida,
     logout 
   } = useApp();
 
@@ -70,44 +72,9 @@ export const MapaMesasView: React.FC = () => {
 
         {/* Right: Alerta Barra + User + Logout */}
         <div className="flex items-center gap-4">
-          {/* Alerta Barra red pill button */}
-          <button
-          onClick={() => {
-              Swal.fire({
-                title: 'Alerta de Barra',
-                text: 'Alerta de Barra atendida correctamente.',
-                icon: 'success',
-                confirmButtonColor: '#7B3F00',
-              });
-            }}
-            className="bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-xs font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xs transition-colors"
-          >
-            <Bell className="w-3.5 h-3.5 fill-current" />
-            <span>Alerta Barra</span>
-          </button>
+          <AlertaBarraPopover />
 
-          {/* User profile pill */}
-          <button 
-            type="button"
-            onClick={() => {
-              Swal.fire({
-                title: 'Mi Perfil',
-                html: '<p><b>Nombre:</b> Sarai L.</p><p><b>Correo:</b> sarai@holacafe.com </p><p><b>Rol:</b> Mesero </p>',
-                icon: 'info',
-                confirmButtonColor:'#7B3F00', 
-              });
-            }}
-            className="flex items-center gap-2 text-right hover:opacity-80 transition-opacity">
-              <div>
-                <span className="block text-xs font-bold text-[#1E110A] leading-tight">Sarai L.</span>
-    <span className="block text-[10px] text-[#8C7D73] leading-tight">sarai@holacafe.com</span>
-              </div>
-              <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
-              SL
-            </div>
-
-          </button>
-          
+          <UsuarioPerfilNavbar />
 
           {/* Cerrar sesión */}
           <button
@@ -192,37 +159,73 @@ export const MapaMesasView: React.FC = () => {
       <main className="flex-1 px-6 pb-8 max-w-[1600px] w-full mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           
-          {/* CARD M01 (Atención / Red Border) */}
-          <div className="bg-white rounded-2xl border-2 border-[#D32F2F] p-4 flex flex-col justify-between shadow-2xs">
+          {/* CARD M01 (Atención / Red Border -> Ver comanda + Cobrar al atender) */}
+          <div className={`bg-white rounded-2xl p-4 flex flex-col justify-between shadow-2xs transition-all ${
+            mesasAtendidas['M01'] ? 'border border-[#E5DCD3]' : 'border-2 border-[#D32F2F]'
+          }`}>
             <div>
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xl font-black text-[#D32F2F] leading-tight">M01</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">4 Pax</p>
+                  <h3 className={`text-xl font-black leading-tight ${
+                    mesasAtendidas['M01'] ? 'text-[#1E110A]' : 'text-[#D32F2F]'
+                  }`}>M01</h3>
                 </div>
-                <span className="bg-[#3A1F13] text-white text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                  Atender
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase ${
+                  mesasAtendidas['M01']
+                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0]'
+                    : 'bg-[#3A1F13] text-white'
+                }`}>
+                  {mesasAtendidas['M01'] ? 'Atendida' : 'Atender'}
                 </span>
               </div>
 
-              <div className="py-6 space-y-1">
-                <div 
-                className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
-                  <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                  <span>Atender</span>
-                  
+              {mesasAtendidas['M01'] ? (
+                <div className="py-4 space-y-1">
+                  <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
+                    <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
+                    <span>En Consumo</span>
+                  </p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-[#1E110A]">$260.00</span>
+                    <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
+                  </div>
                 </div>
-                <p className="text-xs text-[#8C7D73]">
-                  Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
-                </p>
-              </div>
+              ) : (
+                <div className="py-6 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
+                    <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
+                    <span>Atender</span>
+                  </div>
+                  <p className="text-xs text-[#8C7D73]">
+                    Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
+                  </p>
+                </div>
+              )}
             </div>
 
-            <button
-              className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
-            >
-              Atender
-            </button>
+            {mesasAtendidas['M01'] ? (
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={() => handleOpenComanda('M01')}
+                  className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
+                >
+                  Ver comanda
+                </button>
+                <button
+                  onClick={() => handleCobrar('M01')}
+                  className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
+                >
+                  Cobrar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => marcarMesaAtendida('M01')}
+                className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
+              >
+                Atender
+              </button>
+            )}
           </div>
 
           {/* CARD M02 (En Preparación / KDS) */}
@@ -231,7 +234,6 @@ export const MapaMesasView: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M02</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">3 Pax</p>
                 </div>
                 <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
                   KDS
@@ -272,7 +274,6 @@ export const MapaMesasView: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M03</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">Cap. 4 Pax</p>
                 </div>
                 <span className="bg-[#E6F7F0] text-[#059669] text-[10px] font-bold px-2 py-0.5 rounded-md border border-[#A7F3D0]">
                   Limpia
@@ -302,7 +303,6 @@ export const MapaMesasView: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M04</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">2 Pax</p>
                 </div>
               </div>
 
@@ -334,36 +334,73 @@ export const MapaMesasView: React.FC = () => {
             </div>
           </div>
 
-          {/* CARD M05 (Atención / Red Border) */}
-          <div className="bg-white rounded-2xl border-2 border-[#D32F2F] p-4 flex flex-col justify-between shadow-2xs">
+          {/* CARD M05 (Atención / Red Border -> Ver comanda + Cobrar al atender) */}
+          <div className={`bg-white rounded-2xl p-4 flex flex-col justify-between shadow-2xs transition-all ${
+            mesasAtendidas['M05'] ? 'border border-[#E5DCD3]' : 'border-2 border-[#D32F2F]'
+          }`}>
             <div>
               <div className="flex items-start justify-between">
-                <div >
-                 
-                  <h3 className="text-xl font-black text-[#D32F2F] leading-tight">M05</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">4 Pax</p>
+                <div>
+                  <h3 className={`text-xl font-black leading-tight ${
+                    mesasAtendidas['M05'] ? 'text-[#1E110A]' : 'text-[#D32F2F]'
+                  }`}>M05</h3>
                 </div>
-                <span className="bg-[#3A1F13] text-white text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                  Atender
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase ${
+                  mesasAtendidas['M05']
+                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0]'
+                    : 'bg-[#3A1F13] text-white'
+                }`}>
+                  {mesasAtendidas['M05'] ? 'Atendida' : 'Atender'}
                 </span>
               </div>
 
-              <div className="py-6 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
-                  <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                  <span>Atender</span>
+              {mesasAtendidas['M05'] ? (
+                <div className="py-4 space-y-1">
+                  <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
+                    <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
+                    <span>En Consumo</span>
+                  </p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-[#1E110A]">$385.00</span>
+                    <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
+                  </div>
                 </div>
-                <p className="text-xs text-[#8C7D73]">
-                  Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
-                </p>
-              </div>
+              ) : (
+                <div className="py-6 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
+                    <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
+                    <span>Atender</span>
+                  </div>
+                  <p className="text-xs text-[#8C7D73]">
+                    Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
+                  </p>
+                </div>
+              )}
             </div>
 
-            <button
-              className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
-            >
-              Atender
-            </button>
+            {mesasAtendidas['M05'] ? (
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={() => handleOpenComanda('M05')}
+                  className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
+                >
+                  Ver comanda
+                </button>
+                <button
+                  onClick={() => handleCobrar('M05')}
+                  className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
+                >
+                  Cobrar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => marcarMesaAtendida('M05')}
+                className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
+              >
+                Atender
+              </button>
+            )}
           </div>
 
           {/* CARD M06 (Reservada) */}
@@ -386,7 +423,7 @@ export const MapaMesasView: React.FC = () => {
                   <Users className="w-3.5 h-3.5 text-[#8B4513]" />
                   <span>RESERVADA</span>
                 </p>
-                <p className="text-[11px] text-[#8C7D73] font-medium">Familia Morales (6 Pax)</p>
+                <p className="text-[11px] text-[#8C7D73] font-medium">Familia Morales</p>
               </div>
             </div>
 
@@ -411,7 +448,6 @@ export const MapaMesasView: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M07</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">1 Pax</p>
                 </div>
               </div>
 
@@ -438,7 +474,6 @@ export const MapaMesasView: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-black text-[#1E110A] leading-tight">M08</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">1 Pax</p>
                 </div>
               </div>
 

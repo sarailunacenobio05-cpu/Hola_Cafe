@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
-import adminAvatarImg from '../img/admin-avatar.jpg';
+import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
+import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import { 
   Search, 
   Plus, 
-  ChevronRight, 
-  ChevronDown,
   UserX,
-  RotateCcw,
-  Bell
+  RotateCcw
 } from 'lucide-react';
 import { User } from '../types';
-import Swal from 'sweetalert2';
 
 export const ConfiguracionUsuariosView: React.FC = () => {
   const { 
@@ -70,42 +67,8 @@ export const ConfiguracionUsuariosView: React.FC = () => {
 
           {/* User profile & notifications */}
           <div className="flex items-center gap-4">
-            <button 
-              type="button" 
-              aria-label="2 notificaciones"
-              className="relative p-1.5 text-[#7C6E65] hover:text-[#231815] transition-colors"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#DC2626] text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs">
-                2
-              </span>
-            </button>
-            <div
-              onClick={() => {
-                Swal.fire({
-                  title: 'Perfil de Administrador',
-                  html: '<p><b>Nombre:</b> Dante M.</p><p><b>Correo:</b> admin@holacafe.com</p><p><b>Rol:</b> Administrador</p>',
-                  icon: 'info',
-                  confirmButtonColor: '#7B3F00',
-                });
-              }}
-              className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
-            ></div>            
-
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D5C7BA] bg-[#231815]">
-                <img 
-                  src={adminAvatarImg} 
-                  alt="Administrador" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-bold text-[#1E110A] leading-tight">Dante M.</p>
-                <p className="text-[10px] text-[#8C7D73] leading-tight">admin@holacafe.com</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#8C7D73]" />
-            </div>
+            <AdminNotificacionesBell />
+            <UsuarioPerfilNavbar />
           </div>
 
         </header>
@@ -225,7 +188,6 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-bold text-[#1E110A] text-xs">{user.name}</p>
-                          <p className="text-[11px] text-[#8C7D73] mt-0.5">{user.shift}</p>
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono text-[#6E5A4E]">

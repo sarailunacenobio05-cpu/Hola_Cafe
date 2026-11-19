@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
-import adminAvatarImg from '../img/admin-avatar.jpg';
+import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
+import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import { 
-  ChevronRight, 
-  ChevronDown, 
   Printer,
-  Bell
+  Plus
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -18,11 +17,11 @@ interface CorteRow {
 }
 
 export const CajaView: React.FC = () => {
-  const { mostrarTicketModal, setActiveView } = useApp();
+  const { agregarAdminNotificacion } = useApp();
   const [paginaActual, setPaginaActual] = useState(1);
   const filasPorPagina = 5;
 
-  const cortes: CorteRow[] = [
+  const [cortes, setCortes] = useState<CorteRow[]>([
     { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00 },
     { id: '#06', fecha: '25/03/2026 · 20:00', mesero: 'Dante M.', total: 4310.00 },
     { id: '#05', fecha: '24/03/2026 · 20:00', mesero: 'Gael O.', total: 6980.00 },
@@ -30,7 +29,37 @@ export const CajaView: React.FC = () => {
     { id: '#03', fecha: '22/03/2026 · 20:00', mesero: 'Melissa H.', total: 6390.00 },
     { id: '#02', fecha: '21/03/2026 · 20:00', mesero: 'Gael O.', total: 7210.00 },
     { id: '#01', fecha: '20/03/2026 · 20:00', mesero: 'Dante M.', total: 4820.00 },
-  ];
+  ]);
+
+  const handleNuevoCorte = () => {
+    const num = cortes.length + 1;
+    const nuevoId = `#${num < 10 ? `0${num}` : num}`;
+    const totalNuevo = 18420.00;
+    const nuevoCorte: CorteRow = {
+      id: nuevoId,
+      fecha: `Hoy · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      mesero: 'Dante M.',
+      total: totalNuevo,
+    };
+    setCortes(prev => [nuevoCorte, ...prev]);
+    setPaginaActual(1);
+    agregarAdminNotificacion({
+      tipo: 'corte',
+      titulo: `Corte de caja ${nuevoId} realizado`,
+      mensaje: `Registrado por Dante M. por $${totalNuevo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      vistaDestino: 'caja',
+    });
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Corte ${nuevoId} registrado`,
+      showConfirmButton: false,
+      timer: 2500,
+      background: '#FAF8F5',
+      color: '#1E110A',
+    });
+  };
 
   const totalPaginas = Math.ceil(cortes.length / filasPorPagina) || 1;
   const elementosPaginados = cortes.slice(
@@ -60,41 +89,8 @@ export const CajaView: React.FC = () => {
 
           {/* User profile & notifications */}
           <div className="flex items-center gap-4">
-            <button 
-              type="button" 
-              aria-label="2 notificaciones"
-              className="relative p-1.5 text-[#7C6E65] hover:text-[#231815] transition-colors"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#DC2626] text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs">
-                2
-              </span>
-            </button>
-            <div
-              onClick={() => {
-                Swal.fire({
-                  title: 'Perfil de Administrador',
-                  html: '<p><b>Nombre:</b> Dante M.</p><p><b>Correo:</b> admin@holacafe.com</p><p><b>Rol:</b> Administrador</p>',
-                  icon: 'info',
-                  confirmButtonColor: '#7B3F00',
-                });
-              }}
-              className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
-            ></div>
-            
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D5C7BA] bg-[#231815]">
-                <img 
-                  src={adminAvatarImg} 
-                  alt="Administrador" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-bold text-[#1E110A] leading-tight">Dante M.</p>
-                <p className="text-[10px] text-[#8C7D73] leading-tight">admin@holacafe.com</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#8C7D73]" />
-            
+            <AdminNotificacionesBell />
+            <UsuarioPerfilNavbar />
           </div>
 
         </header>
@@ -133,19 +129,29 @@ export const CajaView: React.FC = () => {
           {/* Historial de cortes card and table */}
           <div className="bg-white rounded-2xl border border-[#E5DCD3] shadow-sm overflow-hidden">
             
-            <div className="p-6 border-b border-[#F5EFEB] flex items-center justify-between">
+            <div className="p-6 border-b border-[#F5EFEB] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-black text-[#1E110A]">
                   Historial de cortes
                 </h2>
                 <p className="text-xs text-[#8C7D73] mt-0.5">
-                  Últimos 7 cortes realizados en la caja.
+                  Últimos {cortes.length} cortes realizados en la caja.
                 </p>
               </div>
 
-              <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-3 py-1 rounded-lg">
-                7 REGISTROS
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-3 py-1.5 rounded-lg">
+                  {cortes.length} REGISTROS
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNuevoCorte}
+                  className="px-4 py-2 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Realizar corte</span>
+                </button>
+              </div>
             </div>
 
             {/* Table */}

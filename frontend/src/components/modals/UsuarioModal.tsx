@@ -8,7 +8,6 @@ export const UsuarioModal: React.FC = () => {
 
   const [name, setName] = useState('Fernanda Ruiz');
   const [nameError, setNameError] = useState('');
-  const [shift, setShift] = useState<'Turno matutino' | 'Turno vespertino' | 'Turno completo'>('Turno vespertino');
   const [username, setUsername] = useState('fruiz');
   const [usernameError, setUsernameError] = useState('');
   const [role, setRole] = useState<'Mesero' | 'Administrador' | 'Cocinero'>('Mesero');
@@ -42,7 +41,6 @@ export const UsuarioModal: React.FC = () => {
 
     guardarUser({
       name,
-      shift,
       username,
       role
     });
@@ -71,45 +69,30 @@ export const UsuarioModal: React.FC = () => {
             <h4 className="font-extrabold text-[10px] text-stone-400 uppercase tracking-wider mb-2">
               Datos del mesero
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">Nombre completo</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setName(val);
-                    setNameError(validarRequerido(val, 'nombre completo'));
-                    const parts = val.toLowerCase().split(' ');
-                    if (parts.length >= 2 && parts[0] && parts[1]) {
-                      setUsername(`${parts[0][0]}${parts[1]}`);
-                      setUsernameError('');
-                    }
-                  }}
-                  required
-                  placeholder="Fernanda Ruiz"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
-                />
-                {nameError && (
-                  <span className="text-xs text-red-600 font-semibold mt-1 block">
-                    {nameError}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">Turno</label>
-                <select
-                  value={shift}
-                  onChange={(e) => setShift(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none font-medium text-stone-800"
-                >
-                  <option value="Turno matutino">Turno matutino</option>
-                  <option value="Turno vespertino">Turno vespertino</option>
-                  <option value="Turno completo">Turno completo</option>
-                </select>
-              </div>
+            <div>
+              <label className="block font-bold text-stone-700 mb-1">Nombre completo</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setName(val);
+                  setNameError(validarRequerido(val, 'nombre completo'));
+                  const parts = val.toLowerCase().split(' ');
+                  if (parts.length >= 2 && parts[0] && parts[1]) {
+                    setUsername(`${parts[0][0]}${parts[1]}`);
+                    setUsernameError('');
+                  }
+                }}
+                required
+                placeholder="Fernanda Ruiz"
+                className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
+              />
+              {nameError && (
+                <span className="text-xs text-red-600 font-semibold mt-1 block">
+                  {nameError}
+                </span>
+              )}
             </div>
           </div>
 
