@@ -32,6 +32,9 @@ export const BotonesAvisoView: React.FC = () => {
   const criticosCount = iotDevices.filter(d => d.batteryPercentage <= 10).length;
   const sinConexionCount = iotDevices.filter(d => d.status === 'Sin conexión').length;
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  const filasPorPagina = 8;
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
@@ -39,7 +42,6 @@ export const BotonesAvisoView: React.FC = () => {
     }, 500);
   };
 
-  // Filtered
   const filtered = iotDevices.filter(dev => {
     const matchSearch = dev.id.toLowerCase().includes(search.toLowerCase()) || 
                         dev.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -47,6 +49,12 @@ export const BotonesAvisoView: React.FC = () => {
     const matchStatus = statusFilter === 'Todos' || dev.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const totalPaginas = Math.ceil(filtered.length / filasPorPagina) || 1;
+  const elementosPaginados = filtered.slice(
+    (paginaActual - 1) * filasPorPagina,
+    paginaActual * filasPorPagina
+  );
 
   const getStatusBadge = (status: IoTDevice['status']) => {
     switch (status) {
@@ -266,7 +274,7 @@ export const BotonesAvisoView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F5EFEB] font-medium text-[#1E110A]">
-                  {filtered.map(device => (
+                  {elementosPaginados.map(device => (
                     <tr key={device.id} className="hover:bg-amber-50/20 transition-colors">
                       <td className="py-4 px-6 flex items-center gap-2.5">
                         <span className="p-1.5 rounded-lg bg-[#FAF8F5] border border-[#E5DCD3] text-[#8C7D73]">
@@ -326,18 +334,33 @@ export const BotonesAvisoView: React.FC = () => {
                 Última actualización: 14:32:10 · Batería baja: 25% o menos · Crítica: 10% o menos.
               </span>
               <div className="flex items-center gap-3">
-                <span>Filas por página: 8</span>
+                <span>Filas por página: {filasPorPagina}</span>
                 <div className="flex items-center gap-1">
-                  <button disabled className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#A8988D] cursor-not-allowed">
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
                     ‹
                   </button>
-                  <button className="w-7 h-7 rounded bg-[#DF7B1B] text-white font-bold flex items-center justify-center shadow-xs">
-                    1
-                  </button>
-                  <button className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] hover:bg-stone-50">
-                    2
-                  </button>
-                  <button className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] hover:bg-stone-50">
+                  {Array.from({ length: totalPaginas }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPaginaActual(idx + 1)}
+                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${
+                        paginaActual === idx + 1
+                          ? 'bg-[#DF7B1B] text-white shadow-xs'
+                          : 'border border-[#E5DCD3] bg-white text-[#1E110A] hover:bg-stone-50'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
                     ›
                   </button>
                 </div>

@@ -24,12 +24,12 @@ export const ConfiguracionUsuariosView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'Todos' | 'Activos' | 'Baja'>('Todos');
   const [search, setSearch] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const filasPorPagina = 5;
 
-  // Counts
   const activosCount = users.filter(u => u.status === 'ACTIVO').length;
   const bajasCount = users.filter(u => u.status === 'BAJA').length;
 
-  // Filtered
   const filteredUsers = users.filter(user => {
     const matchesTab = 
       activeTab === 'Todos' || 
@@ -40,6 +40,12 @@ export const ConfiguracionUsuariosView: React.FC = () => {
       user.username.toLowerCase().includes(search.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const totalPaginas = Math.ceil(filteredUsers.length / filasPorPagina) || 1;
+  const elementosPaginados = filteredUsers.slice(
+    (paginaActual - 1) * filasPorPagina,
+    paginaActual * filasPorPagina
+  );
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
@@ -199,7 +205,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F5EFEB] font-medium text-[#1E110A]">
-                  {filteredUsers.map(user => (
+                  {elementosPaginados.map(user => (
                     <tr key={user.id} className="hover:bg-amber-50/20 transition-colors">
                       <td className="py-4 px-6 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-xs font-black text-[#6E4F32]">
@@ -253,10 +259,43 @@ export const ConfiguracionUsuariosView: React.FC = () => {
               </table>
             </div>
 
-            {/* Notice Footer */}
-            <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex items-center gap-2 text-xs text-[#8C7D73]">
-              <span className="w-2 h-2 rounded-full bg-[#DF7B1B]" />
-              <span>Dar de baja a un mesero bloquea su acceso, pero conserva su historial de comandas y tickets.</span>
+            <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#8C7D73]">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#DF7B1B]" />
+                <span>Dar de baja a un mesero bloquea su acceso, pero conserva su historial de comandas y tickets.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span>Filas por página: {filasPorPagina}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
+                    ‹
+                  </button>
+                  {Array.from({ length: totalPaginas }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPaginaActual(idx + 1)}
+                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${
+                        paginaActual === idx + 1
+                          ? 'bg-[#DF7B1B] text-white shadow-xs'
+                          : 'border border-[#E5DCD3] bg-white text-[#1E110A] hover:bg-stone-50'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
             </div>
 
           </div>

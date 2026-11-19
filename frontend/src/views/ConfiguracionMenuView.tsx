@@ -22,11 +22,14 @@ export const ConfiguracionMenuView: React.FC = () => {
     setActiveView 
   } = useApp();
 
+
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+ 
+  
 
   // Derive categories
   const categories = ['Todas', ...Array.from(new Set(menuItems.map(m => m.category)))];
@@ -268,7 +271,7 @@ export const ConfiguracionMenuView: React.FC = () => {
                   disabled={currentPage === 1}
                   className="px-3 py-1 bg-white border border-[#D5C7BA] rounded-lg font-semibold disabled:opacity-40"
                 >
-                  Anterior
+                  ‹
                 </button>
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <button
@@ -288,7 +291,7 @@ export const ConfiguracionMenuView: React.FC = () => {
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 bg-white border border-[#D5C7BA] rounded-lg font-semibold disabled:opacity-40"
                 >
-                  Siguiente
+                   ›
                 </button>
               </div>
             </div>

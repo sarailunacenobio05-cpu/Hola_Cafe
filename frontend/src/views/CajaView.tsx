@@ -19,8 +19,9 @@ interface CorteRow {
 
 export const CajaView: React.FC = () => {
   const { mostrarTicketModal, setActiveView } = useApp();
+  const [paginaActual, setPaginaActual] = useState(1);
+  const filasPorPagina = 5;
 
-  // Exact 7 records from UI_Caja.pdf
   const cortes: CorteRow[] = [
     { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00 },
     { id: '#06', fecha: '25/03/2026 · 20:00', mesero: 'Dante M.', total: 4310.00 },
@@ -30,6 +31,12 @@ export const CajaView: React.FC = () => {
     { id: '#02', fecha: '21/03/2026 · 20:00', mesero: 'Gael O.', total: 7210.00 },
     { id: '#01', fecha: '20/03/2026 · 20:00', mesero: 'Dante M.', total: 4820.00 },
   ];
+
+  const totalPaginas = Math.ceil(cortes.length / filasPorPagina) || 1;
+  const elementosPaginados = cortes.slice(
+    (paginaActual - 1) * filasPorPagina,
+    paginaActual * filasPorPagina
+  );
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
@@ -144,7 +151,7 @@ export const CajaView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F5EFEB] font-medium text-[#1E110A]">
-                  {cortes.map(corte => (
+                  {elementosPaginados.map(corte => (
                     <tr key={corte.id} className="hover:bg-amber-50/20 transition-colors">
                       <td className="py-4 px-6 font-bold text-[#1E110A]">{corte.id}</td>
                       <td className="py-4 px-6 text-[#786B63]">{corte.fecha}</td>
@@ -174,20 +181,37 @@ export const CajaView: React.FC = () => {
               </table>
             </div>
 
-            {/* Footer Pagination */}
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#8C7D73]">
-              <span>Mostrando 7 de 7 cortes registrados</span>
+              <span>Mostrando {elementosPaginados.length} de {cortes.length} cortes registrados</span>
 
               <div className="flex items-center gap-3">
-                <span>Filas por página: 7</span>
+                <span>Filas por página: {filasPorPagina}</span>
                 <div className="flex items-center gap-1">
-                  <button disabled className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#A8988D] cursor-not-allowed">
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
                     ‹
                   </button>
-                  <button className="w-7 h-7 rounded bg-[#DF7B1B] text-white font-bold flex items-center justify-center shadow-xs">
-                    1
-                  </button>
-                  <button disabled className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#A8988D] cursor-not-allowed">
+                  {Array.from({ length: totalPaginas }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPaginaActual(idx + 1)}
+                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${
+                        paginaActual === idx + 1
+                          ? 'bg-[#DF7B1B] text-white shadow-xs'
+                          : 'border border-[#E5DCD3] bg-white text-[#1E110A] hover:bg-stone-50'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="w-7 h-7 rounded border border-[#E5DCD3] flex items-center justify-center bg-white text-[#1E110A] disabled:text-[#A8988D] disabled:cursor-not-allowed hover:bg-stone-50"
+                  >
                     ›
                   </button>
                 </div>
