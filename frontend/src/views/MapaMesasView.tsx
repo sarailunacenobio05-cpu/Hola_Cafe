@@ -87,12 +87,27 @@ export const MapaMesasView: React.FC = () => {
           </button>
 
           {/* User profile pill */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#1E110A]">Carlos R.</span>
-            <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
-              CR
+          <button 
+            type="button"
+            onClick={() => {
+              Swal.fire({
+                title: 'Mi Perfil',
+                html: '<p><b>Nombre:</b> Sarai L.</p><p><b>Correo:</b> sarai@holacafe.com </p><p><b>Rol:</b> Mesero </p>',
+                icon: 'info',
+                confirmButtonColor:'#7B3F00', 
+              });
+            }}
+            className="flex items-center gap-2 text-right hover:opacity-80 transition-opacity">
+              <div>
+                <span className="block text-xs font-bold text-[#1E110A] leading-tight">Sarai L.</span>
+    <span className="block text-[10px] text-[#8C7D73] leading-tight">sarai@holacafe.com</span>
+              </div>
+              <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
+              SL
             </div>
-          </div>
+
+          </button>
+          
 
           {/* Cerrar sesión */}
           <button
@@ -379,7 +394,7 @@ export const MapaMesasView: React.FC = () => {
             onClick={() => {
               Swal.fire({
                 title: 'Detalles',
-                text: 'Detalle de Reserva: Familia Morales\nFecha: Hoy · 20:30 hrs\nLugares: 6',
+                html: '<p><b>Detalle de Reserva:</b> Familia Morales</p><p><b>Fecha:</b> Hoy · 20:30 hrs </p><p><b>Lugares:</b> 6 </p>',
                 icon: 'info',
                 confirmButtonColor: '#7B3F00',
               });

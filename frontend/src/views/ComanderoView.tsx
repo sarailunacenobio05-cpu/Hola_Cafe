@@ -218,12 +218,26 @@ export const ComanderoView: React.FC = () => {
             <span>Alerta Barra</span>
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#1E110A]">Carlos R.</span>
-            <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
-              CR
-            </div>
-          </div>
+          <button 
+                      type="button"
+                      onClick={() => {
+                        Swal.fire({
+                          title: 'Mi Perfil',
+                          html: '<p><b>Nombre:</b> Sarai L.</p><p><b>Correo:</b> sarai@holacafe.com </p><p><b>Rol:</b> Mesero </p>',
+                          icon: 'info',
+                          confirmButtonColor:'#7B3F00', 
+                        });
+                      }}
+                      className="flex items-center gap-2 text-right hover:opacity-80 transition-opacity">
+                        <div>
+                          <span className="block text-xs font-bold text-[#1E110A] leading-tight">Sarai L.</span>
+              <span className="block text-[10px] text-[#8C7D73] leading-tight">sarai@holacafe.com</span>
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32]">
+                        SL
+                      </div>
+          
+                    </button>
 
           <button
             onClick={logout}

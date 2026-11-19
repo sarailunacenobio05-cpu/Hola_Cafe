@@ -12,6 +12,7 @@ import {
   Bell
 } from 'lucide-react';
 import { User } from '../types';
+import Swal from 'sweetalert2';
 
 export const ConfiguracionUsuariosView: React.FC = () => {
   const { 
@@ -79,6 +80,17 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                 2
               </span>
             </button>
+            <div
+              onClick={() => {
+                Swal.fire({
+                  title: 'Perfil de Administrador',
+                  html: '<p><b>Nombre:</b> Dante M.</p><p><b>Correo:</b> admin@holacafe.com</p><p><b>Rol:</b> Administrador</p>',
+                  icon: 'info',
+                  confirmButtonColor: '#7B3F00',
+                });
+              }}
+              className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
+            ></div>            
 
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D5C7BA] bg-[#231815]">
@@ -90,7 +102,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
               </div>
               <div className="text-left hidden sm:block">
                 <p className="text-xs font-bold text-[#1E110A] leading-tight">Dante M.</p>
-                <p className="text-[10px] text-[#8C7D73] leading-tight">Administrador</p>
+                <p className="text-[10px] text-[#8C7D73] leading-tight">admin@holacafe.com</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-[#8C7D73]" />
             </div>
