@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { X, Printer, Plus, Minus } from 'lucide-react';
 
 export const TicketModal: React.FC = () => {
-  const { isTicketModalOpen, closeTicketModal, activeTableId } = useApp();
+  const { isTicketModalOpen, cerrarTicketModal, activeTableId } = useApp();
   const [copies, setCopies] = useState(1);
 
   if (!isTicketModalOpen) return null;
@@ -36,7 +36,7 @@ export const TicketModal: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={closeTicketModal}
+            onClick={cerrarTicketModal}
             className="p-1 rounded-lg text-[#8C7D73] hover:text-[#1E110A] hover:bg-stone-100 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -147,7 +147,7 @@ export const TicketModal: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={closeTicketModal}
+              onClick={cerrarTicketModal}
               className="px-4 py-2 text-xs font-semibold text-[#6E5A4E] hover:text-[#1E110A] rounded-xl"
             >
               Cancelar

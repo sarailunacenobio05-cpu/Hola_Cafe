@@ -16,9 +16,9 @@ import { MenuItem } from '../types';
 export const ConfiguracionMenuView: React.FC = () => {
   const { 
     menuItems, 
-    openAddProductModal, 
-    openEditProductModal, 
-    openConfirmEliminarModal,
+    mostrarAddProductModal, 
+    mostrarEditProductModal, 
+    mostrarConfirmEliminarModal,
     setActiveView 
   } = useApp();
 
@@ -182,7 +182,7 @@ export const ConfiguracionMenuView: React.FC = () => {
 
             {/* Nuevo producto button */}
             <button
-              onClick={openAddProductModal}
+              onClick={mostrarAddProductModal}
               className="w-full md:w-auto px-5 py-2.5 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4" />
@@ -236,14 +236,14 @@ export const ConfiguracionMenuView: React.FC = () => {
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
                         <button
-                          onClick={() => openEditProductModal(item)}
+                          onClick={() => mostrarEditProductModal(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-[#e59819] hover:text-[#e59819] text-[#231815] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                         >
                           <Pencil className="w-3.5 h-3.5 text-[#7c6e65]" />
                           <span>Editar</span>
                         </button>
                         <button
-                          onClick={() => openConfirmEliminarModal(item)}
+                          onClick={() => mostrarConfirmEliminarModal(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF5F5] border border-[#FECACA] hover:bg-[#FEE2E2] text-[#DC2626] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

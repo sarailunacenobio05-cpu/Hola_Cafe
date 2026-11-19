@@ -16,9 +16,9 @@ import { User } from '../types';
 export const ConfiguracionUsuariosView: React.FC = () => {
   const { 
     users, 
-    openAddUserModal, 
-    openConfirmBajaModal, 
-    reactivateUser,
+    mostrarAddUserModal, 
+    mostrarConfirmBajaModal, 
+    reactivarUser,
     setActiveView 
   } = useApp();
 
@@ -169,7 +169,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
 
             {/* Nuevo mesero */}
             <button
-              onClick={openAddUserModal}
+              onClick={mostrarAddUserModal}
               className="w-full md:w-auto px-5 py-2.5 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4" />
@@ -231,7 +231,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                       <td className="py-4 px-6 text-right">
                         {user.status === 'ACTIVO' ? (
                           <button
-                            onClick={() => openConfirmBajaModal(user)}
+                            onClick={() => mostrarConfirmBajaModal(user)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF5F5] border border-[#FECACA] hover:bg-[#FEE2E2] text-[#DC2626] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                           >
                             <UserX className="w-3.5 h-3.5" />
@@ -239,7 +239,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => reactivateUser(user.id)}
+                            onClick={() => reactivarUser(user.id)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#e59819] hover:bg-[#d98d12] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />

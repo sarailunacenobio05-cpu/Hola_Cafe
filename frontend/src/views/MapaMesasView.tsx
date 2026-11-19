@@ -19,7 +19,7 @@ export const MapaMesasView: React.FC = () => {
   const { 
     selectTable, 
     setActiveView, 
-    openCobroModal, 
+    mostrarCobroModal, 
     logout 
   } = useApp();
 
@@ -31,7 +31,7 @@ export const MapaMesasView: React.FC = () => {
   };
 
   const handleCobrar = (tableId: string) => {
-    openCobroModal(tableId);
+    mostrarCobroModal(tableId);
   };
 
   return (

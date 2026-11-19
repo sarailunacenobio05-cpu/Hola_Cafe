@@ -49,8 +49,8 @@ export const ComanderoView: React.FC = () => {
     selectTable, 
     setActiveView, 
     logout, 
-    openCobroModal, 
-    openTicketModal 
+    mostrarCobroModal, 
+    mostrarTicketModal 
   } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos (28)');
@@ -496,7 +496,7 @@ export const ComanderoView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => openCobroModal(activeTableId || 'M02')}
+                onClick={() => mostrarCobroModal(activeTableId || 'M02')}
                 className="py-3 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
               >
                 <CreditCard className="w-4 h-4" />
@@ -514,7 +514,7 @@ export const ComanderoView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => openTicketModal(activeTableId || 'M02')}
+                onClick={() => mostrarTicketModal(activeTableId || 'M02')}
                 className="py-2 px-3 bg-white hover:bg-stone-50 border border-[#D5C7BA] rounded-xl text-xs font-bold text-[#1E110A] flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Receipt className="w-3.5 h-3.5 text-[#8C7D73]" />

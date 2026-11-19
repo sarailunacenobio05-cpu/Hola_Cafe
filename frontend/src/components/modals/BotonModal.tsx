@@ -4,7 +4,7 @@ import { X, Radio, Info } from 'lucide-react';
 import { validarRequerido } from '../../utils/validaciones';
 
 export const BotonModal: React.FC = () => {
-  const { isBotonModalOpen, closeAddBotonModal, saveBoton, tables } = useApp();
+  const { isBotonModalOpen, cerrarAddBotonModal, guardarBoton, tables } = useApp();
 
   const [id, setId] = useState('BOT-M17');
   const [idError, setIdError] = useState('');
@@ -30,7 +30,7 @@ export const BotonModal: React.FC = () => {
     setNameError(errName);
     if (errId || errName) return;
 
-    saveBoton({
+    guardarBoton({
       id,
       name,
       tableId
@@ -47,7 +47,7 @@ export const BotonModal: React.FC = () => {
             <p className="text-xs text-stone-500">Registra un dispositivo y asígnalo a una mesa.</p>
           </div>
           <button
-            onClick={closeAddBotonModal}
+            onClick={cerrarAddBotonModal}
             className="p-1 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -150,7 +150,7 @@ export const BotonModal: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={closeAddBotonModal}
+                onClick={cerrarAddBotonModal}
                 className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 rounded-xl"
               >
                 Cancelar

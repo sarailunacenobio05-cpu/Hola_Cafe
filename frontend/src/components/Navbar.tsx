@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({ sectionTitle }) => {
     logout, 
     tables, 
     barAlerts, 
-    dismissBarAlert,
+    descartarAlertaBarra,
     selectTable
   } = useApp();
 
@@ -170,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({ sectionTitle }) => {
                           </span>
                         </div>
                         <button
-                          onClick={() => dismissBarAlert(alert.id)}
+                          onClick={() => descartarAlertaBarra(alert.id)}
                           className="text-[11px] text-rose-700 hover:text-rose-950 font-bold bg-white px-2 py-0.5 rounded border border-rose-200 shadow-xs"
                         >
                           Atender

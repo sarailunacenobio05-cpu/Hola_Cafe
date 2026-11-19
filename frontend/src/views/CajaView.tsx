@@ -18,7 +18,7 @@ interface CorteRow {
 }
 
 export const CajaView: React.FC = () => {
-  const { openTicketModal, setActiveView } = useApp();
+  const { mostrarTicketModal, setActiveView } = useApp();
 
   // Exact 7 records from UI_Caja.pdf
   const cortes: CorteRow[] = [

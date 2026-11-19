@@ -60,9 +60,9 @@ const fmt = (cents: number) => mxn.format(cents / 100);
 export const CobroRapidoModal: React.FC = () => {
   const {
     isCobroModalOpen,
-    closeCobroModal,
-    openTicketModal,
-    releaseTableDirectly,
+    cerrarCobroModal,
+    mostrarTicketModal,
+    liberarMesaDirectamente,
     activeTableId,
     tables,
     currentUser,
@@ -107,11 +107,11 @@ export const CobroRapidoModal: React.FC = () => {
 
   const handleCerrar = () => {
     setPagado(false);
-    closeCobroModal();
+    cerrarCobroModal();
   };
 
   const handleLiberarMesa = () => {
-    if (activeTableId) releaseTableDirectly(activeTableId);
+    if (activeTableId) liberarMesaDirectamente(activeTableId);
     handleCerrar();
   };
 
@@ -414,7 +414,7 @@ export const CobroRapidoModal: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => openTicketModal(activeTableId || 'M04')}
+                onClick={() => mostrarTicketModal(activeTableId || 'M04')}
                 className="py-2.5 px-3 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Printer className="w-4 h-4 text-[#8C7D73]" />

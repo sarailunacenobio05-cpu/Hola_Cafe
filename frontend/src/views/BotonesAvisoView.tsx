@@ -19,7 +19,7 @@ import {
 import { IoTDevice } from '../types';
 
 export const BotonesAvisoView: React.FC = () => {
-  const { iotDevices, openAddBotonModal, setActiveView } = useApp();
+  const { iotDevices, mostrarAddBotonModal, setActiveView } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
@@ -153,7 +153,7 @@ export const BotonesAvisoView: React.FC = () => {
             </div>
 
             <button
-              onClick={openAddBotonModal}
+              onClick={mostrarAddBotonModal}
               className="px-5 py-2.5 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" />

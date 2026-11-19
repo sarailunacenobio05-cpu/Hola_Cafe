@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from './context/AppContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginView } from './views/LoginView';
 import { RecuperarPasswordView } from './views/RecuperarPasswordView';
 import { RegistroView } from './views/RegistroView';
@@ -10,8 +10,8 @@ import { CajaView } from './views/CajaView';
 import { ConfiguracionMenuView } from './views/ConfiguracionMenuView';
 import { ConfiguracionUsuariosView } from './views/ConfiguracionUsuariosView';
 import { BotonesAvisoView } from './views/BotonesAvisoView';
+import { ProtegerRuta } from './routes/ProtegerRuta';
 
-// Modals
 import { CobroRapidoModal } from './components/modals/CobroRapidoModal';
 import { TicketModal } from './components/modals/TicketModal';
 import { ProductoModal } from './components/modals/ProductoModal';
@@ -21,40 +21,74 @@ import { ConfirmarBajaModal } from './components/modals/ConfirmarBajaModal';
 import { ConfirmarEliminarModal } from './components/modals/ConfirmarEliminarModal';
 
 export const App: React.FC = () => {
-  const { activeView } = useApp();
-
-  const renderCurrentView = () => {
-    switch (activeView) {
-      case 'login':
-        return <LoginView />;
-      case 'recuperar-password':
-        return <RecuperarPasswordView />;
-      case 'registro':
-        return <RegistroView />;
-      case 'mapa-mesas':
-        return <MapaMesasView />;
-      case 'comandero':
-        return <ComanderoView />;
-      case 'cocina':
-        return <CocinaKDSView />;
-      case 'caja':
-        return <CajaView />;
-      case 'config-menu':
-        return <ConfiguracionMenuView />;
-      case 'config-usuarios':
-        return <ConfiguracionUsuariosView />;
-      case 'botones-aviso':
-        return <BotonesAvisoView />;
-      default:
-        return <MapaMesasView />;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#2C1810]">
-      {renderCurrentView()}
+      <Routes>
+        <Route path="/login" element={<LoginView />} />
+        <Route path="/recuperar-password" element={<RecuperarPasswordView />} />
+        <Route path="/registro" element={<RegistroView />} />
 
-      {/* Global Application Modals */}
+        <Route
+          path="/mesas"
+          element={
+            <ProtegerRuta rolesPermitidos={['Mesero', 'Administrador']}>
+              <MapaMesasView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/comandero"
+          element={
+            <ProtegerRuta rolesPermitidos={['Mesero', 'Administrador']}>
+              <ComanderoView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/cocina"
+          element={
+            <ProtegerRuta rolesPermitidos={['Cocinero', 'Administrador']}>
+              <CocinaKDSView />
+            </ProtegerRuta>
+          }
+        />
+
+        <Route
+          path="/admin/caja"
+          element={
+            <ProtegerRuta rolesPermitidos={['Administrador']}>
+              <CajaView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/admin/menu"
+          element={
+            <ProtegerRuta rolesPermitidos={['Administrador']}>
+              <ConfiguracionMenuView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/admin/usuarios"
+          element={
+            <ProtegerRuta rolesPermitidos={['Administrador']}>
+              <ConfiguracionUsuariosView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/admin/botones"
+          element={
+            <ProtegerRuta rolesPermitidos={['Administrador']}>
+              <BotonesAvisoView />
+            </ProtegerRuta>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/mesas" replace />} />
+      </Routes>
+
       <CobroRapidoModal />
       <TicketModal />
       <ProductoModal />

@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User,
   MenuItem,
   IoTDevice,
   TableInfo,
-  KitchenTicket,
+  CocinaTicket,
   CashClosingRecord,
   ActiveView,
-  TableOrder,
   OrderItem
 } from '../types';
 import {
@@ -34,105 +34,140 @@ interface AppContextType {
   menuItems: MenuItem[];
   users: User[];
   iotDevices: IoTDevice[];
-  kitchenTickets: KitchenTicket[];
+  CocinaTickets: CocinaTicket[];
   cashClosings: CashClosingRecord[];
   barAlerts: BarAlert[];
-  
-  // Modals
+
   isCobroModalOpen: boolean;
   isTicketModalOpen: boolean;
   isProductoModalOpen: boolean;
-  editingProduct: MenuItem | null;
+  productoEditando: MenuItem | null;
   isUsuarioModalOpen: boolean;
   isBotonModalOpen: boolean;
   isConfirmBajaModalOpen: boolean;
-  userToBaja: User | null;
+  usuarioBaja: User | null;
   isConfirmEliminarModalOpen: boolean;
-  productToDelete: MenuItem | null;
+  productoAEliminar: MenuItem | null;
 
-  // Actions
   login: (username: string, role?: string) => boolean;
   logout: () => void;
   setActiveView: (view: ActiveView) => void;
   selectTable: (tableId: string | null) => void;
-  
-  // Order actions
-  addItemToOrder: (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => void;
-  updateItemQuantity: (tableId: string, itemId: string, delta: number) => void;
-  removeItemFromOrder: (tableId: string, itemId: string) => void;
-  sendOrderToKitchen: (tableId: string) => void;
-  
-  // Kitchen actions
-  updateKitchenTicketStatus: (ticketId: string, newStatus: KitchenTicket['status']) => void;
-  toggleKitchenItemCompleted: (ticketId: string, itemIndex: number) => void;
 
-  // Cashier / Payment actions
-  openCobroModal: (tableId: string) => void;
-  closeCobroModal: () => void;
-  openTicketModal: (tableId: string) => void;
-  closeTicketModal: () => void;
-  processPaymentAndRelease: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi') => void;
-  releaseTableDirectly: (tableId: string) => void;
+  agregarItemToOrder: (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => void;
+  actualizarItemQuantity: (tableId: string, itemId: string, delta: number) => void;
+  eliminarItemFromOrder: (tableId: string, itemId: string) => void;
+  enviarOrdenACocina: (tableId: string) => void;
 
-  // Alerts
-  triggerBarAlert: (tableId: string, message: string) => void;
-  dismissBarAlert: (id: string) => void;
+  actualizarCocinaTicketStatus: (ticketId: string, newStatus: CocinaTicket['status']) => void;
+  alternarItemCocinaCompletado: (ticketId: string, itemIndex: number) => void;
 
-  // Modals controls
-  openAddProductModal: () => void;
-  openEditProductModal: (product: MenuItem) => void;
-  closeProductModal: () => void;
-  saveProduct: (product: Partial<MenuItem>) => void;
-  openConfirmEliminarModal: (product: MenuItem) => void;
-  closeConfirmEliminarModal: () => void;
-  confirmDeleteProduct: () => void;
+  mostrarCobroModal: (tableId: string) => void;
+  cerrarCobroModal: () => void;
+  mostrarTicketModal: (tableId: string) => void;
+  cerrarTicketModal: () => void;
+  procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi') => void;
+  liberarMesaDirectamente: (tableId: string) => void;
 
-  openAddUserModal: () => void;
-  closeAddUserModal: () => void;
-  saveUser: (userData: Partial<User>) => void;
-  openConfirmBajaModal: (user: User) => void;
-  closeConfirmBajaModal: () => void;
-  confirmBajaUser: () => void;
-  reactivateUser: (userId: string) => void;
+  activarAlertaBarra: (tableId: string, message: string) => void;
+  descartarAlertaBarra: (id: string) => void;
 
-  openAddBotonModal: () => void;
-  closeAddBotonModal: () => void;
-  saveBoton: (botonData: Partial<IoTDevice>) => void;
+  mostrarAddProductModal: () => void;
+  mostrarEditProductModal: (product: MenuItem) => void;
+  cerrarProductModal: () => void;
+  guardarProducto: (product: Partial<MenuItem>) => void;
+  mostrarConfirmEliminarModal: (product: MenuItem) => void;
+  cerrarConfirmEliminarModal: () => void;
+  confirmarBorrarProducto: () => void;
+
+  mostrarAddUserModal: () => void;
+  cerrarAddUserModal: () => void;
+  guardarUser: (userData: Partial<User>) => void;
+  mostrarConfirmBajaModal: (user: User) => void;
+  cerrarConfirmBajaModal: () => void;
+  confirmarBajaUser: () => void;
+  reactivarUser: (userId: string) => void;
+
+  mostrarAddBotonModal: () => void;
+  cerrarAddBotonModal: () => void;
+  guardarBoton: (botonData: Partial<IoTDevice>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const VIEW_TO_PATH: Record<ActiveView, string> = {
+  'login': '/login',
+  'recuperar-password': '/recuperar-password',
+  'registro': '/registro',
+  'mapa-mesas': '/mesas',
+  'comandero': '/comandero',
+  'cocina': '/cocina',
+  'caja': '/admin/caja',
+  'config-menu': '/admin/menu',
+  'config-usuarios': '/admin/usuarios',
+  'botones-aviso': '/admin/botones',
+};
+
+const PATH_TO_VIEW: Record<string, ActiveView> = {
+  '/login': 'login',
+  '/recuperar-password': 'recuperar-password',
+  '/registro': 'registro',
+  '/mesas': 'mapa-mesas',
+  '/comandero': 'comandero',
+  '/cocina': 'cocina',
+  '/admin/caja': 'caja',
+  '/admin/menu': 'config-menu',
+  '/admin/usuarios': 'config-usuarios',
+  '/admin/botones': 'botones-aviso',
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Current user defaults to Dante M. (admin) or David Huerta (waiter)
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
-  const [activeView, setActiveView] = useState<ActiveView>('mapa-mesas');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[1]);
+  const [activeView, setActiveViewState] = useState<ActiveView>(
+    PATH_TO_VIEW[location.pathname] || 'mapa-mesas'
+  );
   const [activeTableId, setActiveTableId] = useState<string | null>('M04');
+
+  const setActiveView = (view: ActiveView) => {
+    setActiveViewState(view);
+    const targetPath = VIEW_TO_PATH[view];
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
+
+  useEffect(() => {
+    const matchedView = PATH_TO_VIEW[location.pathname];
+    if (matchedView && matchedView !== activeView) {
+      setActiveViewState(matchedView);
+    }
+  }, [location.pathname]);
 
   const [tables, setTables] = useState<TableInfo[]>(INITIAL_TABLES);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [iotDevices, setIotDevices] = useState<IoTDevice[]>(INITIAL_IOT_DEVICES);
-  const [kitchenTickets, setKitchenTickets] = useState<KitchenTicket[]>(INITIAL_KITCHEN_TICKETS);
+  const [CocinaTickets, setCocinaTickets] = useState<CocinaTicket[]>(INITIAL_KITCHEN_TICKETS);
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
-  
+
   const [barAlerts, setBarAlerts] = useState<BarAlert[]>([
     { id: 'al-1', tableId: 'M04', message: 'Mesa 04 solicita cuenta', time: '14:31' },
     { id: 'al-2', tableId: 'M07', message: 'Mesa 07 solicita mesero', time: '14:28' },
   ]);
 
-  // Modals state
   const [isCobroModalOpen, setIsCobroModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<MenuItem | null>(null);
+  const [productoEditando, setProductoEditando] = useState<MenuItem | null>(null);
   const [isUsuarioModalOpen, setIsUsuarioModalOpen] = useState(false);
   const [isBotonModalOpen, setIsBotonModalOpen] = useState(false);
   const [isConfirmBajaModalOpen, setIsConfirmBajaModalOpen] = useState(false);
-  const [userToBaja, setUserToBaja] = useState<User | null>(null);
+  const [usuarioBaja, setUsuarioBaja] = useState<User | null>(null);
   const [isConfirmEliminarModalOpen, setIsConfirmEliminarModalOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<MenuItem | null>(null);
+  const [productoAEliminar, setProductoAEliminar] = useState<MenuItem | null>(null);
 
-  // Sync devices with tables
   useEffect(() => {
     setTables(prev => prev.map(t => {
       const dev = iotDevices.find(d => d.tableId === t.id);
@@ -147,8 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveView(found.role === 'Cocinero' ? 'cocina' : found.role === 'Administrador' ? 'caja' : 'mapa-mesas');
       return true;
     }
-    // Default fallback to first active user
-    const fallback = users[0];
+    const fallback = users[1] || users[0];
     setCurrentUser(fallback);
     setActiveView('mapa-mesas');
     return true;
@@ -163,7 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTableId(tableId);
   };
 
-  const addItemToOrder = (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => {
+  const agregarItemToOrder = (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => {
     setTables(prevTables => prevTables.map(t => {
       if (t.id !== tableId) return t;
 
@@ -183,7 +217,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
 
-      // Check if item with same option and notes already in order
       const existingIdx = order.items.findIndex(
         i => i.menuItemId === item.id && i.selectedOption === selectedOption && i.notes === notes
       );
@@ -217,7 +250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const updateItemQuantity = (tableId: string, itemId: string, delta: number) => {
+  const actualizarItemQuantity = (tableId: string, itemId: string, delta: number) => {
     setTables(prev => prev.map(t => {
       if (t.id !== tableId || !t.currentOrder) return t;
       const newItems = t.currentOrder.items.map(item => {
@@ -238,7 +271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const removeItemFromOrder = (tableId: string, itemId: string) => {
+  const eliminarItemFromOrder = (tableId: string, itemId: string) => {
     setTables(prev => prev.map(t => {
       if (t.id !== tableId || !t.currentOrder) return t;
       return {
@@ -251,12 +284,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const sendOrderToKitchen = (tableId: string) => {
+  const enviarOrdenACocina = (tableId: string) => {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder || table.currentOrder.items.length === 0) return;
 
-    // Create KDS ticket
-    const newKitchenTicket: KitchenTicket = {
+    const ticketNuevoCocina: CocinaTicket = {
       id: `k-${Date.now()}`,
       orderFolio: table.currentOrder.folio,
       tableId,
@@ -276,7 +308,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }))
     };
 
-    setKitchenTickets(prev => [newKitchenTicket, ...prev]);
+    setCocinaTickets(prev => [ticketNuevoCocina, ...prev]);
 
     setTables(prev => prev.map(t => {
       if (t.id !== tableId || !t.currentOrder) return t;
@@ -291,14 +323,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const updateKitchenTicketStatus = (ticketId: string, newStatus: KitchenTicket['status']) => {
-    setKitchenTickets(prev => prev.map(k => {
+  const actualizarCocinaTicketStatus = (ticketId: string, newStatus: CocinaTicket['status']) => {
+    setCocinaTickets(prev => prev.map(k => {
       if (k.id !== ticketId) return k;
       return { ...k, status: newStatus };
     }));
 
-    // If marked as list, update table status
-    const ticket = kitchenTickets.find(k => k.id === ticketId);
+    const ticket = CocinaTickets.find(k => k.id === ticketId);
     if (ticket && (newStatus === 'Listas' || newStatus === 'Entregadas')) {
       setTables(prev => prev.map(t => {
         if (t.id === ticket.tableId) {
@@ -312,8 +343,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleKitchenItemCompleted = (ticketId: string, itemIndex: number) => {
-    setKitchenTickets(prev => prev.map(k => {
+  const alternarItemCocinaCompletado = (ticketId: string, itemIndex: number) => {
+    setCocinaTickets(prev => prev.map(k => {
       if (k.id !== ticketId) return k;
       const updated = [...k.items];
       updated[itemIndex] = {
@@ -324,29 +355,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const openCobroModal = (tableId: string) => {
+  const mostrarCobroModal = (tableId: string) => {
     setActiveTableId(tableId);
     setIsCobroModalOpen(true);
   };
 
-  const closeCobroModal = () => {
+  const cerrarCobroModal = () => {
     setIsCobroModalOpen(false);
   };
 
-  const openTicketModal = (tableId: string) => {
+  const mostrarTicketModal = (tableId: string) => {
     setActiveTableId(tableId);
     setIsTicketModalOpen(true);
   };
 
-  const closeTicketModal = () => {
+  const cerrarTicketModal = () => {
     setIsTicketModalOpen(false);
   };
 
-  const processPaymentAndRelease = (
+  const procesarPagoYLiberar = (
     tableId: string,
     discount: number,
     tipPercent: number,
-    method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi'
+    _method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi'
   ) => {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder) return;
@@ -354,9 +385,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const subtotal = table.currentOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const discounted = subtotal * (1 - discount / 100);
     const tip = discounted * (tipPercent / 100);
-    const total = discounted + tip;
+    void (discounted + tip);
 
-    // Update table
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
       return {
@@ -369,12 +399,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }));
 
-    // Remove any alert for this table
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
-    closeCobroModal();
+    cerrarCobroModal();
   };
 
-  const releaseTableDirectly = (tableId: string) => {
+  const liberarMesaDirectamente = (tableId: string) => {
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
       return {
@@ -389,7 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
   };
 
-  const triggerBarAlert = (tableId: string, message: string) => {
+  const activarAlertaBarra = (tableId: string, message: string) => {
     const newAlert: BarAlert = {
       id: `al-${Date.now()}`,
       tableId,
@@ -410,29 +439,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const dismissBarAlert = (id: string) => {
+  const descartarAlertaBarra = (id: string) => {
     setBarAlerts(prev => prev.filter(a => a.id !== id));
   };
 
-  // Menu Product CRUD
-  const openAddProductModal = () => {
-    setEditingProduct(null);
+  const mostrarAddProductModal = () => {
+    setProductoEditando(null);
     setIsProductoModalOpen(true);
   };
 
-  const openEditProductModal = (product: MenuItem) => {
-    setEditingProduct(product);
+  const mostrarEditProductModal = (product: MenuItem) => {
+    setProductoEditando(product);
     setIsProductoModalOpen(true);
   };
 
-  const closeProductModal = () => {
+  const cerrarProductModal = () => {
     setIsProductoModalOpen(false);
-    setEditingProduct(null);
+    setProductoEditando(null);
   };
 
-  const saveProduct = (productData: Partial<MenuItem>) => {
-    if (editingProduct) {
-      setMenuItems(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...productData } as MenuItem : p));
+  const guardarProducto = (productData: Partial<MenuItem>) => {
+    if (productoEditando) {
+      setMenuItems(prev => prev.map(p => p.id === productoEditando.id ? { ...p, ...productData } as MenuItem : p));
     } else {
       const newProduct: MenuItem = {
         id: `prod-${Date.now()}`,
@@ -446,36 +474,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setMenuItems(prev => [newProduct, ...prev]);
     }
-    closeProductModal();
+    cerrarProductModal();
   };
 
-  const openConfirmEliminarModal = (product: MenuItem) => {
-    setProductToDelete(product);
+  const mostrarConfirmEliminarModal = (product: MenuItem) => {
+    setProductoAEliminar(product);
     setIsConfirmEliminarModalOpen(true);
   };
 
-  const closeConfirmEliminarModal = () => {
+  const cerrarConfirmEliminarModal = () => {
     setIsConfirmEliminarModalOpen(false);
-    setProductToDelete(null);
+    setProductoAEliminar(null);
   };
 
-  const confirmDeleteProduct = () => {
-    if (productToDelete) {
-      setMenuItems(prev => prev.filter(p => p.id !== productToDelete.id));
+  const confirmarBorrarProducto = () => {
+    if (productoAEliminar) {
+      setMenuItems(prev => prev.filter(p => p.id !== productoAEliminar.id));
     }
-    closeConfirmEliminarModal();
+    cerrarConfirmEliminarModal();
   };
 
-  // User CRUD
-  const openAddUserModal = () => {
+  const mostrarAddUserModal = () => {
     setIsUsuarioModalOpen(true);
   };
 
-  const closeAddUserModal = () => {
+  const cerrarAddUserModal = () => {
     setIsUsuarioModalOpen(false);
   };
 
-  const saveUser = (userData: Partial<User>) => {
+  const guardarUser = (userData: Partial<User>) => {
     const names = (userData.name || 'Nuevo Usuario').split(' ');
     const initials = names.map(n => n[0]).join('').substring(0, 2).toUpperCase();
     const newUser: User = {
@@ -489,40 +516,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'ACTIVO'
     };
     setUsers(prev => [newUser, ...prev]);
-    closeAddUserModal();
+    cerrarAddUserModal();
   };
 
-  const openConfirmBajaModal = (user: User) => {
-    setUserToBaja(user);
+  const mostrarConfirmBajaModal = (user: User) => {
+    setUsuarioBaja(user);
     setIsConfirmBajaModalOpen(true);
   };
 
-  const closeConfirmBajaModal = () => {
+  const cerrarConfirmBajaModal = () => {
     setIsConfirmBajaModalOpen(false);
-    setUserToBaja(null);
+    setUsuarioBaja(null);
   };
 
-  const confirmBajaUser = () => {
-    if (userToBaja) {
-      setUsers(prev => prev.map(u => u.id === userToBaja.id ? { ...u, status: 'BAJA' } : u));
+  const confirmarBajaUser = () => {
+    if (usuarioBaja) {
+      setUsers(prev => prev.map(u => u.id === usuarioBaja.id ? { ...u, status: 'BAJA' } : u));
     }
-    closeConfirmBajaModal();
+    cerrarConfirmBajaModal();
   };
 
-  const reactivateUser = (userId: string) => {
+  const reactivarUser = (userId: string) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'ACTIVO' } : u));
   };
 
-  // IoT Button Modal
-  const openAddBotonModal = () => {
+  const mostrarAddBotonModal = () => {
     setIsBotonModalOpen(true);
   };
 
-  const closeAddBotonModal = () => {
+  const cerrarAddBotonModal = () => {
     setIsBotonModalOpen(false);
   };
 
-  const saveBoton = (botonData: Partial<IoTDevice>) => {
+  const guardarBoton = (botonData: Partial<IoTDevice>) => {
     const newBoton: IoTDevice = {
       id: botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`,
       name: botonData.name || 'Botón de Mesa',
@@ -532,7 +558,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastConnection: 'Hace unos segundos'
     };
     setIotDevices(prev => [newBoton, ...prev]);
-    closeAddBotonModal();
+    cerrarAddBotonModal();
   };
 
   return (
@@ -545,54 +571,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         menuItems,
         users,
         iotDevices,
-        kitchenTickets,
+        CocinaTickets,
         cashClosings,
         barAlerts,
         isCobroModalOpen,
         isTicketModalOpen,
         isProductoModalOpen,
-        editingProduct,
+        productoEditando,
         isUsuarioModalOpen,
         isBotonModalOpen,
         isConfirmBajaModalOpen,
-        userToBaja,
+        usuarioBaja,
         isConfirmEliminarModalOpen,
-        productToDelete,
+        productoAEliminar,
         login,
         logout,
         setActiveView,
         selectTable,
-        addItemToOrder,
-        updateItemQuantity,
-        removeItemFromOrder,
-        sendOrderToKitchen,
-        updateKitchenTicketStatus,
-        toggleKitchenItemCompleted,
-        openCobroModal,
-        closeCobroModal,
-        openTicketModal,
-        closeTicketModal,
-        processPaymentAndRelease,
-        releaseTableDirectly,
-        triggerBarAlert,
-        dismissBarAlert,
-        openAddProductModal,
-        openEditProductModal,
-        closeProductModal,
-        saveProduct,
-        openConfirmEliminarModal,
-        closeConfirmEliminarModal,
-        confirmDeleteProduct,
-        openAddUserModal,
-        closeAddUserModal,
-        saveUser,
-        openConfirmBajaModal,
-        closeConfirmBajaModal,
-        confirmBajaUser,
-        reactivateUser,
-        openAddBotonModal,
-        closeAddBotonModal,
-        saveBoton,
+        agregarItemToOrder,
+        actualizarItemQuantity,
+        eliminarItemFromOrder,
+        enviarOrdenACocina,
+        actualizarCocinaTicketStatus,
+        alternarItemCocinaCompletado,
+        mostrarCobroModal,
+        cerrarCobroModal,
+        mostrarTicketModal,
+        cerrarTicketModal,
+        procesarPagoYLiberar,
+        liberarMesaDirectamente,
+        activarAlertaBarra,
+        descartarAlertaBarra,
+        mostrarAddProductModal,
+        mostrarEditProductModal,
+        cerrarProductModal,
+        guardarProducto,
+        mostrarConfirmEliminarModal,
+        cerrarConfirmEliminarModal,
+        confirmarBorrarProducto,
+        mostrarAddUserModal,
+        cerrarAddUserModal,
+        guardarUser,
+        mostrarConfirmBajaModal,
+        cerrarConfirmBajaModal,
+        confirmarBajaUser,
+        reactivarUser,
+        mostrarAddBotonModal,
+        cerrarAddBotonModal,
+        guardarBoton,
       }}
     >
       {children}
@@ -603,7 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error('useApp debe usarse dentro de un AppProvider');
   }
   return context;
 };

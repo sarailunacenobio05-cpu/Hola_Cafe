@@ -2,9 +2,9 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 
 export const ConfirmarEliminarModal: React.FC = () => {
-  const { isConfirmEliminarModalOpen, closeConfirmEliminarModal, confirmDeleteProduct, productToDelete } = useApp();
+  const { isConfirmEliminarModalOpen, cerrarConfirmEliminarModal, confirmarBorrarProducto, productoAEliminar } = useApp();
 
-  if (!isConfirmEliminarModalOpen || !productToDelete) return null;
+  if (!isConfirmEliminarModalOpen || !productoAEliminar) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
@@ -20,23 +20,22 @@ export const ConfirmarEliminarModal: React.FC = () => {
               Eliminar producto
             </h3>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">
-              El producto <strong>{productToDelete.name}</strong> se quitará del menú, del comandero y de la cocina. Las comandas y tickets anteriores no cambian. Si solo quieres dejar de venderlo por ahora, márcalo como Agotado u Oculto.
+              El producto <strong>{productoAEliminar.name}</strong> se quitará del menú, del comandero y de la cocina. Las comandas y tickets anteriores no cambian. Si solo quieres dejar de venderlo por ahora, márcalo como Agotado u Oculto.
             </p>
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="mt-6 pt-4 border-t border-stone-100 flex items-center justify-end gap-2.5">
           <button
             type="button"
-            onClick={closeConfirmEliminarModal}
+            onClick={cerrarConfirmEliminarModal}
             className="px-4 py-2 text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
-            onClick={confirmDeleteProduct}
+            onClick={confirmarBorrarProducto}
             className="px-5 py-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
           >
             Eliminar

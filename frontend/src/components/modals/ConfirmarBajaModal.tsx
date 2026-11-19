@@ -3,9 +3,9 @@ import { useApp } from '../../context/AppContext';
 import { AlertCircle } from 'lucide-react';
 
 export const ConfirmarBajaModal: React.FC = () => {
-  const { isConfirmBajaModalOpen, closeConfirmBajaModal, confirmBajaUser, userToBaja } = useApp();
+  const { isConfirmBajaModalOpen, cerrarConfirmBajaModal, confirmarBajaUser, usuarioBaja } = useApp();
 
-  if (!isConfirmBajaModalOpen || !userToBaja) return null;
+  if (!isConfirmBajaModalOpen || !usuarioBaja) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
@@ -21,23 +21,22 @@ export const ConfirmarBajaModal: React.FC = () => {
               Dar de baja al mesero
             </h3>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">
-              El usuario <strong>{userToBaja.name}</strong> perderá el acceso al sistema de inmediato. Sus comandas y tickets se conservan en el historial y podrás reactivarlo cuando quieras.
+              El usuario <strong>{usuarioBaja.name}</strong> perderá el acceso al sistema de inmediato. Sus comandas y tickets se conservan en el historial y podrás reactivarlo cuando quieras.
             </p>
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="mt-6 pt-4 border-t border-stone-100 flex items-center justify-end gap-2.5">
           <button
             type="button"
-            onClick={closeConfirmBajaModal}
+            onClick={cerrarConfirmBajaModal}
             className="px-4 py-2 text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
-            onClick={confirmBajaUser}
+            onClick={confirmarBajaUser}
             className="px-5 py-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
           >
             Dar de baja

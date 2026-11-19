@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { validarRequerido, validarPrecio } from '../../utils/validaciones';
 
 export const ProductoModal: React.FC = () => {
-  const { isProductoModalOpen, closeProductModal, editingProduct, saveProduct } = useApp();
+  const { isProductoModalOpen, cerrarProductModal, productoEditando, guardarProducto } = useApp();
 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
@@ -18,14 +18,14 @@ export const ProductoModal: React.FC = () => {
   const [allowKitchenNotes, setAllowKitchenNotes] = useState(true);
 
   useEffect(() => {
-    if (editingProduct) {
-      setName(editingProduct.name);
-      setCategory(editingProduct.category);
-      setDescription(editingProduct.description);
-      setPrice(editingProduct.price.toString());
-      setStatus(editingProduct.status);
-      setOptions(editingProduct.options || []);
-      setAllowKitchenNotes(editingProduct.allowKitchenNotes ?? true);
+    if (productoEditando) {
+      setName(productoEditando.name);
+      setCategory(productoEditando.category);
+      setDescription(productoEditando.description);
+      setPrice(productoEditando.price.toString());
+      setStatus(productoEditando.status);
+      setOptions(productoEditando.options || []);
+      setAllowKitchenNotes(productoEditando.allowKitchenNotes ?? true);
     } else {
       setName('Cold Brew');
       setCategory('Bebidas frías');
@@ -37,7 +37,7 @@ export const ProductoModal: React.FC = () => {
     }
     setNameError('');
     setPriceError('');
-  }, [editingProduct, isProductoModalOpen]);
+  }, [productoEditando, isProductoModalOpen]);
 
   if (!isProductoModalOpen) return null;
 
@@ -60,7 +60,7 @@ export const ProductoModal: React.FC = () => {
     setPriceError(errPrice);
     if (errName || errPrice) return;
 
-    saveProduct({
+    guardarProducto({
       name,
       category,
       description,
@@ -78,14 +78,14 @@ export const ProductoModal: React.FC = () => {
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-stone-900 text-base">
-              {editingProduct ? 'Editar producto' : 'Nuevo producto'}
+              {productoEditando ? 'Editar producto' : 'Nuevo producto'}
             </h3>
             <p className="text-xs text-stone-500">
-              {editingProduct ? 'Modifica los datos del platillo o bebida' : 'Agrega un producto al menú'}
+              {productoEditando ? 'Modifica los datos del platillo o bebida' : 'Agrega un producto al menú'}
             </p>
           </div>
           <button
-            onClick={closeProductModal}
+            onClick={cerrarProductModal}
             className="p-1 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -250,7 +250,7 @@ export const ProductoModal: React.FC = () => {
           <div className="pt-4 border-t border-stone-100 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={closeProductModal}
+              onClick={cerrarProductModal}
               className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 rounded-xl"
             >
               Cancelar

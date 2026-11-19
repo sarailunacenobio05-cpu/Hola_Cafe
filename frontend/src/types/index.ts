@@ -94,6 +94,8 @@ export interface KitchenTicket {
   status: 'Nuevas' | 'En preparación' | 'Listas' | 'Entregadas';
 }
 
+export type CocinaTicket = KitchenTicket;
+
 export interface CashClosingRecord {
   id: string;
   folio: string;
