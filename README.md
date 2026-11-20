@@ -29,9 +29,8 @@ Según lo estipulado en la rúbrica, se proporcionan credenciales fijas para que
 | :--- | :--- | :--- | :--- |
 | **Administrador** | `admin@holacafe.com` | `HolaCafe#2026` | Acceso total, gestión de usuarios, catálogo, cortes y métricas |
 | **Mesero** | `dhuerta@holacafe.com` | `HolaCafe#2026` | Comandero, asignación de mesas y atención de alertas |
-| **Cocinero** | `cocina@holacafe.com` | `HolaCafe#2026` | Pantalla de producción (KDS) y marcado de platillos |
-| **Cajero** | `caja@holacafe.com` | `HolaCafe#2026` | Cobro rápido de cuentas y cortes de caja |
-| **Cliente** | `cliente@holacafe.com` | `HolaCafe#2026` | Consulta de menú y seguimiento de ticket digital |
+| **Cocinero** | `cocina@holacafe.com` | `HolaCafe#2026` | Pantalla de producción y marcado de platillos |
+
 
 ---
 
