@@ -131,6 +131,7 @@ export type ActiveView =
   | 'comandero'
   | 'cocina'
   | 'caja'
+  | 'revision-tickets'
   | 'config-menu'
   | 'config-usuarios'
   | 'botones-aviso';

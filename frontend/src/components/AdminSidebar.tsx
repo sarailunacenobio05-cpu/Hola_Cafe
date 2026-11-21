@@ -7,7 +7,8 @@ import {
   Store, 
   Users, 
   Settings, 
-  LogOut 
+  LogOut,
+  ReceiptText
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -29,6 +30,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentSubTitle }) =
       icon: <Store className="w-4 h-4" />
     },
     {
+      view: 'revision-tickets',
+      label: 'Revisión de tickets',
+      icon: <ReceiptText className="w-4 h-4" />
+    },
+    {
       view: 'config-usuarios',
       label: 'Usuarios',
       icon: <Users className="w-4 h-4" />
@@ -45,6 +51,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentSubTitle }) =
     switch (activeView) {
       case 'botones-aviso': return 'BOTONES DE AVISO';
       case 'caja': return 'CAJA';
+      case 'revision-tickets': return 'REVISIÓN DE TICKETS';
       case 'config-usuarios': return 'USUARIOS';
       case 'config-menu': return 'MENÚ';
       default: return 'CAJA';
