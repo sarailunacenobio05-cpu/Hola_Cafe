@@ -1,5 +1,5 @@
 -- HOLA CAFÉ - MIGRACIÓN INICIAL V1 DDL DE BASE DE DATOS
--- Motor: MySQL (InnoDB, UTF-8 Multibyte)
+-- Motor: MySQL
 
 -- 1. TABLA ROLES
 CREATE TABLE roles (
@@ -61,8 +61,8 @@ CREATE TABLE mesas (
     CONSTRAINT fk_mesas_mesero FOREIGN KEY (mesero_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. TABLA DISPOSITIVOS_IOT
-CREATE TABLE dispositivos_iot (
+-- 7. TABLA BOTONES
+CREATE TABLE botones (
     id VARCHAR(50) PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     mesa_id VARCHAR(20) NULL,
@@ -78,7 +78,7 @@ CREATE TABLE alertas (
     mesa_id VARCHAR(20) NOT NULL,
     usuario_id VARCHAR(36) NULL,
     estado TINYINT(1) NOT NULL DEFAULT 1,
-    CONSTRAINT fk_alertas_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES dispositivos_iot(id) ON DELETE CASCADE,
+    CONSTRAINT fk_alertas_dispositivo FOREIGN KEY (dispositivo_id) REFERENCES botones(id) ON DELETE CASCADE,
     CONSTRAINT fk_alertas_mesa FOREIGN KEY (mesa_id) REFERENCES mesas(id) ON DELETE CASCADE,
     CONSTRAINT fk_alertas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,6 +1,6 @@
 -- HOLA CAFÉ - MIGRACIÓN DE DATOS DE PRUEBA V2
--- Mínimo 10 a 15 registros por tabla principal
--- Contraseñas hasheadas con BCrypt (Contraseña de prueba: HolaCafe#2026)
+-- Pruebas de 10 a 15 registros por tabla principal
+-- Contraseñas hasheadas con BCrypt
 
 -- 1. ROLES
 INSERT INTO roles (id, nombre) VALUES
@@ -106,8 +106,8 @@ INSERT INTO mesas (id, numero, capacidad, estado, mesero_id) VALUES
 ('M08', 8, 4, 'Reservada', 'u-3'),
 ('M09', 9, 8, 'En Preparación', 'u-4');
 
--- 7. DISPOSITIVOS_IOT 
-INSERT INTO dispositivos_iot (id, nombre, mesa_id, bateria, estado) VALUES
+-- 7. BOTONES 
+INSERT INTO botones (id, nombre, mesa_id, bateria, estado) VALUES
 ('BOT-M01', 'Botón de Mesa 01', 'M01', 92, 'En línea'),
 ('BOT-M02', 'Botón de Mesa 02', 'M02', 98, 'En línea'),
 ('BOT-M03', 'Botón de Mesa 03', 'M03', 85, 'En línea'),
