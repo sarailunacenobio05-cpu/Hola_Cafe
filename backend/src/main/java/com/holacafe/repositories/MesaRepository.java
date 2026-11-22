@@ -9,9 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface MesaRepository extends JpaRepository<Mesa, String> {
-    Optional<Mesa> findByNumero(Integer numero);
+    Optional<Mesa> buscarPorNumero(Integer numero);
 
-    List<Mesa> findByEstado(String estado);
+    List<Mesa> buscarPorEstado(String estado);
 
-    List<Mesa> findByMeseroId(String meseroId);
+    List<Mesa> buscarPorMeseroId(String meseroId);
 }

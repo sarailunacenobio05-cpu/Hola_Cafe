@@ -8,9 +8,9 @@ import java.util.List;
 
 @Repository
 public interface ProductoMenuRepository extends JpaRepository<ProductoMenu, String> {
-    List<ProductoMenu> findByEstado(String estado);
+    List<ProductoMenu> buscarPorEstado(String estado);
 
-    List<ProductoMenu> findByCategoriaId(Integer categoriaId);
+    List<ProductoMenu> buscarPorCategoriaId(Integer categoriaId);
 
-    List<ProductoMenu> findByNombreContainingIgnoreCase(String nombre);
+    List<ProductoMenu> buscarPorNombreContainingIgnoreCase(String nombre);
 }
