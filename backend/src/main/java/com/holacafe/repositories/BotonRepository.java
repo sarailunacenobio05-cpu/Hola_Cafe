@@ -9,9 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface BotonRepository extends JpaRepository<Boton, String> {
-    Optional<Boton> buscarPorMesaId(String mesaId);
+    Optional<Boton> findByMesaId(String mesaId);
 
-    List<Boton> buscarPorEstado(String estado);
+    List<Boton> findByEstado(String estado);
 
-    List<Boton> buscarPorBateriaMenorQue(Integer bateria);
+    List<Boton> findByBateriaLessThan(Integer bateria);
 }

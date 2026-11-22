@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface TicketCocinaRepository extends JpaRepository<TicketCocina, String> {
-    Optional<TicketCocina> buscarPorOrdenId(String ordenId);
+    Optional<TicketCocina> findByOrdenId(String ordenId);
 
-    List<TicketCocina> buscarPorEstado(String estado);
+    List<TicketCocina> findByEstado(String estado);
 }

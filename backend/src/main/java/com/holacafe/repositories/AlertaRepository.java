@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface AlertaRepository extends JpaRepository<Alerta, Integer> {
-    List<Alerta> buscarPorEstadoTrue();
+    List<Alerta> findByEstadoTrue();
 
-    List<Alerta> buscarPorMesaId(String mesaId);
+    List<Alerta> findByMesaId(String mesaId);
 }

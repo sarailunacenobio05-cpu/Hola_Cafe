@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface CorteCajaRepository extends JpaRepository<CorteCaja, String> {
-    List<CorteCaja> buscarPorResponsableId(String responsableId);
+    List<CorteCaja> findByResponsableId(String responsableId);
 }

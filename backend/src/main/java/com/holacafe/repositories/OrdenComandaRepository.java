@@ -9,13 +9,13 @@ import java.util.Optional;
 
 @Repository
 public interface OrdenComandaRepository extends JpaRepository<OrdenComanda, String> {
-    Optional<OrdenComanda> buscarPorFolio(Integer folio);
+    Optional<OrdenComanda> findByFolio(Integer folio);
 
-    List<OrdenComanda> buscarPorMesaId(String mesaId);
+    List<OrdenComanda> findByMesaId(String mesaId);
 
-    List<OrdenComanda> buscarPorEstado(String estado);
+    List<OrdenComanda> findByEstado(String estado);
 
-    List<OrdenComanda> buscarPorMeseroId(String meseroId);
+    List<OrdenComanda> findByMeseroId(String meseroId);
 
-    Optional<OrdenComanda> buscarPorMesaIdYEstadoNo(String mesaId, String estado);
+    Optional<OrdenComanda> findByMesaIdAndEstadoNot(String mesaId, String estado);
 }

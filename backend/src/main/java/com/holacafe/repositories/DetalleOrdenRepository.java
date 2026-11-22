@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface DetalleOrdenRepository extends JpaRepository<DetalleOrden, Integer> {
-    List<DetalleOrden> buscarPorOrdenId(String ordenId);
+    List<DetalleOrden> findByOrdenId(String ordenId);
 
-    List<DetalleOrden> buscarPorCompletadoFalso();
+    List<DetalleOrden> findByCompletadoFalse();
 }
