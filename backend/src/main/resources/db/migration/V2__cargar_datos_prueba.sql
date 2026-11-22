@@ -131,11 +131,11 @@ INSERT INTO cortes_caja (folio, responsable_id, total_ventas, monto_efectivo, mo
 ('CORTE-2026-1105', 'u-admin', 16840.00, 6420.00, 10420.00, 0.00, 42, 'Cierre sin diferencias', '2026-11-05 22:30:00');
 
 -- 10. ORDENES_COMANDAS
-INSERT INTO ordenes_comandas (id, folio, mesa_id, mesero_id, corte_caja_id, estado, subtotal, descuento_porcentaje, propina, total, metodo_pago, monto_pagado, cambio, telefono, fecha) VALUES
-('ord-101', 1035, 'M01', 'u-1', NULL, 'Enviada', 260.00, 0.00, 26.00, 286.00, NULL, NULL, NULL, '+525512345678', NOW()),
-('ord-102', 1037, 'M02', 'u-2', NULL, 'En preparación', 360.00, 0.00, 36.00, 396.00, NULL, NULL, NULL, NULL, NOW()),
-('ord-104', 1039, 'M04', 'u-2', NULL, 'Por Cobrar', 980.00, 10.00, 88.20, 970.20, 'Terminal Bancaria', 970.20, 0.00, '+525598765432', NOW()),
-('ord-105', 1040, 'M05', 'u-4', NULL, 'Lista', 585.00, 0.00, 58.50, 643.50, NULL, NULL, NULL, NULL, NOW());
+INSERT INTO ordenes_comandas (id, folio, mesa_id, mesero_id, corte_caja_id, estado, subtotal, descuento_porcentaje, propina, total, metodo_pago, monto_pagado, cambio, telefono, revisado, fecha) VALUES
+('ord-101', 1035, 'M01', 'u-1', NULL, 'Enviada', 260.00, 0.00, 26.00, 286.00, NULL, NULL, NULL, '+525512345678', 0, NOW()),
+('ord-102', 1037, 'M02', 'u-2', NULL, 'En preparación', 320.00, 0.00, 32.00, 352.00, NULL, NULL, NULL, NULL, 0, NOW()),
+('ord-104', 1039, 'M04', 'u-2', NULL, 'Por Cobrar', 570.00, 10.00, 51.30, 564.30, 'Terminal Bancaria', 564.30, 0.00, '+525598765432', 1, NOW()),
+('ord-105', 1040, 'M05', 'u-4', NULL, 'Lista', 645.00, 0.00, 64.50, 709.50, NULL, NULL, NULL, NULL, 0, NOW());
 
 -- 11. DETALLES_ORDEN
 INSERT INTO detalles_orden (id, orden_id, producto_id, opcion_id, cantidad, precio_unitario, subtotal, notas, completado) VALUES

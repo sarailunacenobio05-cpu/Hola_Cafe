@@ -63,6 +63,9 @@ public class OrdenComanda {
     private String telefono;
 
     @Column(nullable = false)
+    private Boolean revisado = false;
+
+    @Column(nullable = false)
     private LocalDateTime fecha;
 
     @OneToMany(mappedBy = "orden", cascade = CascadeType.ALL, orphanRemoval = true)

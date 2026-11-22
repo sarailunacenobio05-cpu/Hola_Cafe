@@ -127,6 +127,7 @@ CREATE TABLE ordenes_comandas (
     monto_pagado DECIMAL(10,2) NULL,
     cambio DECIMAL(10,2) NULL,
     telefono VARCHAR(20) NULL,
+    revisado TINYINT(1) NOT NULL DEFAULT 0,
     fecha DATETIME NOT NULL,
     CONSTRAINT fk_ordenes_mesa FOREIGN KEY (mesa_id) REFERENCES mesas(id),
     CONSTRAINT fk_ordenes_mesero FOREIGN KEY (mesero_id) REFERENCES usuarios(id),
