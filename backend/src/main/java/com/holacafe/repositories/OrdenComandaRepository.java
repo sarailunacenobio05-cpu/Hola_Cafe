@@ -4,6 +4,7 @@ import com.holacafe.model.OrdenComanda;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,6 @@ public interface OrdenComandaRepository extends JpaRepository<OrdenComanda, Stri
     List<OrdenComanda> findByMeseroId(String meseroId);
 
     Optional<OrdenComanda> findByMesaIdAndEstadoNot(String mesaId, String estado);
+
+    List<OrdenComanda> findByFechaBetweenOrderByFechaDesc(LocalDateTime inicio, LocalDateTime fin);
 }
