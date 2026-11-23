@@ -14,6 +14,8 @@ public interface OrdenComandaRepository extends JpaRepository<OrdenComanda, Stri
 
     List<OrdenComanda> findByMesaId(String mesaId);
 
+    List<OrdenComanda> findByMesaIdOrderByFechaDesc(String mesaId);
+
     List<OrdenComanda> findByEstado(String estado);
 
     List<OrdenComanda> findByMeseroId(String meseroId);

@@ -13,8 +13,6 @@ public class MesaResponse {
     private Integer numero;
     private Integer capacidad;
     private String estado;
-    private Integer posicionX;
-    private Integer posicionY;
     private String meseroId;
     private String meseroNombre;
     private String comandaActivaId;
