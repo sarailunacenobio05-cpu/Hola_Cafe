@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "dispositivos_iot")
+@Table(name = "botones")
 @Getter
 @Setter
 @NoArgsConstructor

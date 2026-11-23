@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(respuesta);
     }
 
-    // 500 Internal Server Error: Errores no controlados
+    // 500 Errores del servidor
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> manejarErrorGeneral(Exception ex, HttpServletRequest request) {
         ErrorResponse respuesta = new ErrorResponse(

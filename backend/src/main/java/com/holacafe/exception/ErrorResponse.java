@@ -17,7 +17,7 @@ public class ErrorResponse {
     private String message;
     private String path;
     private LocalDateTime timestamp = LocalDateTime.now();
-    private Map<String, String> validaciones; // Para errores de @Valid en inputs
+    private Map<String, String> validaciones;
 
     public ErrorResponse(int status, String error, String message, String path) {
         this.status = status;

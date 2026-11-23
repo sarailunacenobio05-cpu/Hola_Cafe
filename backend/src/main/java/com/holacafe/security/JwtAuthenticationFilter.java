@@ -35,7 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (correo != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             Usuario usuario = usuarioRepository.findByCorreo(correo).orElse(null);
             if (usuario != null && jwtService.esTokenValido(jwt, usuario.getCorreo())) {
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(usuario.getRol().getNombre());
+                String rol = jwtService.extraerRol(jwt);
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
+                        rol != null ? rol : usuario.getRol().getNombre());
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         usuario,
                         null,
