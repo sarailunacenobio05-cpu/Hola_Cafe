@@ -21,3 +21,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 *.local
+
+application.properties
+application.properties.example
