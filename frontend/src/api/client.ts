@@ -11,7 +11,7 @@ export interface ApiErrorResponse {
 }
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -19,7 +19,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY) || sessionStorage.getItem(TOKEN_STORAGE_KEY);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }

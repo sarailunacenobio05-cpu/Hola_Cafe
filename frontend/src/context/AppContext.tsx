@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { authService, UsuarioDTO } from '../api/authService';
@@ -63,7 +64,7 @@ interface AppContextType {
   isConfirmEliminarModalOpen: boolean;
   productoAEliminar: MenuItem | null;
 
-  login: (correo: string, password: string) => Promise<boolean>;
+  login: (correo: string, password: string, remember?: boolean) => Promise<boolean>;
   logout: () => void;
   setActiveView: (view: ActiveView) => void;
   selectTable: (tableId: string | null) => void;
@@ -140,11 +141,40 @@ const PATH_TO_VIEW: Record<string, ActiveView> = {
   '/admin/usuarios': 'config-usuarios',
   '/admin/botones': 'botones-aviso',
 };
+function adaptarUsuarioBackend(backendUser: UsuarioDTO): User {
+  const initials =
+    backendUser.nombre
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase() || 'HC';
 
+  return {
+    id: backendUser.id,
+    name: backendUser.nombre,
+    initials,
+    username: backendUser.correo,
+    role:
+      backendUser.rol === 'ROLE_ADMINISTRADOR'
+        ? 'Administrador'
+        : backendUser.rol === 'ROLE_COCINERO'
+          ? 'Cocinero'
+          : 'Mesero',
+    shift: 'Turno completo',
+    lastAccess: 'En línea',
+    status: backendUser.estado === 'ACTIVO' ? 'ACTIVO' : 'BAJA',
+    avatar: backendUser.avatarUrl || '/img/admin-avatar.jpg',
+  };
+}
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const backendUser = authService.getUsuarioActual();
+    return backendUser ? adaptarUsuarioBackend(backendUser) : null;
+  });
   const [activeView, setActiveViewState] = useState<ActiveView>(
     PATH_TO_VIEW[location.pathname] || 'login'
   );
@@ -171,6 +201,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [iotDevices, setIotDevices] = useState<IoTDevice[]>(INITIAL_IOT_DEVICES);
   const [CocinaTickets, setCocinaTickets] = useState<CocinaTicket[]>(INITIAL_KITCHEN_TICKETS);
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
+
+  const cargarDatosBackend = async () => {
+    try {
+      // 1. Cargar Productos del menú
+      const resProd = await api.get('/productos');
+      if (Array.isArray(resProd.data) && resProd.data.length > 0) {
+        setMenuItems(
+          resProd.data.map((p: any) => ({
+            id: p.id,
+            name: p.nombre,
+            category: p.categoriaNombre,
+            description: p.descripcion || '',
+            price: Number(p.precio),
+            status: (p.estado as 'DISPONIBLE' | 'AGOTADO' | 'OCULTO') || 'DISPONIBLE',
+            options: p.opciones ? p.opciones.map((o: any) => o.nombre) : [],
+            allowKitchenNotes: Boolean(p.permiteNotasCocina),
+          }))
+        );
+      }
+
+      if (authService.getToken()) {
+        // 2. Cargar Mesas
+        try {
+          const resMesas = await api.get('/mesas');
+          if (Array.isArray(resMesas.data) && resMesas.data.length > 0) {
+            setTables((prev) =>
+              resMesas.data.map((m: any) => {
+                const tableId = `M0${m.numero}`;
+                const prevTable = prev.find((t) => t.id === tableId || t.id === m.id);
+                return {
+                  id: tableId,
+                  dbId: m.id,
+                  number: m.numero,
+                  capacity: m.capacidad,
+                  status: m.estado || 'Limpia / Disponible',
+                  guests: prevTable?.guests || 0,
+                  waiterName: m.meseroNombre || prevTable?.waiterName,
+                  currentOrder: prevTable?.currentOrder,
+                };
+              })
+            );
+          }
+        } catch { }
+
+        // 3. Cargar Botones 
+        try {
+          const resBot = await api.get('/mesas/botones');
+          if (Array.isArray(resBot.data) && resBot.data.length > 0) {
+            setIotDevices(
+              resBot.data.map((b: any) => ({
+                id: b.id,
+                name: `Botón de Mesa 0${b.mesaNumero || 1}`,
+                tableId: `M0${b.mesaNumero || 1}`,
+                batteryPercentage: b.bateria,
+                status:
+                  b.bateria <= 10
+                    ? 'Batería crítica'
+                    : b.bateria <= 25
+                      ? 'Batería baja'
+                      : b.estado === 'ONLINE'
+                        ? 'En línea'
+                        : 'Sin conexión',
+                lastConnection: 'En línea',
+              }))
+            );
+          }
+        } catch { }
+
+        // 4. Cargar Usuarios y Cortes
+        try {
+          const resUsers = await api.get('/usuarios');
+          if (Array.isArray(resUsers.data) && resUsers.data.length > 0) {
+            setUsers(resUsers.data.map((u: UsuarioDTO) => adaptarUsuarioBackend(u)));
+          }
+        } catch { }
+
+        try {
+          const resCortes = await api.get('/cortes-caja');
+          if (Array.isArray(resCortes.data) && resCortes.data.length > 0) {
+            setCashClosings(
+              resCortes.data.map((c: any) => ({
+                id: c.folio,
+                folio: c.folio,
+                date: new Date(c.fecha).toLocaleString('es-MX'),
+                responsible: c.responsableNombre,
+                totalSales: Number(c.totalVentas),
+                cashAmount: Number(c.montoEfectivo),
+                cardAmount: Number(c.montoTarjeta),
+                difference: 0,
+                status: 'Completado' as const,
+                ticketsCount: c.totalTickets,
+              }))
+            );
+          }
+        } catch { }
+      }
+    } catch (err) {
+      console.error('Error sincronizando con backend:', err);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatosBackend();
+  }, [currentUser]);
 
   const [barAlerts, setBarAlerts] = useState<BarAlert[]>([
     { id: 'al-1', tableId: 'M01', message: 'Mesa 01 presionó el botón de aviso', time: '14:31' },
@@ -224,51 +358,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, [iotDevices]);
 
-  const login = async (correo: string, password: string): Promise<boolean> => {
+  const login = async (correo: string, password: string, remember: boolean = true): Promise<boolean> => {
     try {
-      const response = await authService.login({ correo, password });
-      const backendUser: UsuarioDTO = response.usuario;
-      const initials =
-        backendUser.nombre
-          .trim()
-          .split(/\s+/)
-          .map((n) => n[0])
-          .join('')
-          .substring(0, 2)
-          .toUpperCase() || 'HC';
+      const response = await authService.login({ correo, password, remember });
+      const mappedUser = adaptarUsuarioBackend(response.usuario);
 
-      // Adaptar el usuario del backend al formato del frontend
-      const mappedUser: User = {
-        id: backendUser.id,
-        name: backendUser.nombre,
-        initials,
-        username: backendUser.correo,
-        role:
-          backendUser.rol === 'ROLE_ADMINISTRADOR'
-            ? 'Administrador'
-            : backendUser.rol === 'ROLE_COCINERO'
-              ? 'Cocinero'
-              : 'Mesero',
-        shift: 'Turno completo',
-        lastAccess: 'Hoy · Reciente',
-        status: backendUser.estado === 'ACTIVO' ? 'ACTIVO' : 'BAJA',
-        avatar: backendUser.avatarUrl || '/img/admin-avatar.jpg',
-      };
       setCurrentUser(mappedUser);
-      // Redirigir según el rol
-      if (backendUser.rol === 'ROLE_COCINERO') {
+
+      if (mappedUser.role === 'Cocinero') {
         setActiveView('cocina');
-      } else if (backendUser.rol === 'ROLE_ADMINISTRADOR') {
+      } else if (mappedUser.role === 'Administrador') {
         setActiveView('caja');
       } else {
         setActiveView('mapa-mesas');
       }
+
       return true;
     } catch (error: any) {
-      const mensaje =
-        error?.message ||
-        error?.response?.data?.message ||
-        'Correo electrónico o contraseña incorrectos';
+      const mensaje = error.response?.data?.message || 'Correo electrónico o contraseña incorrectos';
       Swal.fire({
         icon: 'error',
         title: 'Error de Inicio de Sesión',
@@ -596,23 +703,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProductoEditando(null);
   };
 
-  const guardarProducto = (productData: Partial<MenuItem>) => {
-    if (productoEditando) {
-      setMenuItems(prev => prev.map(p => p.id === productoEditando.id ? { ...p, ...productData } as MenuItem : p));
-    } else {
-      const newProduct: MenuItem = {
-        id: `prod-${Date.now()}`,
-        name: productData.name || 'Nuevo Producto',
-        category: productData.category || 'Alimentos salados',
-        description: productData.description || '',
-        price: Number(productData.price) || 0,
-        status: productData.status || 'DISPONIBLE',
-        options: productData.options || [],
-        allowKitchenNotes: productData.allowKitchenNotes ?? true
+  const guardarProducto = async (productData: Partial<MenuItem>) => {
+    try {
+      const payload = {
+        nombre: productData.name || 'Nuevo Producto',
+        descripcion: productData.description || '',
+        precio: Number(productData.price) || 0,
+        categoriaNombre: productData.category || 'Alimentos Salados',
+        estado: productData.status || 'DISPONIBLE',
+        permiteNotasCocina: productData.allowKitchenNotes ?? true,
       };
-      setMenuItems(prev => [newProduct, ...prev]);
+      if (productoEditando) {
+        await api.put(`/productos/${productoEditando.id}`, payload);
+      } else {
+        await api.post('/productos', payload);
+      }
+      await cargarDatosBackend();
+      cerrarProductModal();
+    } catch (error: any) {
+      Swal.fire('Error', error.message || 'No se pudo guardar el producto en la base de datos', 'error');
     }
-    cerrarProductModal();
   };
 
   const mostrarConfirmEliminarModal = (product: MenuItem) => {
@@ -625,9 +735,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProductoAEliminar(null);
   };
 
-  const confirmarBorrarProducto = () => {
+  const confirmarBorrarProducto = async () => {
     if (productoAEliminar) {
-      setMenuItems(prev => prev.filter(p => p.id !== productoAEliminar.id));
+      try {
+        await api.delete(`/productos/${productoAEliminar.id}`);
+        setMenuItems((prev) => prev.filter((p) => p.id !== productoAEliminar.id));
+      } catch (error: any) {
+        Swal.fire('Error', error.message || 'No se pudo eliminar el producto', 'error');
+      }
     }
     cerrarConfirmEliminarModal();
   };
@@ -640,21 +755,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsUsuarioModalOpen(false);
   };
 
-  const guardarUser = (userData: Partial<User>) => {
-    const names = (userData.name || 'Nuevo Usuario').split(' ');
-    const initials = names.map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    const newUser: User = {
-      id: `u-${Date.now()}`,
-      name: userData.name || 'Nuevo Usuario',
-      initials,
-      username: userData.username || 'usuario',
-      role: userData.role || 'Mesero',
-      shift: userData.shift || 'Turno vespertino',
-      lastAccess: 'Hoy · Reciente',
-      status: 'ACTIVO'
-    };
-    setUsers(prev => [newUser, ...prev]);
-    cerrarAddUserModal();
+  const guardarUser = async (userData: Partial<User> & { password?: string }) => {
+    try {
+      const rolId =
+        userData.role === 'Administrador' ? 1 : userData.role === 'Cocinero' ? 3 : 2;
+      await api.post('/auth/registro', {
+        nombre: userData.name || 'Nuevo Usuario',
+        correo: userData.username || `usuario${Date.now()}@holacafe.com`,
+        password: userData.password || 'HolaCafe#2026',
+        rolId,
+      });
+      await cargarDatosBackend();
+      cerrarAddUserModal();
+    } catch (error: any) {
+      Swal.fire('Error', error.message || 'No se pudo registrar el usuario', 'error');
+    }
   };
 
   const mostrarConfirmBajaModal = (user: User) => {
@@ -667,15 +782,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsuarioBaja(null);
   };
 
-  const confirmarBajaUser = () => {
+  const confirmarBajaUser = async () => {
     if (usuarioBaja) {
-      setUsers(prev => prev.map(u => u.id === usuarioBaja.id ? { ...u, status: 'BAJA' } : u));
+      try {
+        await api.patch(`/usuarios/${usuarioBaja.id}/estado`);
+        await cargarDatosBackend();
+      } catch (error: any) {
+        Swal.fire('Error', error.message || 'No se pudo dar de baja al usuario', 'error');
+      }
     }
     cerrarConfirmBajaModal();
   };
 
-  const reactivarUser = (userId: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'ACTIVO' } : u));
+  const reactivarUser = async (userId: string) => {
+    try {
+      await api.patch(`/usuarios/${userId}/estado`);
+      await cargarDatosBackend();
+    } catch (error: any) {
+      Swal.fire('Error', error.message || 'No se pudo reactivar al usuario', 'error');
+    }
   };
 
   const mostrarAddBotonModal = () => {
@@ -699,11 +824,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prev.map(b =>
           b.id === botonEditando.id
             ? {
-                ...b,
-                id: botonData.id || b.id,
-                name: botonData.name || b.name,
-                tableId: botonData.tableId || b.tableId,
-              }
+              ...b,
+              id: botonData.id || b.id,
+              name: botonData.name || b.name,
+              tableId: botonData.tableId || b.tableId,
+            }
             : b
         )
       );

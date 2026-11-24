@@ -20,7 +20,7 @@ export const LoginView = () => {
     setEmailError(errCorreo);
     setPasswordError(errPass);
     if (errCorreo || errPass) return;
-    await login(email, password);
+    await login(email, password, rememberSession);
   }
 
   return (
