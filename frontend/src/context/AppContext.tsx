@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { authService, UsuarioDTO } from '../api/authService';
 import {
   User,
   MenuItem,
@@ -62,7 +63,7 @@ interface AppContextType {
   isConfirmEliminarModalOpen: boolean;
   productoAEliminar: MenuItem | null;
 
-  login: (username: string, role?: string) => boolean;
+  login: (correo: string, password: string) => Promise<boolean>;
   logout: () => void;
   setActiveView: (view: ActiveView) => void;
   selectTable: (tableId: string | null) => void;
@@ -143,9 +144,9 @@ const PATH_TO_VIEW: Record<string, ActiveView> = {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[1]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeView, setActiveViewState] = useState<ActiveView>(
-    PATH_TO_VIEW[location.pathname] || 'mapa-mesas'
+    PATH_TO_VIEW[location.pathname] || 'login'
   );
   const [activeTableId, setActiveTableId] = useState<string | null>('M04');
 
@@ -223,20 +224,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, [iotDevices]);
 
-  const login = (username: string) => {
-    const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (found) {
-      setCurrentUser(found);
-      setActiveView(found.role === 'Cocinero' ? 'cocina' : found.role === 'Administrador' ? 'caja' : 'mapa-mesas');
+  const login = async (correo: string, password: string): Promise<boolean> => {
+    try {
+      const response = await authService.login({ correo, password });
+      const backendUser: UsuarioDTO = response.usuario;
+      const initials =
+        backendUser.nombre
+          .trim()
+          .split(/\s+/)
+          .map((n) => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase() || 'HC';
+
+      // Adaptar el usuario del backend al formato del frontend
+      const mappedUser: User = {
+        id: backendUser.id,
+        name: backendUser.nombre,
+        initials,
+        username: backendUser.correo,
+        role:
+          backendUser.rol === 'ROLE_ADMINISTRADOR'
+            ? 'Administrador'
+            : backendUser.rol === 'ROLE_COCINERO'
+              ? 'Cocinero'
+              : 'Mesero',
+        shift: 'Turno completo',
+        lastAccess: 'Hoy · Reciente',
+        status: backendUser.estado === 'ACTIVO' ? 'ACTIVO' : 'BAJA',
+        avatar: backendUser.avatarUrl || '/img/admin-avatar.jpg',
+      };
+      setCurrentUser(mappedUser);
+      // Redirigir según el rol
+      if (backendUser.rol === 'ROLE_COCINERO') {
+        setActiveView('cocina');
+      } else if (backendUser.rol === 'ROLE_ADMINISTRADOR') {
+        setActiveView('caja');
+      } else {
+        setActiveView('mapa-mesas');
+      }
       return true;
+    } catch (error: any) {
+      const mensaje =
+        error?.message ||
+        error?.response?.data?.message ||
+        'Correo electrónico o contraseña incorrectos';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Inicio de Sesión',
+        text: mensaje,
+        confirmButtonColor: '#b45309',
+      });
+      return false;
     }
-    const fallback = users[1] || users[0];
-    setCurrentUser(fallback);
-    setActiveView('mapa-mesas');
-    return true;
   };
 
   const logout = () => {
+    authService.logout();
     setCurrentUser(null);
     setActiveView('login');
   };

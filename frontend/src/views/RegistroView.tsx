@@ -17,7 +17,7 @@ export const RegistroView = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const errNombre = !nombre.trim() ? "El nombre completo es obligatorio." : "";
     const errCorreo = validarCorreo(email);
@@ -30,7 +30,7 @@ export const RegistroView = () => {
     setConfirmError(errConfirm);
 
     if (errNombre || errCorreo || errPass || errConfirm) return;
-    login(email);
+    await login(email, password);
   }
 
   return (

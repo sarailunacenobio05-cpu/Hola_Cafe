@@ -95,7 +95,7 @@ export const App: React.FC = () => {
           }
         />
 
-        <Route path="*" element={<Navigate to="/mesas" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
 
       <CobroRapidoModal />

@@ -13,14 +13,14 @@ export const LoginView = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberSession, setRememberSession] = useState(true);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const errCorreo = validarCorreo(email);
     const errPass = validarPassword(password);
     setEmailError(errCorreo);
     setPasswordError(errPass);
     if (errCorreo || errPass) return;
-    login(email);
+    await login(email, password);
   }
 
   return (
@@ -136,31 +136,6 @@ export const LoginView = () => {
         >
           ¿No tienes una cuenta? Registrarse
         </button>
-
-        <div className="mt-3 pt-3 border-t border-[#e8dfd8] flex items-center justify-center gap-2">
-          <span className="text-[10px] font-bold text-[#7c6e65] uppercase tracking-wider">Demo:</span>
-          <button
-            type="button"
-            onClick={() => login('admin@holacafe.com')}
-            className="px-2 py-0.5 bg-[#fdfcfa] border border-[#e8dfd8] rounded text-[11px] font-semibold text-[#231815] hover:border-[#e59819] transition-colors"
-          >
-            Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => login('dhuerta')}
-            className="px-2 py-0.5 bg-[#fdfcfa] border border-[#e8dfd8] rounded text-[11px] font-semibold text-[#231815] hover:border-[#e59819] transition-colors"
-          >
-            Mesero
-          </button>
-          <button
-            type="button"
-            onClick={() => login('cocina@holacafe.com')}
-            className="px-2 py-0.5 bg-[#fdfcfa] border border-[#e8dfd8] rounded text-[11px] font-semibold text-[#231815] hover:border-[#e59819] transition-colors"
-          >
-            Cocina
-          </button>
-        </div>
       </section>
     </main>
   );
