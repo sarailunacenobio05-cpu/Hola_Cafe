@@ -10,16 +10,16 @@ INSERT INTO roles (id, nombre) VALUES
 
 -- 2. USUARIOS
 INSERT INTO usuarios (id, rol_id, nombre, correo, password_hash, estado, ultimo_acceso, avatar_url) VALUES
-('u-admin', 1, 'Dante Martínez', 'admin@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), '/img/admin-avatar.jpg'),
-('u-1', 2, 'David Huerta', 'dhuerta@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-2', 2, 'Gael Ortiz', 'gortiz@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-3', 2, 'Santiago Martinez', 'smartinez@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-4', 2, 'Sarai Luna', 'sluna@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-5', 2, 'Melissa Huerta', 'mhuerta@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-6', 2, 'Osmar David', 'odavid@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'BAJA', NOW(), NULL),
-('u-7', 2, 'Cinthya Huerta', 'chuerta@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-cook1', 3, 'Luis Angel', 'cocina@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL),
-('u-cook2', 3, 'Susi Suyali', 'ssuyali@holacafe.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoO2W.RjM8jH9c5u1JjL7Iiqf2dJtB4Fey', 'ACTIVO', NOW(), NULL);
+('u-admin', 1, 'Dante Martínez', 'admin@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), '/img/admin-avatar.jpg'),
+('u-1', 2, 'David Huerta', 'dhuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-2', 2, 'Gael Ortiz', 'gortiz@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-3', 2, 'Santiago Martinez', 'smartinez@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-4', 2, 'Sarai Luna', 'sluna@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-5', 2, 'Melissa Huerta', 'mhuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-6', 2, 'Osmar David', 'odavid@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'BAJA', NOW(), NULL),
+('u-7', 2, 'Cinthya Huerta', 'chuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-cook1', 3, 'Luis Angel', 'cocina@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
+('u-cook2', 3, 'Susi Suyali', 'ssuyali@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL);
 
 -- 3. CATEGORIAS_MENU 
 INSERT INTO categorias_menu (id, nombre, descripcion) VALUES
@@ -31,7 +31,7 @@ INSERT INTO categorias_menu (id, nombre, descripcion) VALUES
 (6, 'Opciones Sin Café', 'Relájate, también es un buen plan: chai, matcha y tisanas'),
 (7, 'Bebidas Frías', 'Frescura en cada sorbo: frappés, lattes fríos y smoothies');
 
--- 4. PRODUCTOS_MENU (Los 28 platillos y bebidas exactos de la carta)
+-- 4. PRODUCTOS_MENU
 INSERT INTO productos_menu (id, categoria_id, nombre, descripcion, precio, estado, permite_notas_cocina) VALUES
 -- Alimentos Salados
 ('prod-1', 1, 'Grilled Cheese Artesanal', 'Pan dorado a la plancha con mezcla de quesos fundidos', 110.00, 'DISPONIBLE', 1),
