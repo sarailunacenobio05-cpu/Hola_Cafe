@@ -26,6 +26,7 @@ public class ProductoService {
         public List<ProductoResponse> listarTodos() {
                 return productoMenuRepository.findAll()
                                 .stream()
+                                .filter(p -> !"ELIMINADO".equalsIgnoreCase(p.getEstado()))
                                 .map(this::mapearProducto)
                                 .toList();
         }
@@ -102,7 +103,8 @@ public class ProductoService {
                 ProductoMenu producto = productoMenuRepository.findById(id)
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Producto no encontrado con ID: " + id));
-                productoMenuRepository.delete(producto);
+                producto.setEstado("ELIMINADO");
+                productoMenuRepository.save(producto);
         }
 
         private CategoriaMenu resolverCategoria(String nombreCategoria) {

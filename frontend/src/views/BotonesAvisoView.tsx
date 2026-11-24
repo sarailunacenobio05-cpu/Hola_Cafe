@@ -3,14 +3,14 @@ import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
-import { 
-  Radio, 
-  Wifi, 
-  WifiOff, 
-  BatteryWarning, 
-  RefreshCw, 
-  Plus, 
-  Edit3, 
+import {
+  Radio,
+  Wifi,
+  WifiOff,
+  BatteryWarning,
+  RefreshCw,
+  Plus,
+  Edit3,
   Search
 } from 'lucide-react';
 import { IoTDevice } from '../types';
@@ -40,9 +40,9 @@ export const BotonesAvisoView: React.FC = () => {
   };
 
   const filtered = iotDevices.filter(dev => {
-    const matchSearch = dev.id.toLowerCase().includes(search.toLowerCase()) || 
-                        dev.name.toLowerCase().includes(search.toLowerCase()) ||
-                        dev.tableId.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = dev.id.toLowerCase().includes(search.toLowerCase()) ||
+      dev.name.toLowerCase().includes(search.toLowerCase()) ||
+      dev.tableId.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'Todos' || dev.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -94,16 +94,16 @@ export const BotonesAvisoView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
-      
+
       {/* 1. SIDEBAR */}
       <AdminSidebar currentSubTitle="BOTONES DE AVISO" />
 
       {/* 2. MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        
+
         {/* Top Header */}
         <header className="bg-white border-b border-[#E7DDD3] px-8 py-3.5 flex items-center justify-between shrink-0">
-          
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-[#8C7D73] font-medium">Panel Principal</span>
@@ -122,7 +122,7 @@ export const BotonesAvisoView: React.FC = () => {
 
         {/* Content Area */}
         <main className="p-8 max-w-6xl w-full mx-auto space-y-6 flex-1">
-          
+
           {/* Header Title + Add Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -227,7 +227,7 @@ export const BotonesAvisoView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black text-[#1E110A]">Dispositivos registrados</h2>
                 <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-2.5 py-0.5 rounded-lg">
-                  16 botones
+                  {filtered.length} botones
                 </span>
               </div>
               <span className="text-xs font-semibold text-[#DF7B1B]">
@@ -264,15 +264,14 @@ export const BotonesAvisoView: React.FC = () => {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
                           <div className="w-20 bg-[#F5EFEB] h-2 rounded-full overflow-hidden border border-[#E5DCD3]">
-                            <div 
-                              className={`h-full ${getBatteryBarColor(device.batteryPercentage)}`} 
+                            <div
+                              className={`h-full ${getBatteryBarColor(device.batteryPercentage)}`}
                               style={{ width: `${device.batteryPercentage}%` }}
                             />
                           </div>
-                          <span className={`font-black ${
-                            device.batteryPercentage <= 10 ? 'text-[#DC2626]' :
-                            device.batteryPercentage <= 25 ? 'text-[#DF7B1B]' : 'text-[#1E110A]'
-                          }`}>
+                          <span className={`font-black ${device.batteryPercentage <= 10 ? 'text-[#DC2626]' :
+                              device.batteryPercentage <= 25 ? 'text-[#DF7B1B]' : 'text-[#1E110A]'
+                            }`}>
                             {device.batteryPercentage}%
                           </span>
                         </div>
@@ -316,11 +315,10 @@ export const BotonesAvisoView: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => setPaginaActual(idx + 1)}
-                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${
-                        paginaActual === idx + 1
+                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${paginaActual === idx + 1
                           ? 'bg-[#DF7B1B] text-white shadow-xs'
                           : 'border border-[#E5DCD3] bg-white text-[#1E110A] hover:bg-stone-50'
-                      }`}
+                        }`}
                     >
                       {idx + 1}
                     </button>

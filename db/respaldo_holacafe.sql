@@ -190,15 +190,15 @@ INSERT INTO roles (id, nombre) VALUES
 
 INSERT INTO usuarios (id, rol_id, nombre, correo, password_hash, estado, ultimo_acceso, avatar_url) VALUES
 ('u-admin', 1, 'Dante Martínez', 'admin@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), '/img/admin-avatar.jpg'),
-('u-1', 2, 'David Huerta', 'dhuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-2', 2, 'Gael Ortiz', 'gortiz@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-3', 2, 'Santiago Martinez', 'smartinez@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-4', 2, 'Sarai Luna', 'sluna@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-5', 2, 'Melissa Huerta', 'mhuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-6', 2, 'Osmar David', 'odavid@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'BAJA', NOW(), NULL),
-('u-7', 2, 'Cinthya Huerta', 'chuerta@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-cook1', 3, 'Luis Angel', 'cocina@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL),
-('u-cook2', 3, 'Susi Suyali', 'ssuyali@holacafe.com', '$2a$10$/P7gYQAIUY6P4cs16uL8eu/0rfdOud1jW9pcwdhHlrud9UEVmTzTm', 'ACTIVO', NOW(), NULL);
+('u-1', 2, 'David Huerta', 'dhuerta@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-2', 2, 'Gael Ortiz', 'gortiz@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-3', 2, 'Santiago Martinez', 'smartinez@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-4', 2, 'Sarai Luna', 'sluna@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-5', 2, 'Melissa Huerta', 'mhuerta@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-6', 2, 'Osmar David', 'odavid@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'BAJA', NOW(), NULL),
+('u-7', 2, 'Cinthya Huerta', 'chuerta@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-cook1', 3, 'Luis Angel', 'cocina@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL),
+('u-cook2', 3, 'Susi Suyali', 'ssuyali@holacafe.com', '$2a$10$wg5RZl/5f4ZCBPE84Mh4De8tBDVKFGv4fuHW/Ii4mTUWwLCxNyrvW', 'ACTIVO', NOW(), NULL);
 
 INSERT INTO categorias_menu (id, nombre, descripcion) VALUES
 (1, 'Cafetería Especialidad', 'Extracciones de espresso, tueste medio y café artesanal'),

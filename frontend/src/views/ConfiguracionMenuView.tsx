@@ -3,21 +3,21 @@ import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   Pencil,
   Trash2
 } from 'lucide-react';
 import { MenuItem } from '../types';
 
 export const ConfiguracionMenuView: React.FC = () => {
-  const { 
-    menuItems, 
-    mostrarAddProductModal, 
-    mostrarEditProductModal, 
+  const {
+    menuItems,
+    mostrarAddProductModal,
+    mostrarEditProductModal,
     mostrarConfirmEliminarModal,
-    setActiveView 
+    setActiveView
   } = useApp();
 
 
@@ -26,18 +26,32 @@ export const ConfiguracionMenuView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
- 
-  
 
-  // Derive categories
-  const categories = ['Todas', ...Array.from(new Set(menuItems.map(m => m.category)))];
 
-  // Filtering
-  const filtered = menuItems.filter(item => {
-    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                        item.description.toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoryFilter === 'Todas' || item.category === categoryFilter;
-    const matchStatus = statusFilter === 'Todos' || item.status === statusFilter;
+
+  // Categorías
+  const categories = [
+    'Todas',
+    ...Array.from(
+      new Set(
+        menuItems
+          .map((m) => (m.category || '').trim())
+          .filter(Boolean)
+      )
+    ),
+  ];
+
+  // Filtrado
+  const filtered = menuItems.filter((item) => {
+    const matchSearch =
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.description.toLowerCase().includes(search.toLowerCase());
+    const matchCat =
+      categoryFilter === 'Todas' ||
+      (item.category || '').trim().toLowerCase() === categoryFilter.trim().toLowerCase();
+    const matchStatus =
+      statusFilter === 'Todos' ||
+      (item.status || '').toUpperCase() === statusFilter.toUpperCase();
     return matchSearch && matchCat && matchStatus;
   });
 
@@ -48,16 +62,16 @@ export const ConfiguracionMenuView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
-      
+
       {/* 1. SIDEBAR */}
       <AdminSidebar currentSubTitle="MENÚ" />
 
       {/* 2. MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        
+
         {/* Top Header */}
         <header className="bg-white border-b border-[#E7DDD3] px-8 py-3.5 flex items-center justify-between shrink-0">
-          
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-[#8C7D73] font-medium">Panel Principal</span>
@@ -76,7 +90,7 @@ export const ConfiguracionMenuView: React.FC = () => {
 
         {/* Content Area */}
         <main className="p-8 max-w-6xl w-full mx-auto space-y-6 flex-1">
-          
+
           {/* Header Title + Stats */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -204,11 +218,10 @@ export const ConfiguracionMenuView: React.FC = () => {
                         ${item.price.toFixed(2)}
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                          item.status === 'DISPONIBLE'
-                            ? 'bg-[#E6F7F0] text-[#059669]'
-                            : 'bg-[#FEF3C7] text-[#D97706]'
-                        }`}>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${item.status === 'DISPONIBLE'
+                          ? 'bg-[#E6F7F0] text-[#059669]'
+                          : 'bg-[#FEF3C7] text-[#D97706]'
+                          }`}>
                           {item.status}
                         </span>
                       </td>
@@ -252,11 +265,10 @@ export const ConfiguracionMenuView: React.FC = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentPage(i + 1)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
-                      currentPage === i + 1 
-                        ? 'bg-[#DF7B1B] text-white shadow-xs' 
-                        : 'bg-white border border-[#D5C7BA] text-[#1E110A] hover:bg-stone-50'
-                    }`}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === i + 1
+                      ? 'bg-[#DF7B1B] text-white shadow-xs'
+                      : 'bg-white border border-[#D5C7BA] text-[#1E110A] hover:bg-stone-50'
+                      }`}
                   >
                     {i + 1}
                   </button>
@@ -266,7 +278,7 @@ export const ConfiguracionMenuView: React.FC = () => {
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 bg-white border border-[#D5C7BA] rounded-lg font-semibold disabled:opacity-40"
                 >
-                   ›
+                  ›
                 </button>
               </div>
             </div>

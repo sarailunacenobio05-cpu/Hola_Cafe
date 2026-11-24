@@ -8,7 +8,7 @@ export const ProductoModal: React.FC = () => {
 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
-  const [category, setCategory] = useState('Bebidas frías');
+  const [category, setCategory] = useState('Bebidas Frías');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('70.00');
   const [priceError, setPriceError] = useState('');
@@ -74,7 +74,7 @@ export const ProductoModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-stone-900 text-base">
@@ -93,7 +93,7 @@ export const ProductoModal: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-stone-700 mb-1">Nombre del producto</label>
@@ -123,14 +123,13 @@ export const ProductoModal: React.FC = () => {
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none font-medium text-stone-800"
               >
-                <option value="Bebidas frías">Bebidas frías</option>
-                <option value="Bebidas calientes">Bebidas calientes</option>
-                <option value="Cafetería Especialidad">Cafetería Especialidad</option>
-                <option value="Alimentos salados">Alimentos salados</option>
-                <option value="Desayunos">Desayunos</option>
-                <option value="Repostería y Pan">Repostería y Pan</option>
-                <option value="Opciones frescas">Opciones frescas</option>
+                <option value="Alimentos Salados">Alimentos Salados</option>
                 <option value="Dulces">Dulces</option>
+                <option value="Mini Hotcakes">Mini Hotcakes</option>
+                <option value="Opciones Frescas">Opciones Frescas</option>
+                <option value="Bebidas Calientes (Café)">Bebidas Calientes (Café)</option>
+                <option value="Opciones Sin Café">Opciones Sin Café</option>
+                <option value="Bebidas Frías">Bebidas Frías</option>
               </select>
             </div>
           </div>

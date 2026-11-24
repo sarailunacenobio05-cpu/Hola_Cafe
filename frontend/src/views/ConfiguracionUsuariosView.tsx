@@ -3,21 +3,21 @@ import { useApp } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   UserX,
   RotateCcw
 } from 'lucide-react';
 import { User } from '../types';
 
 export const ConfiguracionUsuariosView: React.FC = () => {
-  const { 
-    users, 
-    mostrarAddUserModal, 
-    mostrarConfirmBajaModal, 
+  const {
+    users,
+    mostrarAddUserModal,
+    mostrarConfirmBajaModal,
     reactivarUser,
-    setActiveView 
+    setActiveView
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'Todos' | 'Activos' | 'Baja'>('Todos');
@@ -29,12 +29,12 @@ export const ConfiguracionUsuariosView: React.FC = () => {
   const bajasCount = users.filter(u => u.status === 'BAJA').length;
 
   const filteredUsers = users.filter(user => {
-    const matchesTab = 
-      activeTab === 'Todos' || 
-      (activeTab === 'Activos' && user.status === 'ACTIVO') || 
+    const matchesTab =
+      activeTab === 'Todos' ||
+      (activeTab === 'Activos' && user.status === 'ACTIVO') ||
       (activeTab === 'Baja' && user.status === 'BAJA');
-    const matchesSearch = 
-      user.name.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch =
+      user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.username.toLowerCase().includes(search.toLowerCase());
     return matchesTab && matchesSearch;
   });
@@ -47,16 +47,16 @@ export const ConfiguracionUsuariosView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
-      
+
       {/* 1. SIDEBAR */}
       <AdminSidebar currentSubTitle="USUARIOS" />
 
       {/* 2. MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        
+
         {/* Top Header */}
         <header className="bg-white border-b border-[#E7DDD3] px-8 py-3.5 flex items-center justify-between shrink-0">
-          
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-[#8C7D73] font-medium">Panel Principal</span>
@@ -75,7 +75,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
 
         {/* Content Area */}
         <main className="p-8 max-w-6xl w-full mx-auto space-y-6 flex-1">
-          
+
           {/* Header Title + Stats */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -111,25 +111,22 @@ export const ConfiguracionUsuariosView: React.FC = () => {
               <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#E5DCD3]">
                 <button
                   onClick={() => setActiveTab('Todos')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    activeTab === 'Todos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Todos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
+                    }`}
                 >
                   Todos ({users.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('Activos')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    activeTab === 'Activos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Activos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
+                    }`}
                 >
                   Activos ({activosCount})
                 </button>
                 <button
                   onClick={() => setActiveTab('Baja')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    activeTab === 'Baja' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Baja' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
+                    }`}
                 >
                   Baja ({bajasCount})
                 </button>
@@ -188,6 +185,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-bold text-[#1E110A] text-xs">{user.name}</p>
+                          <span className="text-[10px] text-[#8C7D73] font-semibold">{user.role}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono text-[#6E5A4E]">
@@ -200,11 +198,10 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                         {user.lastAccess}
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                          user.status === 'ACTIVO'
+                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${user.status === 'ACTIVO'
                             ? 'bg-[#E6F7F0] text-[#059669]'
                             : 'bg-[#FFF1F1] text-[#DC2626]'
-                        }`}>
+                          }`}>
                           {user.status}
                         </span>
                       </td>
@@ -252,11 +249,10 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => setPaginaActual(idx + 1)}
-                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${
-                        paginaActual === idx + 1
+                      className={`w-7 h-7 rounded font-bold flex items-center justify-center ${paginaActual === idx + 1
                           ? 'bg-[#DF7B1B] text-white shadow-xs'
                           : 'border border-[#E5DCD3] bg-white text-[#1E110A] hover:bg-stone-50'
-                      }`}
+                        }`}
                     >
                       {idx + 1}
                     </button>
