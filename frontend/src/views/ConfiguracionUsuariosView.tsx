@@ -6,18 +6,15 @@ import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import {
   Search,
   Plus,
-  UserX,
-  RotateCcw
+  Trash2
 } from 'lucide-react';
-import { User } from '../types';
 
 export const ConfiguracionUsuariosView: React.FC = () => {
   const {
     users,
+    currentUser,
     mostrarAddUserModal,
-    mostrarConfirmBajaModal,
-    reactivarUser,
-    setActiveView
+    mostrarConfirmBajaModal
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'Todos' | 'Activos' | 'Baja'>('Todos');
@@ -110,21 +107,21 @@ export const ConfiguracionUsuariosView: React.FC = () => {
               {/* Tabs */}
               <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#E5DCD3]">
                 <button
-                  onClick={() => setActiveTab('Todos')}
+                  onClick={() => { setActiveTab('Todos'); setPaginaActual(1); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Todos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
                     }`}
                 >
                   Todos ({users.length})
                 </button>
                 <button
-                  onClick={() => setActiveTab('Activos')}
+                  onClick={() => { setActiveTab('Activos'); setPaginaActual(1); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Activos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
                     }`}
                 >
                   Activos ({activosCount})
                 </button>
                 <button
-                  onClick={() => setActiveTab('Baja')}
+                  onClick={() => { setActiveTab('Baja'); setPaginaActual(1); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Baja' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
                     }`}
                 >
@@ -139,7 +136,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                   type="text"
                   placeholder="Buscar por nombre o usuario..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); setPaginaActual(1); }}
                   className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
                 />
               </div>
@@ -206,21 +203,21 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        {user.status === 'ACTIVO' ? (
+                        {currentUser?.id === user.id || currentUser?.username === user.username ? (
+                          <span
+                            className="inline-flex items-center px-3 py-1.5 bg-[#FAF8F5] border border-[#E5DCD3] text-[#8C7D73] rounded-xl text-[11px] font-semibold"
+                            title="No puedes eliminar tu propia cuenta activa"
+                          >
+                            Sesión actual
+                          </span>
+                        ) : (
                           <button
+                            type="button"
                             onClick={() => mostrarConfirmBajaModal(user)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF5F5] border border-[#FECACA] hover:bg-[#FEE2E2] text-[#DC2626] rounded-xl text-xs font-semibold shadow-2xs transition-all"
                           >
-                            <UserX className="w-3.5 h-3.5" />
-                            <span>Dar de baja</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => reactivarUser(user.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#e59819] hover:bg-[#d98d12] text-white rounded-xl text-xs font-semibold shadow-2xs transition-all"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span>Reactivar</span>
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Eliminar cuenta</span>
                           </button>
                         )}
                       </td>
@@ -233,7 +230,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#8C7D73]">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#DF7B1B]" />
-                <span>Dar de baja a un mesero bloquea su acceso, pero conserva su historial de comandas y tickets.</span>
+                <span>Eliminar una cuenta la remueve permanentemente del sistema. Tu propia cuenta activa está protegida.</span>
               </div>
               <div className="flex items-center gap-3">
                 <span>Filas por página: {filasPorPagina}</span>

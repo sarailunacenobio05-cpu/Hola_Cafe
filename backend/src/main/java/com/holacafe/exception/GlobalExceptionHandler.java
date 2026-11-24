@@ -31,6 +31,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(respuesta);
     }
 
+    // 400 Bad Request: Argumentos inválidos o reglas de negocio (ej. correo duplicado)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> manejarArgumentoInvalido(IllegalArgumentException ex,
+            HttpServletRequest request) {
+        ErrorResponse respuesta = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Solicitud Inválida",
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(respuesta);
+    }
+
     // 404 Not Found: Recurso no encontrado
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> manejarNoEncontrado(ResourceNotFoundException ex, HttpServletRequest request) {

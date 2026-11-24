@@ -38,6 +38,14 @@ export interface AdminNotificacion {
   vistaDestino: ActiveView;
 }
 
+export interface CorteCajaItem {
+  id: string;
+  fecha: string;
+  mesero: string;
+  total: number;
+  tickets?: number;
+}
+
 interface AppContextType {
   currentUser: User | null;
   activeView: ActiveView;
@@ -48,6 +56,9 @@ interface AppContextType {
   iotDevices: IoTDevice[];
   CocinaTickets: CocinaTicket[];
   cashClosings: CashClosingRecord[];
+  cortesCaja: CorteCajaItem[];
+  ventasPendientesCorte: number;
+  ticketsPendientesCorte: number;
   barAlerts: BarAlert[];
   adminNotificaciones: AdminNotificacion[];
   mesasAtendidas: Record<string, boolean>;
@@ -71,6 +82,7 @@ interface AppContextType {
 
   agregarItemToOrder: (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => void;
   actualizarItemQuantity: (tableId: string, itemId: string, delta: number) => void;
+  actualizarNotaItemOrder: (tableId: string, itemId: string, notes?: string) => void;
   eliminarItemFromOrder: (tableId: string, itemId: string) => void;
   enviarOrdenACocina: (tableId: string) => void;
 
@@ -83,6 +95,7 @@ interface AppContextType {
   cerrarTicketModal: () => void;
   procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi') => void;
   liberarMesaDirectamente: (tableId: string) => void;
+  realizarCorteCaja: () => CorteCajaItem | null;
 
   activarAlertaBarra: (tableId: string, message: string) => void;
   descartarAlertaBarra: (id: string) => void;
@@ -100,16 +113,17 @@ interface AppContextType {
 
   mostrarAddUserModal: () => void;
   cerrarAddUserModal: () => void;
-  guardarUser: (userData: Partial<User>) => void;
+  guardarUser: (userData: Partial<User> & { password?: string }) => Promise<void>;
   mostrarConfirmBajaModal: (user: User) => void;
   cerrarConfirmBajaModal: () => void;
-  confirmarBajaUser: () => void;
+  confirmarBajaUser: () => Promise<void>;
   reactivarUser: (userId: string) => void;
 
   mostrarAddBotonModal: () => void;
   mostrarEditBotonModal: (boton: IoTDevice) => void;
   cerrarAddBotonModal: () => void;
-  guardarBoton: (botonData: Partial<IoTDevice>) => void;
+  guardarBoton: (botonData: Partial<IoTDevice>) => Promise<void>;
+  eliminarBoton: (botonId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -178,7 +192,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeView, setActiveViewState] = useState<ActiveView>(
     PATH_TO_VIEW[location.pathname] || 'login'
   );
-  const [activeTableId, setActiveTableId] = useState<string | null>('M04');
+  const ACTIVE_TABLE_STORAGE_KEY = 'holacafe_active_table_id';
+  const TABLES_STORAGE_KEY = 'holacafe_tables_state_v1';
+  const BAR_ALERTS_STORAGE_KEY = 'holacafe_bar_alerts_v1';
+  const MESAS_ATENDIDAS_STORAGE_KEY = 'holacafe_mesas_atendidas_v1';
+
+  const [activeTableId, setActiveTableIdState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_TABLE_STORAGE_KEY) || 'M01';
+    } catch {
+      return 'M01';
+    }
+  });
+
+  const setActiveTableId = (tableId: string | null) => {
+    setActiveTableIdState(tableId);
+    try {
+      if (tableId) {
+        localStorage.setItem(ACTIVE_TABLE_STORAGE_KEY, tableId);
+      } else {
+        localStorage.removeItem(ACTIVE_TABLE_STORAGE_KEY);
+      }
+    } catch { }
+  };
 
   const setActiveView = (view: ActiveView) => {
     setActiveViewState(view);
@@ -193,14 +229,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (matchedView && matchedView !== activeView) {
       setActiveViewState(matchedView);
     }
+
+    // Solo al entrar o regresar a /login (por ejemplo con las flechas del navegador)
+    // cerramos la sesión activa para impedir volver con la flecha de adelante.
+    if (location.pathname === '/login' && authService.getToken()) {
+      authService.logout();
+      setCurrentUser(null);
+    }
   }, [location.pathname]);
 
-  const [tables, setTables] = useState<TableInfo[]>(INITIAL_TABLES);
+  const [tables, setTables] = useState<TableInfo[]>(() => {
+    try {
+      const saved = localStorage.getItem(TABLES_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch { }
+    return INITIAL_TABLES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(tables));
+    } catch { }
+  }, [tables]);
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [iotDevices, setIotDevices] = useState<IoTDevice[]>(INITIAL_IOT_DEVICES);
   const [CocinaTickets, setCocinaTickets] = useState<CocinaTicket[]>(INITIAL_KITCHEN_TICKETS);
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
+  const [cortesCaja, setCortesCaja] = useState<CorteCajaItem[]>([
+    { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00, tickets: 24 },
+    { id: '#06', fecha: '25/03/2026 · 20:00', mesero: 'Dante M.', total: 4310.00, tickets: 15 },
+    { id: '#05', fecha: '24/03/2026 · 20:00', mesero: 'Gael O.', total: 6980.00, tickets: 22 },
+    { id: '#04', fecha: '23/03/2026 · 20:00', mesero: 'Melissa H.', total: 5150.00, tickets: 18 },
+    { id: '#03', fecha: '22/03/2026 · 20:00', mesero: 'Melissa H.', total: 6390.00, tickets: 21 },
+    { id: '#02', fecha: '21/03/2026 · 20:00', mesero: 'Gael O.', total: 7210.00, tickets: 25 },
+    { id: '#01', fecha: '20/03/2026 · 20:00', mesero: 'Dante M.', total: 4820.00, tickets: 16 },
+  ]);
+  const [ventasPendientesCorte, setVentasPendientesCorte] = useState<number>(18420.00);
+  const [ticketsPendientesCorte, setTicketsPendientesCorte] = useState<number>(37);
 
   const cargarDatosBackend = async () => {
     try {
@@ -211,7 +283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           resProd.data.map((p: any) => ({
             id: p.id,
             name: p.nombre,
-            category: p.categoriaNombre,
+            category: p.categoria || p.categoriaNombre || 'Sin categoría',
             description: p.descripcion || '',
             price: Number(p.precio),
             status: (p.estado as 'DISPONIBLE' | 'AGOTADO' | 'OCULTO') || 'DISPONIBLE',
@@ -222,22 +294,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (authService.getToken()) {
-        // 2. Cargar Mesas
+        // 2. Cargar Mesas (preservando estado local y comandas activas de las mesas)
         try {
           const resMesas = await api.get('/mesas');
           if (Array.isArray(resMesas.data) && resMesas.data.length > 0) {
+            const tieneEstadoGuardado = Boolean(localStorage.getItem(TABLES_STORAGE_KEY));
             setTables((prev) =>
               resMesas.data.map((m: any) => {
-                const tableId = `M0${m.numero}`;
+                const tableId = `M${m.numero < 10 ? `0${m.numero}` : m.numero}`;
                 const prevTable = prev.find((t) => t.id === tableId || t.id === m.id);
                 return {
                   id: tableId,
                   dbId: m.id,
                   number: m.numero,
                   capacity: m.capacidad,
-                  status: m.estado || 'Limpia / Disponible',
+                  status: (tieneEstadoGuardado && prevTable?.status) ? prevTable.status : (m.estado || 'Limpia / Disponible'),
                   guests: prevTable?.guests || 0,
-                  waiterName: m.meseroNombre || prevTable?.waiterName,
+                  waiterName: prevTable?.waiterName || m.meseroNombre,
+                  hasAlert: prevTable?.hasAlert ?? false,
+                  alertType: prevTable?.alertType,
                   currentOrder: prevTable?.currentOrder,
                 };
               })
@@ -248,22 +323,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // 3. Cargar Botones 
         try {
           const resBot = await api.get('/mesas/botones');
-          if (Array.isArray(resBot.data) && resBot.data.length > 0) {
+          if (Array.isArray(resBot.data)) {
             setIotDevices(
               resBot.data.map((b: any) => ({
                 id: b.id,
-                name: `Botón de Mesa 0${b.mesaNumero || 1}`,
-                tableId: `M0${b.mesaNumero || 1}`,
-                batteryPercentage: b.bateria,
+                name: b.nombre || `Botón de Mesa ${b.mesaNumero ? (b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero) : ''}`.trim(),
+                tableId: b.mesaId || (b.mesaNumero ? `M${b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero}` : ''),
+                batteryPercentage: Number(b.bateria ?? 100),
                 status:
-                  b.bateria <= 10
-                    ? 'Batería crítica'
-                    : b.bateria <= 25
-                      ? 'Batería baja'
-                      : b.estado === 'ONLINE'
-                        ? 'En línea'
-                        : 'Sin conexión',
-                lastConnection: 'En línea',
+                  b.estado === 'Sin conexión'
+                    ? 'Sin conexión'
+                    : Number(b.bateria ?? 100) <= 10
+                      ? 'Batería crítica'
+                      : Number(b.bateria ?? 100) <= 25
+                        ? 'Batería baja'
+                        : b.estado === 'ONLINE' || b.estado === 'En línea'
+                          ? 'En línea'
+                          : 'Sin conexión',
+                lastConnection: b.estado === 'Sin conexión' ? 'Sin señal' : 'En línea',
               }))
             );
           }
@@ -272,7 +349,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // 4. Cargar Usuarios y Cortes
         try {
           const resUsers = await api.get('/usuarios');
-          if (Array.isArray(resUsers.data) && resUsers.data.length > 0) {
+          if (Array.isArray(resUsers.data)) {
             setUsers(resUsers.data.map((u: UsuarioDTO) => adaptarUsuarioBackend(u)));
           }
         } catch { }
@@ -306,15 +383,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     cargarDatosBackend();
   }, [currentUser]);
 
-  const [barAlerts, setBarAlerts] = useState<BarAlert[]>([
-    { id: 'al-1', tableId: 'M01', message: 'Mesa 01 presionó el botón de aviso', time: '14:31' },
-    { id: 'al-2', tableId: 'M05', message: 'Mesa 05 solicita atención del mesero', time: '14:28' },
-  ]);
+  const [barAlerts, setBarAlerts] = useState<BarAlert[]>(() => {
+    try {
+      const saved = localStorage.getItem(BAR_ALERTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch { }
+    return [
+      { id: 'al-1', tableId: 'M01', message: 'Mesa 01 presionó el botón de aviso', time: '14:31' },
+      { id: 'al-2', tableId: 'M05', message: 'Mesa 05 solicita atención del mesero', time: '14:28' },
+    ];
+  });
 
-  const [mesasAtendidas, setMesasAtendidas] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try {
+      localStorage.setItem(BAR_ALERTS_STORAGE_KEY, JSON.stringify(barAlerts));
+    } catch { }
+  }, [barAlerts]);
+
+  const [mesasAtendidas, setMesasAtendidas] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(MESAS_ATENDIDAS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      }
+    } catch { }
+    return {};
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MESAS_ATENDIDAS_STORAGE_KEY, JSON.stringify(mesasAtendidas));
+    } catch { }
+  }, [mesasAtendidas]);
+
+  const ADMIN_NOTIFS_DISMISSED_KEY = 'holacafe_admin_notifs_leidas';
+  const ADMIN_NOTIFS_CUSTOM_KEY = 'holacafe_admin_notifs_custom';
+
+  const leerNotifsLeidas = (): string[] => {
+    try {
+      const raw = localStorage.getItem(ADMIN_NOTIFS_DISMISSED_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const leerNotifsCustom = (): AdminNotificacion[] => {
+    try {
+      const raw = localStorage.getItem(ADMIN_NOTIFS_CUSTOM_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
 
   const [adminNotificaciones, setAdminNotificaciones] = useState<AdminNotificacion[]>(() => {
-    const notifs: AdminNotificacion[] = INITIAL_IOT_DEVICES
+    const leidas = new Set(leerNotifsLeidas());
+    const custom = leerNotifsCustom();
+
+    const baseNotifs: AdminNotificacion[] = INITIAL_IOT_DEVICES
       .filter(d => d.batteryPercentage <= 25)
       .map(d => ({
         id: `notif-bat-${d.id}`,
@@ -327,7 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (INITIAL_CASH_CLOSINGS[0]) {
       const ultimo = INITIAL_CASH_CLOSINGS[0];
-      notifs.push({
+      baseNotifs.push({
         id: `notif-corte-${ultimo.id}`,
         tipo: 'corte',
         titulo: `Corte de caja ${ultimo.folio}`,
@@ -336,7 +473,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         vistaDestino: 'caja',
       });
     }
-    return notifs;
+
+    return [...custom, ...baseNotifs].filter(n => !leidas.has(n.id));
   });
 
   const [isCobroModalOpen, setIsCobroModalOpen] = useState(false);
@@ -389,7 +527,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     authService.logout();
     setCurrentUser(null);
-    setActiveView('login');
+    setActiveViewState('login');
+    navigate('/login', { replace: true });
   };
 
   const selectTable = (tableId: string | null) => {
@@ -478,6 +617,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentOrder: {
           ...t.currentOrder,
           items: t.currentOrder.items.filter(i => i.id !== itemId)
+        }
+      };
+    }));
+  };
+
+  const actualizarNotaItemOrder = (tableId: string, itemId: string, notes?: string) => {
+    setTables(prev => prev.map(t => {
+      if (t.id !== tableId || !t.currentOrder) return t;
+      return {
+        ...t,
+        currentOrder: {
+          ...t.currentOrder,
+          items: t.currentOrder.items.map(i =>
+            i.id === itemId ? { ...i, notes: notes?.trim() || undefined } : i
+          )
         }
       };
     }));
@@ -584,7 +738,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const subtotal = table.currentOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const discounted = subtotal * (1 - discount / 100);
     const tip = discounted * (tipPercent / 100);
-    void (discounted + tip);
+    const totalCobrado = Number((discounted + tip).toFixed(2));
+
+    setVentasPendientesCorte(prev => Number((prev + totalCobrado).toFixed(2)));
+    setTicketsPendientesCorte(prev => prev + 1);
 
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
@@ -600,6 +757,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
     cerrarCobroModal();
+  };
+
+  const realizarCorteCaja = (): CorteCajaItem | null => {
+    if (ventasPendientesCorte <= 0) {
+      return null;
+    }
+
+    const num = cortesCaja.length + 1;
+    const nuevoId = `#${num < 10 ? `0${num}` : num}`;
+    const totalNuevo = ventasPendientesCorte;
+    const ticketsNuevos = ticketsPendientesCorte;
+    const responsable = currentUser?.name || 'Dante M.';
+
+    const nuevoCorte: CorteCajaItem = {
+      id: nuevoId,
+      fecha: `Hoy · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      mesero: responsable,
+      total: totalNuevo,
+      tickets: ticketsNuevos,
+    };
+
+    setCortesCaja(prev => [nuevoCorte, ...prev]);
+    setVentasPendientesCorte(0);
+    setTicketsPendientesCorte(0);
+
+    agregarAdminNotificacion({
+      tipo: 'corte',
+      titulo: `Corte de caja ${nuevoId} realizado`,
+      mensaje: `Registrado por ${responsable} por $${totalNuevo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      vistaDestino: 'caja',
+    });
+
+    return nuevoCorte;
   };
 
   const liberarMesaDirectamente = (tableId: string) => {
@@ -656,6 +846,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const alerta = barAlerts.find(a => a.id === id);
     if (alerta) {
       setMesasAtendidas(prev => ({ ...prev, [alerta.tableId]: true }));
+      setTables(prev => prev.map(t =>
+        t.id === alerta.tableId
+          ? {
+              ...t,
+              hasAlert: false,
+              alertType: undefined,
+              status: t.status === 'Atendido' ? 'En Consumo' : t.status,
+            }
+          : t
+      ));
     }
     setBarAlerts(prev => prev.filter(a => a.id !== id));
   };
@@ -663,6 +863,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const marcarMesaAtendida = (tableId: string) => {
     setMesasAtendidas(prev => ({ ...prev, [tableId]: true }));
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
+    setTables(prev => prev.map(t =>
+      t.id === tableId
+        ? {
+            ...t,
+            hasAlert: false,
+            alertType: undefined,
+            status: t.status === 'Atendido' ? 'En Consumo' : t.status,
+          }
+        : t
+    ));
     Swal.fire({
       toast: true,
       position: 'top-end',
@@ -682,10 +892,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setAdminNotificaciones(prev => [nueva, ...prev]);
+    try {
+      const existentes = leerNotifsCustom();
+      localStorage.setItem(ADMIN_NOTIFS_CUSTOM_KEY, JSON.stringify([nueva, ...existentes]));
+    } catch { }
   };
 
   const descartarAdminNotificacion = (id: string) => {
     setAdminNotificaciones(prev => prev.filter(n => n.id !== id));
+    try {
+      const leidas = Array.from(new Set([...leerNotifsLeidas(), id]));
+      localStorage.setItem(ADMIN_NOTIFS_DISMISSED_KEY, JSON.stringify(leidas));
+
+      const customActualizadas = leerNotifsCustom().filter(n => n.id !== id);
+      localStorage.setItem(ADMIN_NOTIFS_CUSTOM_KEY, JSON.stringify(customActualizadas));
+    } catch { }
   };
 
   const mostrarAddProductModal = () => {
@@ -759,16 +980,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const rolId =
         userData.role === 'Administrador' ? 1 : userData.role === 'Cocinero' ? 3 : 2;
+      const correoLimpio = (userData.username || '').trim();
       await api.post('/auth/registro', {
-        nombre: userData.name || 'Nuevo Usuario',
-        correo: userData.username || `usuario${Date.now()}@holacafe.com`,
-        password: userData.password || 'HolaCafe#2026',
+        nombre: (userData.name || '').trim(),
+        correo: correoLimpio,
+        password: userData.password || '',
         rolId,
       });
       await cargarDatosBackend();
       cerrarAddUserModal();
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Usuario ${(userData.name || correoLimpio).trim()} creado`,
+        showConfirmButton: false,
+        timer: 2400,
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
     } catch (error: any) {
-      Swal.fire('Error', error.message || 'No se pudo registrar el usuario', 'error');
+      const detalles: Record<string, string> | undefined =
+        error?.errors || error?.validaciones || error?.response?.data?.validaciones;
+
+      if (detalles && Object.keys(detalles).length > 0) {
+        const listaHtml = Object.entries(detalles)
+          .map(([campo, msg]) => `<li><strong>${campo}:</strong> ${msg}</li>`)
+          .join('');
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo crear el usuario',
+          html: `<div style="text-align:left;font-size:13px;"><p style="margin-bottom:8px;">Corrige los siguientes campos:</p><ul style="padding-left:18px;margin:0;">${listaHtml}</ul></div>`,
+          confirmButtonColor: '#DF7B1B',
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo crear el usuario',
+          text: error?.message || error?.response?.data?.message || 'Error al registrar el usuario.',
+          confirmButtonColor: '#DF7B1B',
+        });
+      }
     }
   };
 
@@ -785,10 +1038,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const confirmarBajaUser = async () => {
     if (usuarioBaja) {
       try {
-        await api.patch(`/usuarios/${usuarioBaja.id}/estado`);
+        await api.delete(`/usuarios/${encodeURIComponent(usuarioBaja.id)}`);
         await cargarDatosBackend();
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Cuenta de ${usuarioBaja.name} eliminada`,
+          showConfirmButton: false,
+          timer: 2400,
+          background: '#FAF8F5',
+          color: '#1E110A',
+        });
       } catch (error: any) {
-        Swal.fire('Error', error.message || 'No se pudo dar de baja al usuario', 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo eliminar la cuenta',
+          text: error?.message || error?.response?.data?.message || 'Ocurrió un error al eliminar el usuario.',
+          confirmButtonColor: '#DC2626',
+        });
       }
     }
     cerrarConfirmBajaModal();
@@ -818,32 +1086,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBotonEditando(null);
   };
 
-  const guardarBoton = (botonData: Partial<IoTDevice>) => {
-    if (botonEditando) {
-      setIotDevices(prev =>
-        prev.map(b =>
-          b.id === botonEditando.id
-            ? {
-              ...b,
-              id: botonData.id || b.id,
-              name: botonData.name || b.name,
-              tableId: botonData.tableId || b.tableId,
-            }
-            : b
-        )
-      );
-    } else {
-      const newBoton: IoTDevice = {
-        id: botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`,
-        name: botonData.name || 'Botón de Mesa',
-        tableId: botonData.tableId || 'M01',
-        batteryPercentage: 100,
-        status: 'En línea',
-        lastConnection: 'Hace unos segundos'
+  const guardarBoton = async (botonData: Partial<IoTDevice>) => {
+    try {
+      const payload = {
+        id: (botonEditando ? botonEditando.id : (botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`)).trim().toUpperCase(),
+        nombre: (botonData.name || 'Botón de Mesa').trim(),
+        mesaId: botonData.tableId || null,
+        bateria: botonEditando ? botonEditando.batteryPercentage : 100,
+        estado: botonEditando ? botonEditando.status : 'En línea',
       };
-      setIotDevices(prev => [newBoton, ...prev]);
+
+      if (botonEditando) {
+        await api.put(`/mesas/botones/${encodeURIComponent(botonEditando.id)}`, payload);
+      } else {
+        await api.post('/mesas/botones', payload);
+      }
+
+      await cargarDatosBackend();
+      cerrarAddBotonModal();
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: botonEditando ? 'Dispositivo actualizado' : 'Dispositivo registrado',
+        showConfirmButton: false,
+        timer: 2200,
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
+    } catch (error: any) {
+      Swal.fire(
+        'Error',
+        error?.message || error?.response?.data?.message || 'No se pudo guardar el dispositivo',
+        'error'
+      );
     }
-    cerrarAddBotonModal();
+  };
+
+  const eliminarBoton = async (botonId: string) => {
+    try {
+      await api.delete(`/mesas/botones/${encodeURIComponent(botonId)}`);
+      await cargarDatosBackend();
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Dispositivo ${botonId} eliminado`,
+        showConfirmButton: false,
+        timer: 2200,
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
+    } catch (error: any) {
+      Swal.fire(
+        'Error',
+        error?.message || error?.response?.data?.message || 'No se pudo eliminar el dispositivo',
+        'error'
+      );
+    }
   };
 
   return (
@@ -858,6 +1160,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         iotDevices,
         CocinaTickets,
         cashClosings,
+        cortesCaja,
+        ventasPendientesCorte,
+        ticketsPendientesCorte,
         barAlerts,
         adminNotificaciones,
         mesasAtendidas,
@@ -878,6 +1183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectTable,
         agregarItemToOrder,
         actualizarItemQuantity,
+        actualizarNotaItemOrder,
         eliminarItemFromOrder,
         enviarOrdenACocina,
         actualizarCocinaTicketStatus,
@@ -888,6 +1194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cerrarTicketModal,
         procesarPagoYLiberar,
         liberarMesaDirectamente,
+        realizarCorteCaja,
         activarAlertaBarra,
         descartarAlertaBarra,
         marcarMesaAtendida,
@@ -911,6 +1218,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mostrarEditBotonModal,
         cerrarAddBotonModal,
         guardarBoton,
+        eliminarBoton,
       }}
     >
       {children}

@@ -2,6 +2,7 @@ package com.holacafe.service;
 
 import com.holacafe.dto.AlertaResponse;
 import com.holacafe.dto.BotonResponse;
+import com.holacafe.dto.GuardarBotonRequest;
 import com.holacafe.dto.MesaResponse;
 import com.holacafe.exception.ResourceNotFoundException;
 import com.holacafe.model.Alerta;
@@ -47,6 +48,64 @@ public class MesaService {
         return botonRepository.findAll().stream()
                 .map(this::mapearBoton)
                 .toList();
+    }
+
+    @Transactional
+    public BotonResponse crearBoton(GuardarBotonRequest request) {
+        String idLimpio = request.getId().trim().toUpperCase();
+        if (botonRepository.existsById(idLimpio)) {
+            throw new IllegalArgumentException("Ya existe un botón registrado con el ID: " + idLimpio);
+        }
+
+        Boton boton = new Boton();
+        boton.setId(idLimpio);
+        boton.setNombre(request.getNombre().trim());
+        boton.setBateria(request.getBateria() != null ? request.getBateria() : 100);
+        boton.setEstado(
+                request.getEstado() != null && !request.getEstado().isBlank()
+                        ? request.getEstado().trim()
+                        : "En línea"
+        );
+
+        if (request.getMesaId() != null && !request.getMesaId().isBlank()) {
+            Mesa mesa = mesaRepository.findById(request.getMesaId().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con ID: " + request.getMesaId()));
+            boton.setMesa(mesa);
+        }
+
+        return mapearBoton(botonRepository.save(boton));
+    }
+
+    @Transactional
+    public BotonResponse actualizarBoton(String id, GuardarBotonRequest request) {
+        Boton boton = botonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Botón no encontrado con ID: " + id));
+
+        boton.setNombre(request.getNombre().trim());
+
+        if (request.getMesaId() != null && !request.getMesaId().isBlank()) {
+            Mesa mesa = mesaRepository.findById(request.getMesaId().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con ID: " + request.getMesaId()));
+            boton.setMesa(mesa);
+        } else {
+            boton.setMesa(null);
+        }
+
+        if (request.getBateria() != null) {
+            boton.setBateria(request.getBateria());
+        }
+        if (request.getEstado() != null && !request.getEstado().isBlank()) {
+            boton.setEstado(request.getEstado().trim());
+        }
+
+        return mapearBoton(botonRepository.save(boton));
+    }
+
+    @Transactional
+    public void eliminarBoton(String id) {
+        Boton boton = botonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Botón no encontrado con ID: " + id));
+        botonRepository.delete(boton);
     }
 
     @Transactional(readOnly = true)

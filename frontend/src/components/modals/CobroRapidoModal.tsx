@@ -95,6 +95,7 @@ export const CobroRapidoModal: React.FC = () => {
   const {
     isCobroModalOpen,
     cerrarCobroModal,
+    procesarPagoYLiberar,
     liberarMesaDirectamente,
     activeTableId,
     tables,
@@ -144,10 +145,24 @@ export const CobroRapidoModal: React.FC = () => {
 
   const activeTable = tables.find((t) => t.id === activeTableId);
 
+  const comandaItems =
+    activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
+      ? activeTable.currentOrder.items.map((it, idx) => ({
+          id: idx + 1,
+          cantidad: it.quantity,
+          nombre: it.name,
+          precioCents: Math.round(it.price * 100),
+          modificadores: [it.selectedOption, it.notes].filter(Boolean) as string[],
+          categoria: 'Menú ¡Hola, Café!',
+        }))
+      : COMANDA_DEFAULT.items;
+
   const comanda = {
     ...COMANDA_DEFAULT,
     mesa: activeTable ? activeTable.number.toString().padStart(2, '0') : COMANDA_DEFAULT.mesa,
+    ticket: activeTable?.currentOrder?.folio || COMANDA_DEFAULT.ticket,
     mesero: activeTable?.waiterName || currentUser?.name || COMANDA_DEFAULT.mesero,
+    items: comandaItems,
   };
 
   const totales = useMemo(() => {
@@ -400,7 +415,18 @@ export const CobroRapidoModal: React.FC = () => {
   };
 
   const handleLiberarMesa = () => {
-    if (activeTableId) liberarMesaDirectamente(activeTableId);
+    if (activeTableId) {
+      if (activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
+        procesarPagoYLiberar(
+          activeTableId,
+          descuentoPct,
+          propinaPct,
+          metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi'
+        );
+      } else {
+        liberarMesaDirectamente(activeTableId);
+      }
+    }
     handleCerrar();
   };
 

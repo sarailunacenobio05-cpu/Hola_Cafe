@@ -3,26 +3,30 @@ import { useApp } from '../context/AppContext';
 import { Logo } from '../components/Logo';
 import { AlertaBarraPopover } from '../components/AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
-import { 
-  Bell, 
-  LogOut, 
-  LayoutGrid, 
-  ChefHat, 
-  Check, 
-  Coffee, 
-  Users, 
-  UtensilsCrossed
+import {
+  Bell,
+  LogOut,
+  LayoutGrid,
+  ChefHat,
+  Check,
+  Coffee,
+  Users,
+  UtensilsCrossed,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { TableInfo } from '../types';
 
 export const MapaMesasView: React.FC = () => {
-  const { 
-    selectTable, 
-    setActiveView, 
+  const {
+    tables,
+    barAlerts,
+    activeTableId,
+    selectTable,
+    setActiveView,
     mostrarCobroModal,
     mesasAtendidas,
     marcarMesaAtendida,
-    logout 
+    logout,
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<'Todas' | 'Libres' | 'Ocupadas' | 'Atención'>('Todas');
@@ -33,15 +37,47 @@ export const MapaMesasView: React.FC = () => {
   };
 
   const handleCobrar = (tableId: string) => {
+    selectTable(tableId);
     mostrarCobroModal(tableId);
   };
 
+  const isTableLibre = (table: TableInfo) => {
+    const st = (table.status || '').toLowerCase();
+    return st.includes('limpia') || st.includes('disponible') || st === 'libre';
+  };
+
+  const isTableReservada = (table: TableInfo) => {
+    return (table.status || '').toLowerCase().includes('reservada');
+  };
+
+  const hasActiveAlert = (table: TableInfo) => {
+    return barAlerts.some((a) => a.tableId === table.id);
+  };
+
+  const getOrderTotal = (table: TableInfo): number => {
+    if (table.currentOrder && table.currentOrder.items.length > 0) {
+      const sub = table.currentOrder.items.reduce((acc, it) => acc + it.price * it.quantity, 0);
+      return sub;
+    }
+    return 0;
+  };
+
+  const totalMesas = tables.length;
+  const libresCount = tables.filter((t) => isTableLibre(t)).length;
+  const ocupadasCount = tables.filter((t) => !isTableLibre(t)).length;
+  const alertasCount = barAlerts.length;
+
+  const filteredTables = tables.filter((table) => {
+    if (activeFilter === 'Libres') return isTableLibre(table);
+    if (activeFilter === 'Ocupadas') return !isTableLibre(table);
+    if (activeFilter === 'Atención') return hasActiveAlert(table);
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-col justify-between font-sans selection:bg-amber-100">
-      
-      {/* 1. TOP HEADER (Exact Figma Match) */}
+      {/* 1. TOP HEADER */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-[#E7DDD3] bg-[#F5EFEB] shrink-0">
-        
         {/* Left: Brand Logo */}
         <div className="flex items-center gap-3">
           <Logo size="md" variant="badge-only" />
@@ -50,17 +86,21 @@ export const MapaMesasView: React.FC = () => {
           </span>
         </div>
 
-        {/* Center: Views Navigation (Only Mesas and Comandero for mesero) */}
+        {/* Center: Views Navigation */}
         <div className="hidden sm:flex items-center bg-[#EDE3D8] rounded-xl p-1 gap-1 border border-[#D5C7BA]">
           <button
+            type="button"
             className="px-3 py-1 text-xs font-bold text-[#1E110A] bg-white rounded-lg flex items-center gap-1.5 shadow-2xs"
           >
             <LayoutGrid className="w-3.5 h-3.5 text-[#8B4513]" />
             <span>Mesas</span>
           </button>
           <button
+            type="button"
             onClick={() => {
-              selectTable('M02');
+              if (!activeTableId && tables[0]) {
+                selectTable(tables[0].id);
+              }
               setActiveView('comandero');
             }}
             className="px-3 py-1 text-xs font-semibold text-[#6E5A4E] hover:text-[#1E110A] rounded-lg flex items-center gap-1.5 transition-colors"
@@ -73,11 +113,9 @@ export const MapaMesasView: React.FC = () => {
         {/* Right: Alerta Barra + User + Logout */}
         <div className="flex items-center gap-4">
           <AlertaBarraPopover />
-
           <UsuarioPerfilNavbar />
-
-          {/* Cerrar sesión */}
           <button
+            type="button"
             onClick={logout}
             className="flex items-center gap-1.5 text-xs font-semibold text-[#6E5A4E] hover:text-[#1E110A] transition-colors ml-1"
           >
@@ -85,15 +123,14 @@ export const MapaMesasView: React.FC = () => {
             <span className="hidden sm:inline">Cerrar sesión</span>
           </button>
         </div>
-
       </header>
 
-      {/* 2. SUBHEADER TOOLBAR & COUNTERS (Figma Match) */}
+      {/* 2. SUBHEADER TOOLBAR & COUNTERS */}
       <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 max-w-[1600px] w-full mx-auto">
-        
         {/* Left: Filter selector pill */}
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setActiveFilter('Todas')}
             className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
               activeFilter === 'Todas'
@@ -102,26 +139,30 @@ export const MapaMesasView: React.FC = () => {
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5 text-amber-500" />
-            <span>Todo el Local (9 Mesas)</span>
+            <span>Todo el Local ({totalMesas} Mesas)</span>
           </button>
         </div>
 
         {/* Right: Status counts pills */}
         <div className="flex items-center gap-2.5 overflow-x-auto pb-1 md:pb-0">
-          {/* Libres 1 Mesa */}
+          {/* Libres */}
           <button
+            type="button"
             onClick={() => setActiveFilter('Libres')}
             className={`px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 ${
               activeFilter === 'Libres' ? 'ring-2 ring-stone-400 bg-white' : 'bg-white/80 border-[#D5C7BA]'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-[#A8988D]" />
+            <span className="w-2 h-2 rounded-full bg-[#059669]" />
             <span className="text-[10px] text-[#8C7D73] font-bold uppercase">LIBRES</span>
-            <span className="font-extrabold text-[#1E110A]">1 Mesa</span>
+            <span className="font-extrabold text-[#1E110A]">
+              {libresCount} {libresCount === 1 ? 'Mesa' : 'Mesas'}
+            </span>
           </button>
 
-          {/* Ocupadas 8 Mesas */}
+          {/* Ocupadas */}
           <button
+            type="button"
             onClick={() => setActiveFilter('Ocupadas')}
             className={`px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 ${
               activeFilter === 'Ocupadas' ? 'ring-2 ring-amber-500 bg-white' : 'bg-white/80 border-[#D5C7BA]'
@@ -129,385 +170,317 @@ export const MapaMesasView: React.FC = () => {
           >
             <span className="w-2 h-2 rounded-full bg-[#DF7B1B]" />
             <span className="text-[10px] text-[#8C7D73] font-bold uppercase">OCUPADAS</span>
-            <span className="font-extrabold text-[#1E110A]">8 Mesas</span>
+            <span className="font-extrabold text-[#1E110A]">
+              {ocupadasCount} {ocupadasCount === 1 ? 'Mesa' : 'Mesas'}
+            </span>
           </button>
 
-          {/* Atención 2 Alertas (Solid Red) */}
+          {/* Atención (Alertas en vivo) */}
           <button
+            type="button"
             onClick={() => setActiveFilter('Atención')}
-            className="px-3.5 py-1.5 rounded-xl bg-[#D32F2F] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs hover:bg-[#B71C1C] transition-colors"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-xs transition-colors ${
+              alertasCount > 0
+                ? 'bg-[#D32F2F] text-white hover:bg-[#B71C1C]'
+                : 'bg-white border border-[#D5C7BA] text-[#6E5A4E]'
+            } ${activeFilter === 'Atención' ? 'ring-2 ring-red-400' : ''}`}
           >
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                alertasCount > 0 ? 'bg-white animate-ping' : 'bg-[#059669]'
+              }`}
+            />
             <span className="text-[10px] uppercase tracking-wider">ATENCIÓN</span>
-            <span>2 Alertas</span>
+            <span>
+              {alertasCount} {alertasCount === 1 ? 'Alerta' : 'Alertas'}
+            </span>
           </button>
         </div>
-
       </div>
 
       {/* 3. SECTION SUBHEADER */}
       <div className="px-6 flex items-center justify-between max-w-[1600px] w-full mx-auto mb-3">
         <h2 className="text-lg font-black text-[#1E110A]">
-          Mesas del Servicio
+          Mesas del Servicio ({filteredTables.length})
         </h2>
         <span className="text-xs text-[#786B63] font-medium hidden sm:block">
           Pulse sobre una mesa para abrir comanda o gestionar servicio
         </span>
       </div>
 
-      {/* 4. MAIN TABLES GRID (4 columns x 2 rows, matching Figma exactly) */}
+      {/* 4. MAIN TABLES GRID (Cuadrícula 3x3 para las 9 mesas) */}
       <main className="flex-1 px-6 pb-8 max-w-[1600px] w-full mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          
-          {/* CARD M01 (Atención / Red Border -> Ver comanda + Cobrar al atender) */}
-          <div className={`bg-white rounded-2xl p-4 flex flex-col justify-between shadow-2xs transition-all ${
-            mesasAtendidas['M01'] ? 'border border-[#E5DCD3]' : 'border-2 border-[#D32F2F]'
-          }`}>
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className={`text-xl font-black leading-tight ${
-                    mesasAtendidas['M01'] ? 'text-[#1E110A]' : 'text-[#D32F2F]'
-                  }`}>M01</h3>
-                </div>
-                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase ${
-                  mesasAtendidas['M01']
-                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0]'
-                    : 'bg-[#3A1F13] text-white'
-                }`}>
-                  {mesasAtendidas['M01'] ? 'Atendida' : 'Atender'}
-                </span>
-              </div>
-
-              {mesasAtendidas['M01'] ? (
-                <div className="py-4 space-y-1">
-                  <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
-                    <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
-                    <span>En Consumo</span>
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-[#1E110A]">$260.00</span>
-                    <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-6 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
-                    <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                    <span>Atender</span>
-                  </div>
-                  <p className="text-xs text-[#8C7D73]">
-                    Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {mesasAtendidas['M01'] ? (
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  onClick={() => handleOpenComanda('M01')}
-                  className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-                >
-                  Ver comanda
-                </button>
-                <button
-                  onClick={() => handleCobrar('M01')}
-                  className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-                >
-                  Cobrar
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => marcarMesaAtendida('M01')}
-                className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
-              >
-                Atender
-              </button>
-            )}
-          </div>
-
-          {/* CARD M02 (En Preparación / KDS) */}
-          <div className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M02</h3>
-                </div>
-                <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
-                  KDS
-                </span>
-              </div>
-
-              <div className="py-4 space-y-1">
-                <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
-                  <ChefHat className="w-3.5 h-3.5 text-amber-600" />
-                  <span>En Preparación</span>
-                </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-[#1E110A]">$272.60</span>
-                  <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                onClick={() => handleOpenComanda('M02')}
-                className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-              >
-                Ver comanda
-              </button>
-              <button
-                onClick={() => handleCobrar('M02')}
-                className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-              >
-                Cobrar
-              </button>
-            </div>
-          </div>
-
-          {/* CARD M03 (Limpia / Disponible) */}
-          <div className="bg-[#FAF8F5] rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between opacity-80">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M03</h3>
-                </div>
-                <span className="bg-[#E6F7F0] text-[#059669] text-[10px] font-bold px-2 py-0.5 rounded-md border border-[#A7F3D0]">
-                  Limpia
-                </span>
-              </div>
-
-              <div className="py-5 space-y-1">
-                <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5 text-[#059669]" />
-                  <span>Disponible / Libre</span>
-                </p>
-                <p className="text-[11px] text-[#8C7D73]">Lista para asignar</p>
-              </div>
-            </div>
-
+        {filteredTables.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[#E5DCD3] p-10 text-center space-y-2">
+            <p className="text-sm font-black text-[#1E110A]">No hay mesas en este filtro</p>
+            <p className="text-xs text-[#8C7D73]">
+              Cambia el filtro superior para ver el resto de las mesas del salón.
+            </p>
             <button
-              onClick={() => handleOpenComanda('M03')}
-              className="w-full py-2 bg-white/70 hover:bg-white text-[#8C7D73] hover:text-[#1E110A] border border-[#E5DCD3] rounded-xl text-xs font-semibold text-center transition-colors"
+              type="button"
+              onClick={() => setActiveFilter('Todas')}
+              className="mt-2 px-4 py-2 bg-[#3A1F13] text-white rounded-xl text-xs font-bold"
             >
-              En espera
+              Ver todas las mesas
             </button>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredTables.map((table) => {
+              const enAlerta = hasActiveAlert(table);
+              const fueAtendida = Boolean(mesasAtendidas[table.id]);
+              const libre = isTableLibre(table);
+              const reservada = isTableReservada(table);
+              const stLower = (table.status || '').toLowerCase();
+              const enPreparacion = stLower.includes('preparaci');
+              const pidiendoCuenta = stLower.includes('cuenta') || stLower.includes('cobrar');
+              const totalMesa = getOrderTotal(table);
+              const meseroNombre = table.waiterName || 'Asignado';
 
-          {/* CARD M04 (Pidiendo Cuenta / Yellow Border) */}
-          <div className="bg-white rounded-2xl border-2 border-[#F6C36C] p-4 flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M04</h3>
-                </div>
-              </div>
+              // 1. MESA CON ALERTA ACTIVA (Por atender)
+              if (enAlerta) {
+                return (
+                  <div
+                    key={table.id}
+                    className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs transition-all border-2 border-[#D32F2F]"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-xl font-black leading-tight text-[#D32F2F]">
+                            {table.id}
+                          </h3>
+                          <span className="text-[11px] text-[#8C7D73] font-medium">
+                            Capacidad: {table.capacity} personas
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase bg-[#3A1F13] text-white">
+                          Atender
+                        </span>
+                      </div>
 
-              <div className="py-4 space-y-1">
-                <p className="text-xs text-[#DF7B1B] font-bold flex items-center gap-1">
-                  <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                  <span>Atendiendo</span>
-                </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-[#1E110A]">$1,240.00</span>
-                  <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
-                </div>
-              </div>
-            </div>
+                      <div className="py-5 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
+                          <Bell className="w-3.5 h-3.5 text-[#D32F2F] animate-bounce" />
+                          <span>Llamado de mesa activo</span>
+                        </div>
+                        <p className="text-xs text-[#8C7D73]">
+                          Mesero:{' '}
+                          <strong className="text-[#1E110A] font-semibold">{meseroNombre}</strong>
+                        </p>
+                      </div>
+                    </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                onClick={() => handleOpenComanda('M04')}
-                className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-              >
-                Ver comanda
-              </button>
-              <button
-                onClick={() => handleCobrar('M04')}
-                className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-              >
-                Cobrar
-              </button>
-            </div>
-          </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => marcarMesaAtendida(table.id)}
+                        className="py-2.5 px-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
+                      >
+                        Atender llamado
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenComanda(table.id)}
+                        className="py-2.5 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
+                      >
+                        Abrir comanda
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
 
-          {/* CARD M05 (Atención / Red Border -> Ver comanda + Cobrar al atender) */}
-          <div className={`bg-white rounded-2xl p-4 flex flex-col justify-between shadow-2xs transition-all ${
-            mesasAtendidas['M05'] ? 'border border-[#E5DCD3]' : 'border-2 border-[#D32F2F]'
-          }`}>
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className={`text-xl font-black leading-tight ${
-                    mesasAtendidas['M05'] ? 'text-[#1E110A]' : 'text-[#D32F2F]'
-                  }`}>M05</h3>
-                </div>
-                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase ${
-                  mesasAtendidas['M05']
-                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0]'
-                    : 'bg-[#3A1F13] text-white'
-                }`}>
-                  {mesasAtendidas['M05'] ? 'Atendida' : 'Atender'}
-                </span>
-              </div>
+              // 2. MESA RESERVADA
+              if (reservada) {
+                return (
+                  <div
+                    key={table.id}
+                    className="bg-white rounded-2xl border border-[#E5DCD3] p-5 flex flex-col justify-between shadow-2xs"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-xl font-black text-[#1E110A] leading-tight">
+                            {table.id}
+                          </h3>
+                          <p className="text-xs text-[#8C7D73] mt-0.5">
+                            Capacidad: {table.capacity} personas
+                          </p>
+                        </div>
+                        <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                          20:30 hrs
+                        </span>
+                      </div>
 
-              {mesasAtendidas['M05'] ? (
-                <div className="py-4 space-y-1">
-                  <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
-                    <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
-                    <span>En Consumo</span>
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-[#1E110A]">$385.00</span>
-                    <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
+                      <div className="py-5 space-y-1">
+                        <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5 text-[#8B4513]" />
+                          <span>RESERVADA</span>
+                        </p>
+                        <p className="text-[11px] text-[#8C7D73] font-medium">
+                          Mesero: {meseroNombre}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          Swal.fire({
+                            title: `Reserva ${table.id}`,
+                            html: `<p><b>Mesa:</b> ${table.id} (${table.capacity} personas)</p><p><b>Mesero asignado:</b> ${meseroNombre}</p><p><b>Horario:</b> Hoy · 20:30 hrs</p>`,
+                            icon: 'info',
+                            confirmButtonColor: '#7B3F00',
+                          });
+                        }}
+                        className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
+                      >
+                        Detalle Reserva
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenComanda(table.id)}
+                        className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
+                      >
+                        Abrir comanda
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 3. MESA LIMPIA / DISPONIBLE
+              if (libre) {
+                return (
+                  <div
+                    key={table.id}
+                    className="bg-[#FAF8F5] rounded-2xl border border-[#E5DCD3] p-5 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-xl font-black text-[#1E110A] leading-tight">
+                            {table.id}
+                          </h3>
+                          <span className="text-[11px] text-[#8C7D73] font-medium">
+                            Capacidad: {table.capacity} personas
+                          </span>
+                        </div>
+                        <span className="bg-[#E6F7F0] text-[#059669] text-[10px] font-bold px-2 py-0.5 rounded-md border border-[#A7F3D0]">
+                          Limpia
+                        </span>
+                      </div>
+
+                      <div className="py-5 space-y-1">
+                        <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 text-[#059669]" />
+                          <span>Disponible / Libre</span>
+                        </p>
+                        <p className="text-[11px] text-[#8C7D73]">
+                          Lista para tomar orden ({meseroNombre})
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenComanda(table.id)}
+                      className="w-full py-2.5 bg-white hover:bg-amber-50/60 text-[#1E110A] border border-[#D5C7BA] hover:border-[#DF7B1B] rounded-xl text-xs font-bold text-center transition-colors shadow-2xs"
+                    >
+                      Abrir comanda
+                    </button>
+                  </div>
+                );
+              }
+
+              // 4. MESA OCUPADA (En Preparación / Pidiendo Cuenta / En Consumo / Atendida)
+              return (
+                <div
+                  key={table.id}
+                  className={`bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs ${
+                    pidiendoCuenta ? 'border-2 border-[#F6C36C]' : 'border border-[#E5DCD3]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-black text-[#1E110A] leading-tight">
+                          {table.id}
+                        </h3>
+                        <span className="text-[11px] text-[#8C7D73] font-medium">
+                          Mesero: {meseroNombre}
+                        </span>
+                      </div>
+                      {enPreparacion ? (
+                        <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                          KDS
+                        </span>
+                      ) : fueAtendida ? (
+                        <span className="bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
+                          Atendida
+                        </span>
+                      ) : pidiendoCuenta ? (
+                        <span className="bg-amber-50 text-[#D97706] border border-amber-200 text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
+                          Cuenta
+                        </span>
+                      ) : (
+                        <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                          Activa
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="py-4 space-y-1">
+                      {enPreparacion ? (
+                        <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
+                          <ChefHat className="w-3.5 h-3.5 text-amber-600" />
+                          <span>En Preparación</span>
+                        </p>
+                      ) : pidiendoCuenta ? (
+                        <p className="text-xs text-[#DF7B1B] font-bold flex items-center gap-1">
+                          <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
+                          <span>Pidiendo Cuenta</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
+                          <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
+                          <span>En Consumo</span>
+                        </p>
+                      )}
+
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-[#1E110A]">
+                          ${totalMesa.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenComanda(table.id)}
+                      className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
+                    >
+                      Ver comanda
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCobrar(table.id)}
+                      className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
+                    >
+                      Cobrar
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="py-6 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
-                    <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                    <span>Atender</span>
-                  </div>
-                  <p className="text-xs text-[#8C7D73]">
-                    Mesero: <strong className="text-[#1E110A] font-semibold">Carlos R.</strong>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {mesasAtendidas['M05'] ? (
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  onClick={() => handleOpenComanda('M05')}
-                  className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-                >
-                  Ver comanda
-                </button>
-                <button
-                  onClick={() => handleCobrar('M05')}
-                  className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-                >
-                  Cobrar
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => marcarMesaAtendida('M05')}
-                className="w-full py-2.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
-              >
-                Atender
-              </button>
-            )}
+              );
+            })}
           </div>
-
-          {/* CARD M06 (Reservada) */}
-          <div 
-         
-          className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M06</h3>
-                  <p className="text-xs text-[#8C7D73] mt-0.5">Reservada</p>
-                </div>
-                <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
-                  20:30 hrs
-                </span>
-              </div>
-
-              <div className="py-5 space-y-1">
-                <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-[#8B4513]" />
-                  <span>RESERVADA</span>
-                </p>
-                <p className="text-[11px] text-[#8C7D73] font-medium">Familia Morales</p>
-              </div>
-            </div>
-
-            <button
-            onClick={() => {
-              Swal.fire({
-                title: 'Detalles',
-                html: '<p><b>Detalle de Reserva:</b> Familia Morales</p><p><b>Fecha:</b> Hoy · 20:30 hrs </p><p><b>Lugares:</b> 6 </p>',
-                icon: 'info',
-                confirmButtonColor: '#7B3F00',
-              });
-            }}
-              className="w-full py-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-            >
-              Detalle Reserva
-            </button>
-          </div>
-
-          {/* CARD M07 (Disponible / Libre) */}
-          <div className="bg-[#FAF8F5] rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between opacity-80">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M07</h3>
-                </div>
-              </div>
-
-              <div className="py-6 space-y-1">
-                <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5 text-[#059669]" />
-                  <span>Disponible / Libre</span>
-                </p>
-                <p className="text-[11px] text-[#8C7D73]">Mesa libre</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => handleOpenComanda('M07')}
-              className="w-full py-2 bg-white/70 hover:bg-white text-[#8C7D73] hover:text-[#1E110A] border border-[#E5DCD3] rounded-xl text-xs font-semibold text-center transition-colors"
-            >
-              Mesa libre
-            </button>
-          </div>
-
-          {/* CARD M08 (En Consumo) */}
-          <div className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-[#1E110A] leading-tight">M08</h3>
-                </div>
-              </div>
-
-              <div className="py-4 space-y-1">
-                <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
-                  <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
-                  <span>En Consumo</span>
-                </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-[#1E110A]">$145.00</span>
-                  <span className="text-[10px] text-[#8C7D73] font-bold">MXN</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                onClick={() => handleOpenComanda('M08')}
-                className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-              >
-                Ver comanda
-              </button>
-              <button
-                onClick={() => handleCobrar('M08')}
-                className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-              >
-                Cobrar
-              </button>
-            </div>
-          </div>
-
-        </div>
+        )}
       </main>
-
     </div>
   );
 };

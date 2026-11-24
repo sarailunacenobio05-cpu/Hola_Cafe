@@ -2,9 +2,12 @@ package com.holacafe.controller;
 
 import com.holacafe.dto.AlertaResponse;
 import com.holacafe.dto.BotonResponse;
+import com.holacafe.dto.GuardarBotonRequest;
 import com.holacafe.dto.MesaResponse;
 import com.holacafe.service.MesaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,30 @@ public class MesaController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_MESERO')")
     public ResponseEntity<List<BotonResponse>> listarBotones() {
         return ResponseEntity.ok(mesaService.listarBotones());
+    }
+
+    // Crear un nuevo botón IoT (Solo Administrador)
+    @PostMapping("/botones")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<BotonResponse> crearBoton(@Valid @RequestBody GuardarBotonRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(mesaService.crearBoton(request));
+    }
+
+    // Actualizar un botón IoT existente (Solo Administrador)
+    @PutMapping("/botones/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<BotonResponse> actualizarBoton(
+            @PathVariable String id,
+            @Valid @RequestBody GuardarBotonRequest request) {
+        return ResponseEntity.ok(mesaService.actualizarBoton(id, request));
+    }
+
+    // Eliminar un botón IoT (Solo Administrador)
+    @DeleteMapping("/botones/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarBoton(@PathVariable String id) {
+        mesaService.eliminarBoton(id);
+        return ResponseEntity.noContent().build();
     }
     // Listar alertas activas (Llamadas a mesero o cuenta)
     @GetMapping("/alertas")

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { AlertCircle } from 'lucide-react';
 
 export const ConfirmarBajaModal: React.FC = () => {
   const { isConfirmBajaModalOpen, cerrarConfirmBajaModal, confirmarBajaUser, usuarioBaja } = useApp();
@@ -18,10 +17,10 @@ export const ConfirmarBajaModal: React.FC = () => {
 
           <div>
             <h3 className="font-extrabold text-stone-900 text-lg leading-tight">
-              Dar de baja al mesero
+              Eliminar cuenta definitivamente
             </h3>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">
-              El usuario <strong>{usuarioBaja.name}</strong> perderá el acceso al sistema de inmediato. Sus comandas y tickets se conservan en el historial y podrás reactivarlo cuando quieras.
+              Se eliminará permanentemente la cuenta de <strong>{usuarioBaja.name}</strong> ({usuarioBaja.username}) del sistema. Esta acción <strong>no se puede deshacer</strong>.
             </p>
           </div>
         </div>
@@ -39,7 +38,7 @@ export const ConfirmarBajaModal: React.FC = () => {
             onClick={confirmarBajaUser}
             className="px-5 py-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
           >
-            Dar de baja
+            Eliminar cuenta
           </button>
         </div>
 

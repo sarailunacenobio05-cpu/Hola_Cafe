@@ -95,6 +95,7 @@ export const BotonModal: React.FC = () => {
             <input
               type="text"
               value={id}
+              disabled={Boolean(botonEditando)}
               onChange={(e) => {
                 const val = e.target.value;
                 setId(val);
@@ -102,7 +103,9 @@ export const BotonModal: React.FC = () => {
               }}
               required
               placeholder="Ej. BOT-M17"
-              className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-mono font-medium"
+              className={`w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-mono font-medium ${
+                botonEditando ? 'opacity-65 cursor-not-allowed bg-stone-100' : ''
+              }`}
             />
             {idError ? (
               <span className="text-xs text-red-600 font-semibold mt-1 block">

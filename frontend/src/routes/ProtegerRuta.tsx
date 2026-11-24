@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { authService } from '../api/authService';
 import { UserRole } from '../types';
 
 interface ProtegerRutaProps {
@@ -10,8 +11,9 @@ interface ProtegerRutaProps {
 
 export const ProtegerRuta: React.FC<ProtegerRutaProps> = ({ rolesPermitidos, children }) => {
   const { currentUser } = useApp();
+  const hasSession = Boolean(currentUser && authService.getToken());
 
-  if (!currentUser) {
+  if (!hasSession || !currentUser) {
     return <Navigate to="/login" replace />;
   }
 

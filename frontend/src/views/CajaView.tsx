@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, CorteCajaItem } from '../context/AppContext';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -9,56 +9,284 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-interface CorteRow {
-  id: string;
-  fecha: string;
-  mesero: string;
-  total: number;
-}
-
 export const CajaView: React.FC = () => {
-  const { agregarAdminNotificacion } = useApp();
+  const {
+    cortesCaja: cortes,
+    ventasPendientesCorte,
+    ticketsPendientesCorte,
+    realizarCorteCaja,
+    tables,
+  } = useApp();
   const [paginaActual, setPaginaActual] = useState(1);
   const filasPorPagina = 5;
 
-  const [cortes, setCortes] = useState<CorteRow[]>([
-    { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00 },
-    { id: '#06', fecha: '25/03/2026 · 20:00', mesero: 'Dante M.', total: 4310.00 },
-    { id: '#05', fecha: '24/03/2026 · 20:00', mesero: 'Gael O.', total: 6980.00 },
-    { id: '#04', fecha: '23/03/2026 · 20:00', mesero: 'Melissa H.', total: 5150.00 },
-    { id: '#03', fecha: '22/03/2026 · 20:00', mesero: 'Melissa H.', total: 6390.00 },
-    { id: '#02', fecha: '21/03/2026 · 20:00', mesero: 'Gael O.', total: 7210.00 },
-    { id: '#01', fecha: '20/03/2026 · 20:00', mesero: 'Dante M.', total: 4820.00 },
-  ]);
+  const cuentasAbiertas = tables.filter(
+    t => t.status !== 'Limpia / Disponible' && t.status !== 'Reservada'
+  ).length;
+  const hayIngresosPendientes = ventasPendientesCorte > 0;
 
   const handleNuevoCorte = () => {
-    const num = cortes.length + 1;
-    const nuevoId = `#${num < 10 ? `0${num}` : num}`;
-    const totalNuevo = 18420.00;
-    const nuevoCorte: CorteRow = {
-      id: nuevoId,
-      fecha: `Hoy · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      mesero: 'Dante M.',
-      total: totalNuevo,
-    };
-    setCortes(prev => [nuevoCorte, ...prev]);
+    if (!hayIngresosPendientes) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Sin ingresos pendientes',
+        text: 'Ya se realizó el corte con los ingresos acumulados. Registra nuevos cobros para realizar el siguiente corte de caja.',
+        confirmButtonColor: '#DF7B1B',
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
+      return;
+    }
+
+    const nuevoCorte = realizarCorteCaja();
+    if (!nuevoCorte) return;
+
     setPaginaActual(1);
-    agregarAdminNotificacion({
-      tipo: 'corte',
-      titulo: `Corte de caja ${nuevoId} realizado`,
-      mensaje: `Registrado por Dante M. por $${totalNuevo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
-      vistaDestino: 'caja',
-    });
     Swal.fire({
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: `Corte ${nuevoId} registrado`,
+      title: `Corte ${nuevoCorte.id} registrado ($${nuevoCorte.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })})`,
       showConfirmButton: false,
       timer: 2500,
       background: '#FAF8F5',
       color: '#1E110A',
     });
+  };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+  const handleImprimirCorte = (corte: CorteCajaItem) => {
+    const formatoMoneda = (monto: number) =>
+      monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const subtotal = corte.total / 1.16;
+    const iva = corte.total - subtotal;
+    const fechaImpresion = new Date().toLocaleString('es-MX', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Corte de Caja ${escapeHtml(corte.id)} - ¡Hola, Café!</title>
+    <style>
+      @page {
+        size: auto;
+        margin: 12mm;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #1E110A;
+        margin: 0;
+        padding: 16px;
+        background: #ffffff;
+      }
+      .ticket {
+        max-width: 360px;
+        margin: 0 auto;
+        border: 1px solid #D5C7BA;
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .header {
+        text-align: center;
+        padding-bottom: 12px;
+        border-bottom: 1px dashed #B8A99A;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+      }
+      .header p {
+        margin: 2px 0;
+        font-size: 11px;
+        color: #6E5A4E;
+      }
+      .badge {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #FAF8F5;
+        border: 1px solid #D5C7BA;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .section {
+        padding: 12px 0;
+        border-bottom: 1px dashed #B8A99A;
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 5px 0;
+      }
+      .label {
+        color: #6E5A4E;
+      }
+      .value {
+        font-weight: 700;
+        text-align: right;
+      }
+      .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid #E5DCD3;
+        font-size: 16px;
+        font-weight: 900;
+      }
+      .total-amount {
+        color: #7B3F00;
+        font-size: 18px;
+      }
+      .signatures {
+        margin-top: 28px;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 10px;
+        color: #6E5A4E;
+      }
+      .sig-box {
+        flex: 1;
+        text-align: center;
+      }
+      .sig-line {
+        border-top: 1px solid #8C7D73;
+        margin-bottom: 4px;
+      }
+      .footer {
+        margin-top: 16px;
+        text-align: center;
+        font-size: 10px;
+        color: #8C7D73;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticket">
+      <div class="header">
+        <h1>¡Hola, Café!</h1>
+        <p><strong>Café Central</strong></p>
+        <p>Av. Principal 123, Col. Centro Cuilapam</p>
+        <p>RFC: XAXX010101000</p>
+        <div class="badge">Comprobante de Corte de Caja</div>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <span class="label">Folio de corte:</span>
+          <span class="value">${escapeHtml(corte.id)}</span>
+        </div>
+        <div class="row">
+          <span class="label">Fecha y hora:</span>
+          <span class="value">${escapeHtml(corte.fecha)}</span>
+        </div>
+        <div class="row">
+          <span class="label">Responsable / Mesero:</span>
+          <span class="value">${escapeHtml(corte.mesero)}</span>
+        </div>
+        ${corte.tickets !== undefined ? `<div class="row">
+          <span class="label">Tickets incluidos:</span>
+          <span class="value">${corte.tickets}</span>
+        </div>` : ''}
+        <div class="row">
+          <span class="label">Impreso el:</span>
+          <span class="value">${escapeHtml(fechaImpresion)}</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <span class="label">Subtotal (sin IVA)</span>
+          <span class="value">$${formatoMoneda(subtotal)}</span>
+        </div>
+        <div class="row">
+          <span class="label">IVA (16%)</span>
+          <span class="value">$${formatoMoneda(iva)}</span>
+        </div>
+        <div class="total-row">
+          <span>TOTAL CORTE</span>
+          <span class="total-amount">$${formatoMoneda(corte.total)}</span>
+        </div>
+      </div>
+
+      <div class="signatures">
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <span>Entrega (${escapeHtml(corte.mesero)})</span>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <span>Recibe (Administrador)</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        Documento interno de control de caja · ¡Hola, Café!
+      </div>
+    </div>
+  </body>
+</html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentWindow?.document;
+    if (!frameDoc || !iframe.contentWindow) {
+      document.body.removeChild(iframe);
+      Swal.fire({
+        title: 'Error de impresión',
+        text: 'No se pudo preparar el comprobante para imprimir.',
+        icon: 'error',
+        confirmButtonColor: '#7B3F00',
+      });
+      return;
+    }
+
+    frameDoc.open();
+    frameDoc.write(html);
+    frameDoc.close();
+
+    const frameWindow = iframe.contentWindow;
+    const limpiar = () => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    };
+
+    frameWindow.onafterprint = limpiar;
+    setTimeout(() => {
+      frameWindow.focus();
+      frameWindow.print();
+      setTimeout(limpiar, 1500);
+    }, 150);
   };
 
   const totalPaginas = Math.ceil(cortes.length / filasPorPagina) || 1;
@@ -112,16 +340,18 @@ export const CajaView: React.FC = () => {
             {/* 3 Metrics Grouped Box matching Figma UI_Caja.pdf */}
             <div className="inline-flex items-center bg-white border border-[#E5DCD3] rounded-2xl overflow-hidden self-start md:self-auto shadow-2xs divide-x divide-[#E5DCD3]">
               <div className="px-5 py-3 text-left min-w-[130px]">
-                <span className="block text-[11px] font-semibold text-[#8C7D73]">Ventas del día</span>
-                <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">$18,420.00</span>
+                <span className="block text-[11px] font-semibold text-[#8C7D73]">Ventas por cortar</span>
+                <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">
+                  ${ventasPendientesCorte.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="px-5 py-3 text-left min-w-[110px]">
                 <span className="block text-[11px] font-semibold text-[#8C7D73]">Cuentas abiertas</span>
-                <span className="text-xl sm:text-2xl font-black text-[#DF7B1B] leading-tight">5</span>
+                <span className="text-xl sm:text-2xl font-black text-[#DF7B1B] leading-tight">{cuentasAbiertas}</span>
               </div>
               <div className="px-5 py-3 text-left min-w-[110px]">
                 <span className="block text-[11px] font-semibold text-[#8C7D73]">Tickets impresos</span>
-                <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">37</span>
+                <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">{ticketsPendientesCorte}</span>
               </div>
             </div>
           </div>
@@ -146,10 +376,15 @@ export const CajaView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleNuevoCorte}
-                  className="px-4 py-2 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1.5"
+                  title={hayIngresosPendientes ? 'Realizar corte de caja con los ingresos acumulados' : 'No hay ingresos pendientes por cortar'}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1.5 ${
+                    hayIngresosPendientes
+                      ? 'bg-[#DF7B1B] hover:bg-[#C96910] text-white'
+                      : 'bg-[#E5DCD3] text-[#8C7D73] cursor-not-allowed'
+                  }`}
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Realizar corte</span>
+                  <span>{hayIngresosPendientes ? 'Realizar corte' : 'Sin ingresos nuevos'}</span>
                 </button>
               </div>
             </div>
@@ -177,14 +412,8 @@ export const CajaView: React.FC = () => {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => {
-                                            Swal.fire({
-                                              title: 'Ticket',
-                                              text: 'Imprimir ticket',
-                                              icon: 'success',
-                                              confirmButtonColor: '#7B3F00',
-                                            });
-                                          }}
+                          type="button"
+                          onClick={() => handleImprimirCorte(corte)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold text-[#1E110A] transition-colors shadow-2xs"
                         >
                           <Printer className="w-3.5 h-3.5 text-[#8C7D73]" />

@@ -11,12 +11,33 @@ import {
   RefreshCw,
   Plus,
   Edit3,
+  Trash2,
   Search
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { IoTDevice } from '../types';
 
 export const BotonesAvisoView: React.FC = () => {
-  const { iotDevices, mostrarAddBotonModal, mostrarEditBotonModal } = useApp();
+  const { iotDevices, mostrarAddBotonModal, mostrarEditBotonModal, eliminarBoton } = useApp();
+
+  const confirmarEliminarBoton = async (device: IoTDevice) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar dispositivo?',
+      html: `Se eliminará el dispositivo <strong>${device.id}</strong> (${device.name}). Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#8C7D73',
+      background: '#FAF8F5',
+      color: '#1E110A',
+    });
+
+    if (result.isConfirmed) {
+      await eliminarBoton(device.id);
+    }
+  };
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
@@ -280,15 +301,26 @@ export const BotonesAvisoView: React.FC = () => {
                         {getStatusBadge(device.status)}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          type="button"
-                          onClick={() => mostrarEditBotonModal(device)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-[#e59819] hover:text-[#e59819] text-[#231815] rounded-xl text-xs font-semibold shadow-2xs transition-all"
-                          title="Editar botón"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-[#7c6e65]" />
-                          <span>Editar</span>
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => mostrarEditBotonModal(device)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-[#e59819] hover:text-[#e59819] text-[#231815] rounded-xl text-xs font-semibold shadow-2xs transition-all"
+                            title="Editar botón"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-[#7c6e65]" />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => confirmarEliminarBoton(device)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:border-red-300 hover:bg-red-50 hover:text-red-700 text-[#7c6e65] rounded-xl text-xs font-semibold shadow-2xs transition-all"
+                            title="Eliminar dispositivo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

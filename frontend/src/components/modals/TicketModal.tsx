@@ -3,21 +3,32 @@ import { useApp } from '../../context/AppContext';
 import { X, Printer, Plus, Minus } from 'lucide-react';
 
 export const TicketModal: React.FC = () => {
-  const { isTicketModalOpen, cerrarTicketModal, activeTableId } = useApp();
+  const { isTicketModalOpen, cerrarTicketModal, activeTableId, tables, currentUser } = useApp();
   const [copies, setCopies] = useState(1);
 
   if (!isTicketModalOpen) return null;
 
-  // Exact items from Figma Modal_Ticket.pdf
-  const ticketItems = [
-    { qty: 2, name: 'Hamburguesa Clásica', price: 330.00 },
-    { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00 },
-    { qty: 1, name: 'Club Sandwich Clásico', price: 150.00 },
-    { qty: 1, name: 'Papas Gajo', price: 95.00 },
-    { qty: 2, name: 'Crepa Nutella & Frutos Rojos', price: 240.00 },
-    { qty: 2, name: 'Latte (Vainilla)', price: 150.00 },
-    { qty: 2, name: 'Limonada Natural', price: 100.00 },
-  ];
+  const activeTable = tables.find((t) => t.id === activeTableId);
+  const mesaNum = activeTable ? String(activeTable.number).padStart(2, '0') : (activeTableId || 'M04').replace('M', '');
+  const folio = activeTable?.currentOrder?.folio || 1039;
+  const mesero = activeTable?.waiterName || currentUser?.name || 'Gael O.';
+  const personas = activeTable?.guests || activeTable?.capacity || 2;
+
+  const ticketItems =
+    activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
+      ? activeTable.currentOrder.items.map((it) => ({
+          qty: it.quantity,
+          name: it.selectedOption ? `${it.name} (${it.selectedOption})` : it.name,
+          price: it.price * it.quantity,
+        }))
+      : [
+          { qty: 2, name: 'Hamburguesa Clásica', price: 330.00 },
+          { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00 },
+        ];
+
+  const totalAmount = ticketItems.reduce((acc, it) => acc + it.price, 0);
+  const subtotalAmount = totalAmount / 1.16;
+  const ivaAmount = totalAmount - subtotalAmount;
 
   const handlePrint = () => {
     window.print();
@@ -32,7 +43,7 @@ export const TicketModal: React.FC = () => {
           <div>
             <h3 className="font-black text-[#1E110A] text-base">Ticket de cuenta</h3>
             <p className="text-xs text-[#8C7D73]">
-              Vista previa · Mesa 04 · Folio #1039
+              Vista previa · Mesa {mesaNum} · Folio #{folio}
             </p>
           </div>
           <button
@@ -60,16 +71,16 @@ export const TicketModal: React.FC = () => {
             {/* Ticket Info */}
             <div className="py-3 border-b border-dashed border-[#D5C7BA] space-y-1 text-[11px] text-[#6E5A4E]">
               <div className="flex justify-between font-bold">
-                <span>Ticket #1039</span>
-                <span>Mesa 04</span>
+                <span>Ticket #{folio}</span>
+                <span>Mesa {mesaNum}</span>
               </div>
               <div className="flex justify-between">
-                <span>22/10/2026</span>
-                <span>14:32</span>
+                <span>{new Date().toLocaleDateString('es-MX')}</span>
+                <span>{new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="flex justify-between">
-                <span>Mesero: <strong>Gael O.</strong></span>
-                <span>Personas: 4</span>
+                <span>Mesero: <strong>{mesero}</strong></span>
+                <span>Personas: {personas}</span>
               </div>
             </div>
 
@@ -99,15 +110,15 @@ export const TicketModal: React.FC = () => {
             <div className="py-3 border-b border-dashed border-[#D5C7BA] space-y-1 text-xs">
               <div className="flex justify-between text-[#6E5A4E]">
                 <span>Subtotal</span>
-                <span className="font-semibold text-[#1E110A]">$1,068.97</span>
+                <span className="font-semibold text-[#1E110A]">${subtotalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-[#6E5A4E]">
                 <span>IVA (16%)</span>
-                <span className="font-semibold text-[#1E110A]">$171.03</span>
+                <span className="font-semibold text-[#1E110A]">${ivaAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-base font-black text-[#1E110A] pt-1">
                 <span>TOTAL</span>
-                <span className="text-lg font-black text-[#7B3F00]">$1,240.00</span>
+                <span className="text-lg font-black text-[#7B3F00]">${totalAmount.toFixed(2)}</span>
               </div>
             </div>
 

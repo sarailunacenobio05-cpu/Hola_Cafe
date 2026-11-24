@@ -8,10 +8,11 @@ export interface ApiErrorResponse {
   status: number;
   message: string;
   errors?: Record<string, string>;
+  validaciones?: Record<string, string>;
 }
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -51,7 +52,7 @@ api.interceptors.response.use(
     return Promise.reject({
       status,
       message: data?.message || "Ocurrió un error al procesar la solicitud.",
-      errors: data?.errors,
+      errors: data?.validaciones || data?.errors,
     } satisfies ApiErrorResponse);
   },
 );

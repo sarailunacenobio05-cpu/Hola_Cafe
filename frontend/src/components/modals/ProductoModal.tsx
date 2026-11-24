@@ -10,32 +10,35 @@ export const ProductoModal: React.FC = () => {
   const [nameError, setNameError] = useState('');
   const [category, setCategory] = useState('Bebidas Frías');
   const [description, setDescription] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
   const [price, setPrice] = useState('70.00');
   const [priceError, setPriceError] = useState('');
   const [status, setStatus] = useState<'DISPONIBLE' | 'AGOTADO' | 'OCULTO'>('DISPONIBLE');
-  const [options, setOptions] = useState<string[]>(['Natural', 'Vainilla']);
+  const [options, setOptions] = useState<string[]>([]);
   const [newOptionInput, setNewOptionInput] = useState('');
   const [allowKitchenNotes, setAllowKitchenNotes] = useState(true);
 
   useEffect(() => {
     if (productoEditando) {
       setName(productoEditando.name);
-      setCategory(productoEditando.category);
+      setCategory(productoEditando.category || 'Bebidas Frías');
       setDescription(productoEditando.description);
       setPrice(productoEditando.price.toString());
       setStatus(productoEditando.status);
       setOptions(productoEditando.options || []);
       setAllowKitchenNotes(productoEditando.allowKitchenNotes ?? true);
     } else {
-      setName('Cold Brew');
-      setCategory('Bebidas frías');
-      setDescription('Café de extracción en frío, servido con hielo. Suave, refrescante y con bajo amargor.');
-      setPrice('70.00');
+      setName('');
+      setCategory('Bebidas Frías');
+      setDescription('');
+      setPrice('');
       setStatus('DISPONIBLE');
-      setOptions(['Natural', 'Vainilla']);
+      setOptions([]);
       setAllowKitchenNotes(true);
     }
+    setNewOptionInput('');
     setNameError('');
+    setDescriptionError('');
     setPriceError('');
   }, [productoEditando, isProductoModalOpen]);
 
@@ -55,15 +58,17 @@ export const ProductoModal: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errName = validarRequerido(name, 'nombre del producto');
+    const errDesc = validarRequerido(description, 'descripción');
     const errPrice = validarPrecio(price);
     setNameError(errName);
+    setDescriptionError(errDesc);
     setPriceError(errPrice);
-    if (errName || errPrice) return;
+    if (errName || errDesc || errPrice) return;
 
     guardarProducto({
-      name,
+      name: name.trim(),
       category,
-      description,
+      description: description.trim(),
       price: parseFloat(price) || 0,
       status,
       options,
@@ -92,11 +97,13 @@ export const ProductoModal: React.FC = () => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
+        <form onSubmit={handleSubmit} noValidate className="p-5 overflow-y-auto space-y-4 text-xs flex-1">
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-stone-700 mb-1">Nombre del producto</label>
+              <label className="block font-bold text-stone-700 mb-1">
+                Nombre del producto <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={name}
@@ -107,7 +114,9 @@ export const ProductoModal: React.FC = () => {
                 }}
                 required
                 placeholder="Ej. Cold Brew"
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium"
+                className={`w-full px-3 py-2 bg-stone-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium ${
+                  nameError ? 'border-red-400 bg-red-50/40' : 'border-stone-200'
+                }`}
               />
               {nameError && (
                 <span className="text-xs text-red-600 font-semibold mt-1 block">
@@ -117,7 +126,9 @@ export const ProductoModal: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-bold text-stone-700 mb-1">Categoría</label>
+              <label className="block font-bold text-stone-700 mb-1">
+                Categoría <span className="text-red-500">*</span>
+              </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -135,20 +146,35 @@ export const ProductoModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-bold text-stone-700 mb-1">Descripción</label>
+            <label className="block font-bold text-stone-700 mb-1">
+              Descripción <span className="text-red-500">*</span>
+            </label>
             <textarea
               rows={2}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDescription(val);
+                setDescriptionError(validarRequerido(val, 'descripción'));
+              }}
               required
               placeholder="Descripción de ingredientes y sabor..."
-              className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium resize-none"
+              className={`w-full px-3 py-2 bg-stone-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium resize-none ${
+                descriptionError ? 'border-red-400 bg-red-50/40' : 'border-stone-200'
+              }`}
             />
+            {descriptionError && (
+              <span className="text-xs text-red-600 font-semibold mt-1 block">
+                {descriptionError}
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-stone-700 mb-1">Precio (MXN)</label>
+              <label className="block font-bold text-stone-700 mb-1">
+                Precio (MXN) <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 step="0.5"
@@ -160,7 +186,9 @@ export const ProductoModal: React.FC = () => {
                 }}
                 required
                 placeholder="70.00"
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-bold text-stone-900"
+                className={`w-full px-3 py-2 bg-stone-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-bold text-stone-900 ${
+                  priceError ? 'border-red-400 bg-red-50/40' : 'border-stone-200'
+                }`}
               />
               {priceError && (
                 <span className="text-xs text-red-600 font-semibold mt-1 block">
@@ -170,7 +198,9 @@ export const ProductoModal: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-bold text-stone-700 mb-1">Disponibilidad</label>
+              <label className="block font-bold text-stone-700 mb-1">
+                Disponibilidad <span className="text-red-500">*</span>
+              </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
@@ -187,7 +217,7 @@ export const ProductoModal: React.FC = () => {
             <label className="block font-bold text-stone-700 mb-1">
               Opciones o variantes (opcional)
             </label>
-            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {options.map((opt) => (
                 <span
                   key={opt}
@@ -215,21 +245,18 @@ export const ProductoModal: React.FC = () => {
                       handleAddOption();
                     }
                   }}
-                  placeholder="Nueva opción..."
-                  className="px-2 py-1 bg-stone-50 border border-dashed border-stone-300 rounded-lg text-xs w-28 focus:outline-none"
+                  placeholder="Ej. Vainilla, Natural..."
+                  className="px-2.5 py-1 bg-stone-50 border border-dashed border-stone-300 rounded-lg text-xs w-44 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddOption}
-                  className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200 text-xs"
+                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200 text-xs"
                 >
                   + Agregar
                 </button>
               </div>
             </div>
-            <p className="text-[11px] text-stone-400">
-              Ej. Vainilla / Caramelo o Natural / de frutos.
-            </p>
           </div>
 
           <div className="pt-2">
@@ -246,20 +273,25 @@ export const ProductoModal: React.FC = () => {
             </label>
           </div>
 
-          <div className="pt-4 border-t border-stone-100 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={cerrarProductModal}
-              className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 rounded-xl"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
-            >
-              Guardar producto
-            </button>
+          <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
+            <span className="text-[11px] text-stone-400">
+              <span className="text-red-500 font-bold">*</span> Campos obligatorios
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cerrarProductModal}
+                className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98"
+              >
+                Guardar producto
+              </button>
+            </div>
           </div>
 
         </form>
