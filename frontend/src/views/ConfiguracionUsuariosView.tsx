@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
+import { Blobatar } from '@blobatar/react';
 
 export const ConfiguracionUsuariosView: React.FC = () => {
   const {
@@ -17,23 +18,17 @@ export const ConfiguracionUsuariosView: React.FC = () => {
     mostrarConfirmBajaModal
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'Todos' | 'Activos' | 'Baja'>('Todos');
   const [search, setSearch] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
   const filasPorPagina = 5;
 
   const activosCount = users.filter(u => u.status === 'ACTIVO').length;
-  const bajasCount = users.filter(u => u.status === 'BAJA').length;
 
   const filteredUsers = users.filter(user => {
-    const matchesTab =
-      activeTab === 'Todos' ||
-      (activeTab === 'Activos' && user.status === 'ACTIVO') ||
-      (activeTab === 'Baja' && user.status === 'BAJA');
-    const matchesSearch =
+    return (
       user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.username.toLowerCase().includes(search.toLowerCase());
-    return matchesTab && matchesSearch;
+      user.username.toLowerCase().includes(search.toLowerCase())
+    );
   });
 
   const totalPaginas = Math.ceil(filteredUsers.length / filasPorPagina) || 1;
@@ -80,82 +75,50 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                 Configuración de usuarios
               </h1>
               <p className="text-xs sm:text-sm text-[#786B63] mt-1 font-medium">
-                Da de alta o de baja a los meseros y asígnales las credenciales para ingresar al sistema.
+                Administra las cuentas del personal y asigna sus credenciales para ingresar al sistema.
               </p>
             </div>
 
-            {/* 3 Metrics Grouped Box (Meseros activos 5 | Dados de baja 1 | Total de usuarios 6) */}
+            {/* Metrics Box */}
             <div className="inline-flex items-center bg-white border border-[#E5DCD3] rounded-2xl overflow-hidden self-start md:self-auto shadow-2xs divide-x divide-[#E5DCD3]">
-              <div className="px-5 py-3 text-center min-w-[110px]">
-                <span className="block text-[11px] font-semibold text-[#8C7D73]">Meseros activos</span>
+              <div className="px-5 py-3 text-center min-w-[120px]">
+                <span className="block text-[11px] font-semibold text-[#8C7D73]">Usuarios activos</span>
                 <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">{activosCount}</span>
               </div>
-              <div className="px-5 py-3 text-center min-w-[110px]">
-                <span className="block text-[11px] font-semibold text-[#8C7D73]">Dados de baja</span>
-                <span className="text-xl sm:text-2xl font-black text-[#DC2626] leading-tight">{bajasCount}</span>
-              </div>
-              <div className="px-5 py-3 text-center min-w-[110px]">
+              <div className="px-5 py-3 text-center min-w-[120px]">
                 <span className="block text-[11px] font-semibold text-[#8C7D73]">Total de usuarios</span>
                 <span className="text-xl sm:text-2xl font-black text-[#1E110A] leading-tight">{users.length}</span>
               </div>
             </div>
           </div>
 
-          {/* Filter Bar with Tabs and Add Waiter button */}
+          {/* Search Bar and Add User button */}
           <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto flex-1">
-              {/* Tabs */}
-              <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#E5DCD3]">
-                <button
-                  onClick={() => { setActiveTab('Todos'); setPaginaActual(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Todos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                    }`}
-                >
-                  Todos ({users.length})
-                </button>
-                <button
-                  onClick={() => { setActiveTab('Activos'); setPaginaActual(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Activos' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                    }`}
-                >
-                  Activos ({activosCount})
-                </button>
-                <button
-                  onClick={() => { setActiveTab('Baja'); setPaginaActual(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'Baja' ? 'bg-[#DF7B1B] text-white shadow-xs' : 'text-[#6E5A4E] hover:text-[#1E110A]'
-                    }`}
-                >
-                  Baja ({bajasCount})
-                </button>
-              </div>
-
-              {/* Search */}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C7D73]" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o correo..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPaginaActual(1); }}
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
-                />
-              </div>
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C7D73]" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o correo..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPaginaActual(1); }}
+                className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
+              />
             </div>
 
-            {/* Nuevo mesero */}
+            {/* Añadir usuario */}
             <button
               onClick={mostrarAddUserModal}
               className="w-full md:w-auto px-5 py-2.5 bg-[#DF7B1B] hover:bg-[#C96910] text-white rounded-xl text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4" />
-              <span>Nuevo mesero</span>
+              <span>Añadir usuario</span>
             </button>
           </div>
 
           {/* Table */}
           <div className="bg-white rounded-2xl border border-[#E5DCD3] shadow-sm overflow-hidden">
             <div className="p-5 border-b border-[#F5EFEB] flex items-center justify-between">
-              <h2 className="text-base font-black text-[#1E110A]">Meseros registrados</h2>
+              <h2 className="text-base font-black text-[#1E110A]">Usuarios registrados</h2>
               <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-3 py-1 rounded-lg">
                 {filteredUsers.length} usuarios
               </span>
@@ -165,7 +128,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#FAF8F5] text-[#8C7D73] font-bold border-b border-[#E5DCD3] uppercase tracking-wider text-[10px]">
                   <tr>
-                    <th className="py-3.5 px-6">MESERO</th>
+                    <th className="py-3.5 px-6">USUARIO</th>
                     <th className="py-3.5 px-6">CORREO ELECTRÓNICO</th>
                     <th className="py-3.5 px-6">CONTRASEÑA</th>
                     <th className="py-3.5 px-6">ÚLTIMO ACCESO</th>
@@ -177,9 +140,11 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                   {elementosPaginados.map(user => (
                     <tr key={user.id} className="hover:bg-amber-50/20 transition-colors">
                       <td className="py-4 px-6 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-xs font-black text-[#6E4F32]">
-                          {user.initials}
-                        </div>
+                        <Blobatar
+                          name={user.username || user.name}
+                          size={34}
+                          className="w-8 h-8 rounded-full border border-[#D5C7BA] shrink-0"
+                        />
                         <div>
                           <p className="font-bold text-[#1E110A] text-xs">{user.name}</p>
                           <span className="text-[10px] text-[#8C7D73] font-semibold">{user.role}</span>

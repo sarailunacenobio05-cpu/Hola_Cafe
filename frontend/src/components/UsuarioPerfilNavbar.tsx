@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import adminAvatarImg from '../img/admin-avatar.jpg';
+import { Blobatar } from '@blobatar/react';
 
 interface UsuarioPerfilNavbarProps {
   variante?: 'clara' | 'oscura';
@@ -29,17 +29,7 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
   const rol = currentUser?.role || 'Mesero';
   const turno = currentUser?.shift || 'Turno completo';
   const estado = currentUser?.status || 'ACTIVO';
-  const iniciales =
-    currentUser?.initials ||
-    nombre
-      .split(' ')
-      .map((p) => p[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-
-  const avatarUrl =
-    currentUser?.avatar || (rol === 'Administrador' ? adminAvatarImg : undefined);
+  const avatarSeed = correo || nombre;
 
   const rolBadgeColor =
     rol === 'Administrador'
@@ -93,17 +83,11 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
 
         <div className="flex items-center gap-3.5 pr-6">
           <div className="relative shrink-0">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={nombre}
-                className="w-12 h-12 rounded-full object-cover border-2 border-[#DF7B1B]/70 shadow-sm"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-[#523323] text-amber-200 font-black text-sm flex items-center justify-center border-2 border-[#DF7B1B]/70">
-                {iniciales}
-              </div>
-            )}
+            <Blobatar
+              name={avatarSeed}
+              size={48}
+              className="w-12 h-12 rounded-full border-2 border-[#DF7B1B]/70 shadow-sm"
+            />
             <span
               className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#231815]"
               title="En línea"
@@ -193,17 +177,11 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
           aria-expanded={abierto}
           className="kds-profile hover:opacity-85 transition-opacity text-left"
         >
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={nombre}
-              className="w-8 h-8 rounded-full object-cover border border-amber-400/30"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#523323] text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-400/30">
-              {iniciales}
-            </div>
-          )}
+          <Blobatar
+            name={avatarSeed}
+            size={32}
+            className="w-8 h-8 rounded-full border border-amber-400/30 shrink-0"
+          />
           <span className="kds-profile-copy">
             <strong>{nombre}</strong>
             <small>{correo}</small>
@@ -225,15 +203,11 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
         aria-expanded={abierto}
         className="flex items-center gap-2.5 text-left hover:opacity-80 transition-opacity"
       >
-        {avatarUrl ? (
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D5C7BA] bg-[#231815] shrink-0">
-            <img src={avatarUrl} alt={nombre} className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-[#EFE6DC] border border-[#D5C7BA] flex items-center justify-center text-[11px] font-black text-[#6E4F32] shrink-0">
-            {iniciales}
-          </div>
-        )}
+        <Blobatar
+          name={avatarSeed}
+          size={32}
+          className="w-8 h-8 rounded-full border border-[#D5C7BA] shrink-0"
+        />
         <div className="hidden sm:block">
           <p className="text-xs font-bold text-[#1E110A] leading-tight">{nombre}</p>
           <p className="text-[10px] text-[#8C7D73] leading-tight">{correo}</p>

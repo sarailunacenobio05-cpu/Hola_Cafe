@@ -129,17 +129,6 @@ export const UsuarioModal: React.FC = () => {
                   const val = e.target.value;
                   setName(val);
                   setNameError(validarNombreCompleto(val));
-                  const parts = val
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toLowerCase()
-                    .trim()
-                    .split(/\s+/);
-                  if (parts.length >= 2 && parts[0] && parts[1]) {
-                    const sugerido = `${parts[0][0]}${parts[1].replace(/[^a-z0-9]/g, '')}@holacafe.com`;
-                    setUsername(sugerido);
-                    setUsernameError(validarCorreo(sugerido));
-                  }
                 }}
                 placeholder="Ej. Fernanda Ruiz"
                 className={`w-full px-3 py-2 bg-stone-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium ${
@@ -173,7 +162,7 @@ export const UsuarioModal: React.FC = () => {
                     setUsername(val);
                     setUsernameError(validarCorreo(val));
                   }}
-                  placeholder="fruiz@holacafe.com"
+                  placeholder="Ej. usuario@correo.com"
                   className={`w-full px-3 py-2 bg-stone-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 font-medium font-mono ${
                     usernameError ? 'border-red-400 bg-red-50/40' : 'border-stone-200'
                   }`}

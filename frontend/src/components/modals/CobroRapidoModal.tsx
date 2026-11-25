@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import Swal from 'sweetalert2';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../api/client';
 import { Logo } from '../Logo';
 import { AlertaBarraPopover } from '../AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../UsuarioPerfilNavbar';
@@ -114,6 +116,7 @@ export const CobroRapidoModal: React.FC = () => {
   const [fechaPago, setFechaPago] = useState('');
   const [mostrarWhatsApp, setMostrarWhatsApp] = useState(false);
   const [telefonoWhatsApp, setTelefonoWhatsApp] = useState('');
+  const [enviandoWhatsApp, setEnviandoWhatsApp] = useState(false);
 
   const bloqueado = pagoActivo || pagado;
   const metodoActual = METODOS.find((m) => m.id === metodo) ?? METODOS[0];
@@ -374,7 +377,7 @@ export const CobroRapidoModal: React.FC = () => {
     setTimeout(triggerPrint, 120);
   };
 
-  const handleEnviarWhatsApp = (e?: React.FormEvent) => {
+  const handleEnviarWhatsApp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const fecha = fechaPago || formatFechaTicket();
     const lineasItems = comanda.items
@@ -402,13 +405,105 @@ export const CobroRapidoModal: React.FC = () => {
       '¡Gracias por tu visita!',
     ];
 
+    const mensajeTexto = lineasMensaje.join('\n');
     const soloDigitos = telefonoWhatsApp.replace(/\D/g, '');
-    const numeroDestino =
-      soloDigitos.length === 10 ? `52${soloDigitos}` : soloDigitos;
-    const baseUrl = numeroDestino ? `https://wa.me/${numeroDestino}` : 'https://wa.me/';
-    const url = `${baseUrl}?text=${encodeURIComponent(lineasMensaje.join('\n'))}`;
+    const numeroDestino = soloDigitos.length === 10 ? `52${soloDigitos}` : soloDigitos;
+    const abrirWaMe = () => {
+      const baseUrl = numeroDestino ? `https://wa.me/${numeroDestino}` : 'https://wa.me/';
+      window.open(`${baseUrl}?text=${encodeURIComponent(mensajeTexto)}`, '_blank', 'noopener,noreferrer');
+    };
 
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (soloDigitos.length < 10) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Número requerido',
+        text: 'Ingresa un número de WhatsApp de 10 dígitos para enviarlo directamente desde el servidor.',
+        confirmButtonColor: '#16A34A',
+      });
+      return;
+    }
+
+    const resumenUnaLinea = comanda.items
+      .map((it) => `${it.cantidad}x ${it.nombre}`)
+      .join(', ');
+
+    const itemsPdf = comanda.items.map((it) => ({
+      cantidad: it.cantidad,
+      nombre: it.nombre,
+      importe: fmt(it.cantidad * it.precioCents),
+      detalle: it.modificadores.length > 0 ? it.modificadores.join(' · ') : '',
+    }));
+
+    setEnviandoWhatsApp(true);
+    try {
+      const { data } = await api.post('/notificaciones/whatsapp', {
+        telefono: soloDigitos,
+        mensaje: mensajeTexto,
+        enviarPdf: true,
+        folio: `#${comanda.ticket}`,
+        mesa: `Mesa ${comanda.mesa}`,
+        mesero: comanda.mesero,
+        metodoPago: metodoActual.titulo,
+        fecha,
+        subtotal: fmt(totales.subtotal),
+        descuentoPct,
+        descuento: fmt(totales.descuento),
+        iva: fmt(totales.iva),
+        propinaPct,
+        propina: fmt(totales.propina),
+        total: `${fmt(totales.total)} MXN`,
+        resumen: resumenUnaLinea,
+        items: itemsPdf,
+      });
+
+      if (data?.enviado) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title:
+            data?.modo === 'pdf'
+              ? `Ticket PDF enviado por WhatsApp (${data.destino})`
+              : `Ticket enviado por WhatsApp (${data.destino})`,
+          showConfirmButton: false,
+          timer: 3200,
+          background: '#ECFDF5',
+          color: '#065F46',
+        });
+        setMostrarWhatsApp(false);
+        setTelefonoWhatsApp('');
+      } else {
+        const res = await Swal.fire({
+          icon: 'info',
+          title: 'Meta WhatsApp sin configurar',
+          text:
+            data?.mensaje ||
+            'Agrega meta.whatsapp.token y meta.whatsapp.phone-number-id en application.properties para enviar sin abrir WhatsApp.',
+          showCancelButton: true,
+          confirmButtonText: 'Abrir WhatsApp Web',
+          cancelButtonText: 'Cerrar',
+          confirmButtonColor: '#16A34A',
+        });
+        if (res.isConfirmed) {
+          abrirWaMe();
+        }
+      }
+    } catch (error: any) {
+      const res = await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo enviar por WhatsApp',
+        text: error?.message || 'Error al enviar el mensaje desde el backend.',
+        showCancelButton: true,
+        confirmButtonText: 'Usar WhatsApp Web',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: '#16A34A',
+      });
+      if (res.isConfirmed) {
+        abrirWaMe();
+      }
+    } finally {
+      setEnviandoWhatsApp(false);
+    }
   };
 
   const handleLiberarMesa = () => {
@@ -887,10 +982,11 @@ export const CobroRapidoModal: React.FC = () => {
                       </div>
                       <button
                         type="submit"
-                        className="px-3.5 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
+                        disabled={enviandoWhatsApp}
+                        className="px-3.5 py-2 bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-60 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
                       >
                         <Send className="w-3.5 h-3.5" />
-                        Enviar
+                        {enviandoWhatsApp ? 'Enviando...' : 'Enviar'}
                       </button>
                     </div>
                   </form>
