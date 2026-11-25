@@ -2,114 +2,28 @@ import { useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { UsuarioPerfilNavbar } from "../components/UsuarioPerfilNavbar";
 import logoImg from "../img/logo.png";
-import { Bell, ChevronRight, LogOut } from "lucide-react";
+import { Bell, CheckCircle2, ChevronRight, Clock, LogOut, Trash2, UtensilsCrossed } from "lucide-react";
+import Swal from "sweetalert2";
+import { KitchenTicket } from "../types";
 
 type Status = "new" | "preparing" | "ready";
 type Note = { text: string; allergy?: boolean };
-type Dish = { quantity: number; name: string; notes: Note[] };
+type Dish = {
+  index: number;
+  quantity: number;
+  name: string;
+  option?: string;
+  notes: Note[];
+};
 type Order = {
+  id: string;
   table: string;
   number: string;
   waiter: string;
+  createdAt: string;
   status: Status;
   dishes: Dish[];
 };
-
-// Initial orders from Figma specifications
-// M05 is set to "preparing" instead of "late", without red borders as requested
-const initialOrders: Order[] = [
-  {
-    table: "M08",
-    number: "#1048",
-    waiter: "Sarai L.",
-    status: "new",
-    dishes: [
-      {
-        quantity: 2,
-        name: "Latte (Vainilla)",
-        notes: [{ text: "Leche deslactosada · Extra shot" }],
-      },
-      {
-        quantity: 1,
-        name: "Grilled Cheese Artesanal",
-        notes: [{ text: "Bien dorado · Cortado en triángulos" }],
-      },
-    ],
-  },
-  {
-    table: "M04",
-    number: "#1039",
-    waiter: "Gael O.",
-    status: "new",
-    dishes: [
-      {
-        quantity: 2,
-        name: "Crepa Nutella & Frutos Rojos",
-        notes: [{ text: "Una con la fruta aparte" }],
-      },
-      { quantity: 1, name: "Chai Latte", notes: [{ text: "Caliente · Sin azúcar" }] },
-    ],
-  },
-  {
-    table: "M05",
-    number: "#1045",
-    waiter: "Santi M.",
-    status: "preparing",
-    dishes: [
-      { quantity: 1, name: "Hot Dog Gourmet", notes: [{ text: "Toppings: tocino y jalapeño" }] },
-      {
-        quantity: 1,
-        name: "Hamburguesa Clásica",
-        notes: [
-          { text: "ALERGIA: sin lácteos (sin queso)", allergy: true },
-          { text: "Término medio · Sin jitomate" },
-        ],
-      },
-      { quantity: 1, name: "Smoothie (Mango)", notes: [{ text: "Con yogurt" }] },
-    ],
-  },
-  {
-    table: "M01",
-    number: "#1042",
-    waiter: "David H.",
-    status: "preparing",
-    dishes: [
-      {
-        quantity: 1,
-        name: "Mini Hotcakes",
-        notes: [
-          { text: "ALERGIA: frutos secos", allergy: true },
-          { text: "Base Lechera · Fruta Plátano · Topping Chispas" },
-        ],
-      },
-      { quantity: 2, name: "Cappuccino", notes: [{ text: "Leche de avena · Uno descafeinado" }] },
-    ],
-  },
-  {
-    table: "M07",
-    number: "#1049",
-    waiter: "Gael O.",
-    status: "preparing",
-    dishes: [
-      {
-        quantity: 1,
-        name: "Baguette de Pierna (Especial)",
-        notes: [{ text: "Sin jitomate · Extra queso" }],
-      },
-      { quantity: 1, name: "Frappé (Moka)", notes: [{ text: "Sin crema" }] },
-    ],
-  },
-  {
-    table: "M03",
-    number: "#1041",
-    waiter: "Melissa H.",
-    status: "ready",
-    dishes: [
-      { quantity: 1, name: "Club Sandwich Clásico", notes: [{ text: "Sin jitomate" }] },
-      { quantity: 1, name: "Ensalada de Temporada", notes: [{ text: "Aderezo aparte" }] },
-    ],
-  },
-];
 
 const statusLabel: Record<Status, string> = {
   new: "NUEVA",
@@ -119,13 +33,49 @@ const statusLabel: Record<Status, string> = {
 
 type Filter = "all" | "new" | "preparing" | "ready";
 
-function OrderCard({ order, onAdvance }: { order: Order; onAdvance: (number: string) => void }) {
-  const action =
-    order.status === "new"
-      ? "Iniciar preparación"
-      : order.status === "ready"
-        ? "Entregada a mesa"
-        : "Marcar como lista";
+function mapTicketStatus(status: KitchenTicket["status"]): Status {
+  if (status === "En preparación") return "preparing";
+  if (status === "Listas") return "ready";
+  return "new";
+}
+
+function mapTicketToOrder(ticket: KitchenTicket): Order {
+  return {
+    id: ticket.id,
+    table: ticket.tableId,
+    number: `#${ticket.orderFolio}`,
+    waiter: ticket.waiterName || "Mesero",
+    createdAt: ticket.createdAt || "Ahora",
+    status: mapTicketStatus(ticket.status),
+    dishes: ticket.items.map((item, index) => {
+      const notes: Note[] = [];
+      if (item.notes) {
+        notes.push({
+          text: item.notes,
+          allergy: item.notes.toLowerCase().includes("alergia"),
+        });
+      }
+      return {
+        index,
+        quantity: item.quantity,
+        name: item.name,
+        option: item.option,
+        notes,
+      };
+    }),
+  };
+}
+
+function OrderCard({
+  order,
+  onAdvance,
+  onCancelDish,
+}: {
+  order: Order;
+  onAdvance: (order: Order) => void;
+  onCancelDish: (order: Order, dish: Dish) => void;
+}) {
+  const totalPlatillos = order.dishes.reduce((acc, d) => acc + d.quantity, 0);
 
   return (
     <article className={`kds-order-card kds-order-card--${order.status}`}>
@@ -138,41 +88,101 @@ function OrderCard({ order, onAdvance }: { order: Order; onAdvance: (number: str
           <span className={`kds-status kds-status--${order.status}`}>{statusLabel[order.status]}</span>
           <span>Mesero: {order.waiter}</span>
         </div>
+
+        {/* Resumen rápido del pedido */}
+        <div className="mt-2.5 flex items-center justify-between text-[11px] font-semibold text-[#745853] bg-[#FAF7F2] border border-[#E8DFD8] rounded-lg px-2.5 py-1.5">
+          <span className="inline-flex items-center gap-1">
+            <UtensilsCrossed className="w-3.5 h-3.5 text-[#DF7B1B]" />
+            {totalPlatillos} {totalPlatillos === 1 ? "producto" : "productos"}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-[#8C7D73]" />
+            {order.createdAt}
+          </span>
+        </div>
+
         <div className="kds-divider" />
+
+        {/* Previsualización detallada de cada platillo/bebida */}
         <div className="kds-dish-list">
           {order.dishes.map((dish) => (
-            <div className="kds-dish" key={dish.name}>
-              <span className="kds-quantity">{dish.quantity}×</span>
+            <div
+              className="kds-dish bg-[#FAF7F2] border border-[#EDE4DC] rounded-xl p-2.5 items-start"
+              key={`${order.id}-${dish.index}-${dish.name}`}
+            >
+              <span className="kds-quantity shrink-0">{dish.quantity}×</span>
               <div className="kds-dish-content">
                 <strong>{dish.name}</strong>
-                {dish.notes.map((note) => (
+                {dish.option && (
+                  <span className="inline-block w-fit px-2 py-0.5 rounded-md bg-white border border-[#E5DCD3] text-[11px] font-bold text-[#7B3F00]">
+                    Opción: {dish.option}
+                  </span>
+                )}
+                {dish.notes.map((note, noteIdx) => (
                   <span
                     className={note.allergy ? "kds-note kds-note--allergy" : "kds-note"}
-                    key={note.text}
+                    key={`${order.id}-${dish.index}-${noteIdx}`}
                   >
                     {note.text}
                   </span>
                 ))}
               </div>
+
+              {order.status !== "ready" && (
+                <button
+                  type="button"
+                  onClick={() => onCancelDish(order, dish)}
+                  title="Quitar producto por falta de ingredientes y avisar al mesero"
+                  className="p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#DC2626] hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
       </div>
-      <button
-        className={`kds-order-action kds-order-action--${order.status}`}
-        onClick={() => onAdvance(order.number)}
-        type="button"
-      >
-        {action}
-      </button>
+
+      {/* Flujo de cocina: solo "Iniciar pedido" y "Marcar como lista". Se retira cuando el mesero confirma entrega */}
+      {order.status === "new" && (
+        <button
+          className="kds-order-action kds-order-action--new"
+          onClick={() => onAdvance(order)}
+          type="button"
+        >
+          Iniciar pedido
+        </button>
+      )}
+
+      {order.status === "preparing" && (
+        <button
+          className="kds-order-action kds-order-action--preparing"
+          onClick={() => onAdvance(order)}
+          type="button"
+        >
+          Marcar como lista
+        </button>
+      )}
+
+      {order.status === "ready" && (
+        <div className="mt-3.5 py-2.5 px-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] text-xs font-extrabold flex items-center justify-center gap-1.5 text-center">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>Lista · Esperando entrega del mesero</span>
+        </div>
+      )}
     </article>
   );
 }
 
 export const CocinaKDSView = () => {
-  const { logout } = useApp();
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const { logout, CocinaTickets, actualizarCocinaTicketStatus, cancelarProductoDesdeCocina } = useApp();
   const [filter, setFilter] = useState<Filter>("all");
+
+  const orders = useMemo(
+    () =>
+      CocinaTickets.filter((ticket) => ticket.status !== "Entregadas").map(mapTicketToOrder),
+    [CocinaTickets],
+  );
 
   const counts = useMemo(
     () => ({
@@ -189,17 +199,55 @@ export const CocinaKDSView = () => {
     return order.status === filter;
   });
 
-  const advanceOrder = (number: string) => {
-    setOrders((current) =>
-      current
-        .map((order) => {
-          if (order.number !== number) return order;
-          if (order.status === "new") return { ...order, status: "preparing" as const };
-          if (order.status === "preparing") return { ...order, status: "ready" as const };
-          return order;
-        })
-        .filter((order) => !(order.number === number && order.status === "ready")),
-    );
+  const advanceOrder = (order: Order) => {
+    if (order.status === "new") {
+      actualizarCocinaTicketStatus(order.id, "En preparación");
+    } else if (order.status === "preparing") {
+      actualizarCocinaTicketStatus(order.id, "Listas");
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: `Mesero notificado · ${order.table} lista`,
+        showConfirmButton: false,
+        timer: 2600,
+        background: "#ECFDF5",
+        color: "#065F46",
+      });
+    }
+  };
+
+  const handleCancelDish = async (order: Order, dish: Dish) => {
+    const result = await Swal.fire({
+      title: "Quitar producto del pedido",
+      html: `<p style="font-size:13px;">Se eliminará <strong>${dish.quantity}× ${dish.name}</strong> de la comanda de <strong>${order.table}</strong> y se notificará al mesero para que avise al comensal.</p>`,
+      input: "text",
+      inputLabel: "Motivo (opcional)",
+      inputValue: "Falta de ingredientes",
+      inputPlaceholder: "Ej. Falta de ingredientes, producto agotado...",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Eliminar y avisar al mesero",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#8C7D73",
+      background: "#FAF8F5",
+      color: "#1E110A",
+    });
+
+    if (result.isConfirmed) {
+      cancelarProductoDesdeCocina(order.id, dish.index, result.value);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "info",
+        title: `Producto retirado y mesero notificado (${order.table})`,
+        showConfirmButton: false,
+        timer: 2800,
+        background: "#FFFBEB",
+        color: "#92400E",
+      });
+    }
   };
 
   const tabs: { id: Filter; label: string; count: number }[] = [
@@ -211,9 +259,8 @@ export const CocinaKDSView = () => {
 
   return (
     <div className="kds-shell">
-      {/* Top Bar matching Figma exact specifications */}
+      {/* Top Bar */}
       <header className="kds-topbar">
-        {/* Left: Brand logo & name */}
         <div className="kds-brand">
           <div className="kds-brand-logo">
             <img src={logoImg} alt="Logotipo de ¡Hola, Café!" />
@@ -224,18 +271,21 @@ export const CocinaKDSView = () => {
           </div>
         </div>
 
-        {/* Breadcrumb (without middle menu bar) */}
         <nav className="kds-breadcrumb" aria-label="Migas de pan">
           <span>Panel Principal</span>
           <ChevronRight className="w-3.5 h-3.5 text-white/60" />
           <strong>Cocina</strong>
         </nav>
 
-        {/* Right: Notifications & Profile */}
         <div className="kds-user-tools">
-          <button className="kds-notifications" type="button" aria-label="2 notificaciones">
+          <button
+            className="kds-notifications"
+            type="button"
+            aria-label={`${counts.new} pedidos nuevos`}
+            onClick={() => setFilter("new")}
+          >
             <Bell className="w-4 h-4 text-white" />
-            <span>2</span>
+            <span>{counts.new}</span>
           </button>
           <UsuarioPerfilNavbar variante="oscura" />
         </div>
@@ -283,7 +333,12 @@ export const CocinaKDSView = () => {
         {/* Orders Grid */}
         <section className="kds-orders-grid" aria-live="polite">
           {visibleOrders.map((order) => (
-            <OrderCard key={order.number} order={order} onAdvance={advanceOrder} />
+            <OrderCard
+              key={order.id}
+              order={order}
+              onAdvance={advanceOrder}
+              onCancelDish={handleCancelDish}
+            />
           ))}
           {visibleOrders.length === 0 && (
             <p className="kds-empty-state">No hay comandas en este estado.</p>

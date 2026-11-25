@@ -27,6 +27,7 @@ export interface BarAlert {
   tableId: string;
   message: string;
   time: string;
+  tipo?: 'boton' | 'cocina' | 'cocina-cancelacion';
 }
 
 export interface AdminNotificacion {
@@ -88,6 +89,7 @@ interface AppContextType {
 
   actualizarCocinaTicketStatus: (ticketId: string, newStatus: CocinaTicket['status']) => void;
   alternarItemCocinaCompletado: (ticketId: string, itemIndex: number) => void;
+  cancelarProductoDesdeCocina: (ticketId: string, itemIndex: number, motivo?: string) => void;
 
   mostrarCobroModal: (tableId: string) => void;
   cerrarCobroModal: () => void;
@@ -131,7 +133,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const VIEW_TO_PATH: Record<ActiveView, string> = {
   'login': '/login',
   'recuperar-password': '/recuperar-password',
-  'registro': '/registro',
   'mapa-mesas': '/mesas',
   'comandero': '/comandero',
   'cocina': '/cocina',
@@ -145,7 +146,6 @@ const VIEW_TO_PATH: Record<ActiveView, string> = {
 const PATH_TO_VIEW: Record<string, ActiveView> = {
   '/login': 'login',
   '/recuperar-password': 'recuperar-password',
-  '/registro': 'registro',
   '/mesas': 'mapa-mesas',
   '/comandero': 'comandero',
   '/cocina': 'cocina',
@@ -196,6 +196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const TABLES_STORAGE_KEY = 'holacafe_tables_state_v1';
   const BAR_ALERTS_STORAGE_KEY = 'holacafe_bar_alerts_v1';
   const MESAS_ATENDIDAS_STORAGE_KEY = 'holacafe_mesas_atendidas_v1';
+  const COCINA_TICKETS_STORAGE_KEY = 'holacafe_cocina_tickets_v1';
 
   const [activeTableId, setActiveTableIdState] = useState<string | null>(() => {
     try {
@@ -260,7 +261,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [iotDevices, setIotDevices] = useState<IoTDevice[]>(INITIAL_IOT_DEVICES);
-  const [CocinaTickets, setCocinaTickets] = useState<CocinaTicket[]>(INITIAL_KITCHEN_TICKETS);
+  const [CocinaTickets, setCocinaTickets] = useState<CocinaTicket[]>(() => {
+    try {
+      const saved = localStorage.getItem(COCINA_TICKETS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch { }
+    return INITIAL_KITCHEN_TICKETS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COCINA_TICKETS_STORAGE_KEY, JSON.stringify(CocinaTickets));
+    } catch { }
+  }, [CocinaTickets]);
+
+  // Sincronización en tiempo real entre pestañas (ej. Mesero en una pestaña y Cocina en otra)
+  useEffect(() => {
+    const handleStorageSync = (e: StorageEvent) => {
+      if (e.key === COCINA_TICKETS_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setCocinaTickets(parsed);
+        } catch { }
+      }
+      if (e.key === TABLES_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setTables(parsed);
+        } catch { }
+      }
+      if (e.key === BAR_ALERTS_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed: BarAlert[] = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setBarAlerts((prev) => {
+              const prevIds = new Set(prev.map((a) => a.id));
+              const nuevaCocina = parsed.find((a) => a.tipo === 'cocina' && !prevIds.has(a.id));
+              const nuevaCancelacion = parsed.find((a) => a.tipo === 'cocina-cancelacion' && !prevIds.has(a.id));
+              if (nuevaCancelacion) {
+                Swal.fire({
+                  toast: true,
+                  position: 'top-end',
+                  icon: 'warning',
+                  title: `Sin ingredientes · ${nuevaCancelacion.tableId.replace('M', 'Mesa ')}`,
+                  text: nuevaCancelacion.message,
+                  showConfirmButton: false,
+                  timer: 6000,
+                  timerProgressBar: true,
+                  background: '#FFFBEB',
+                  color: '#92400E',
+                });
+              } else if (nuevaCocina) {
+                Swal.fire({
+                  toast: true,
+                  position: 'top-end',
+                  icon: 'success',
+                  title: `Pedido listo · ${nuevaCocina.tableId.replace('M', 'Mesa ')}`,
+                  text: nuevaCocina.message,
+                  showConfirmButton: false,
+                  timer: 5000,
+                  timerProgressBar: true,
+                  background: '#ECFDF5',
+                  color: '#065F46',
+                });
+              }
+              return parsed;
+            });
+          }
+        } catch { }
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+    return () => window.removeEventListener('storage', handleStorageSync);
+  }, []);
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
   const [cortesCaja, setCortesCaja] = useState<CorteCajaItem[]>([
     { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00, tickets: 24 },
@@ -513,7 +591,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return true;
     } catch (error: any) {
-      const mensaje = error.response?.data?.message || 'Correo electrónico o contraseña incorrectos';
+      const mensaje =
+        error?.message ||
+        error?.response?.data?.message ||
+        'Correo electrónico o contraseña incorrectos';
       Swal.fire({
         icon: 'error',
         title: 'Error de Inicio de Sesión',
@@ -556,7 +637,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const existingIdx = order.items.findIndex(
-        i => i.menuItemId === item.id && i.selectedOption === selectedOption && i.notes === notes
+        i =>
+          !i.enviadoACocina &&
+          i.menuItemId === item.id &&
+          i.selectedOption === selectedOption &&
+          i.notes === notes
       );
 
       let newItems = [...order.items];
@@ -573,7 +658,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           price: item.price,
           quantity: 1,
           selectedOption,
-          notes
+          notes,
+          enviadoACocina: false
         });
       }
 
@@ -641,6 +727,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder || table.currentOrder.items.length === 0) return;
 
+    // Solo enviamos los productos pendientes (que aún no se han mandado a cocina)
+    const itemsPendientes = table.currentOrder.items.filter(i => !i.enviadoACocina);
+    if (itemsPendientes.length === 0) return;
+
     const ticketNuevoCocina: CocinaTicket = {
       id: `k-${Date.now()}`,
       orderFolio: table.currentOrder.folio,
@@ -649,10 +739,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       elapsedMinutes: 1,
       status: 'Nuevas',
-      allergies: table.currentOrder.items.some(i => i.notes?.toLowerCase().includes('alergia'))
+      allergies: itemsPendientes.some(i => i.notes?.toLowerCase().includes('alergia'))
         ? ['ALERGIA: Verificar notas']
         : [],
-      items: table.currentOrder.items.map(i => ({
+      items: itemsPendientes.map(i => ({
         name: i.name,
         quantity: i.quantity,
         option: i.selectedOption,
@@ -670,7 +760,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'En Preparación',
         currentOrder: {
           ...t.currentOrder,
-          status: 'En preparación'
+          status: 'En preparación',
+          items: t.currentOrder.items.map(i => ({ ...i, enviadoACocina: true }))
         }
       };
     }));
@@ -683,12 +774,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     const ticket = CocinaTickets.find(k => k.id === ticketId);
-    if (ticket && (newStatus === 'Listas' || newStatus === 'Entregadas')) {
+    if (ticket && newStatus === 'Listas') {
+      const mesaLabel = ticket.tableId.replace('M', 'Mesa ');
+      const resumenPlatillos = ticket.items
+        .map(i => `${i.quantity}x ${i.name}`)
+        .slice(0, 2)
+        .join(', ');
+      const nuevaAlertaCocina: BarAlert = {
+        id: `al-cocina-${ticket.id}-${Date.now()}`,
+        tableId: ticket.tableId,
+        message: `Pedido #${ticket.orderFolio} listo en cocina para llevar a ${mesaLabel}${resumenPlatillos ? ` (${resumenPlatillos})` : ''}`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        tipo: 'cocina',
+      };
+
+      setBarAlerts(prev => [nuevaAlertaCocina, ...prev]);
+      setMesasAtendidas(prev => ({ ...prev, [ticket.tableId]: false }));
       setTables(prev => prev.map(t => {
         if (t.id === ticket.tableId) {
           return {
             ...t,
-            status: newStatus === 'Listas' ? 'Atendido' : 'En Consumo'
+            status: 'Atendido',
+            hasAlert: true,
+            alertType: 'Pedido listo en cocina',
+          };
+        }
+        return t;
+      }));
+    } else if (ticket && newStatus === 'Entregadas') {
+      setBarAlerts(prev => prev.filter(a => !(a.tableId === ticket.tableId && a.tipo === 'cocina')));
+      setMesasAtendidas(prev => ({ ...prev, [ticket.tableId]: true }));
+      setTables(prev => prev.map(t => {
+        if (t.id === ticket.tableId) {
+          return {
+            ...t,
+            status: 'En Consumo',
+            hasAlert: false,
+            alertType: undefined,
           };
         }
         return t;
@@ -706,6 +828,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       return { ...k, items: updated };
     }));
+  };
+
+  const cancelarProductoDesdeCocina = (ticketId: string, itemIndex: number, motivo?: string) => {
+    const ticket = CocinaTickets.find(k => k.id === ticketId);
+    if (!ticket || !ticket.items[itemIndex]) return;
+
+    const itemCancelado = ticket.items[itemIndex];
+    const razon = (motivo || '').trim() || 'Falta de ingredientes';
+    const mesaLabel = ticket.tableId.replace('M', 'Mesa ');
+
+    // 1. Quitar producto del ticket de cocina (si era el último, retirar el ticket completo)
+    setCocinaTickets(prev =>
+      prev
+        .map(k => {
+          if (k.id !== ticketId) return k;
+          const restantes = k.items.filter((_, idx) => idx !== itemIndex);
+          return { ...k, items: restantes };
+        })
+        .filter(k => k.items.length > 0)
+    );
+
+    // 2. Eliminar ese producto de la comanda de la mesa para que no se cobre
+    setTables(prev => prev.map(t => {
+      if (t.id !== ticket.tableId) return t;
+      if (!t.currentOrder) {
+        return { ...t, hasAlert: true, alertType: 'Llamada de cliente' };
+      }
+      let removido = false;
+      const nuevosItems = t.currentOrder.items.filter(it => {
+        if (!removido && it.name === itemCancelado.name && (it.selectedOption || '') === (itemCancelado.option || '')) {
+          removido = true;
+          return false;
+        }
+        return true;
+      });
+      return {
+        ...t,
+        hasAlert: true,
+        alertType: 'Llamada de cliente',
+        currentOrder: {
+          ...t.currentOrder,
+          items: nuevosItems,
+        },
+      };
+    }));
+
+    // 3. Notificar al mesero para avisar al comensal y ofrecer otra opción
+    const alertaCancelacion: BarAlert = {
+      id: `al-cancel-${ticket.id}-${Date.now()}`,
+      tableId: ticket.tableId,
+      message: `Cocina canceló ${itemCancelado.quantity}x ${itemCancelado.name} en ${mesaLabel} (${razon}). Avisa al comensal para elegir otra opción.`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      tipo: 'cocina-cancelacion',
+    };
+    setBarAlerts(prev => [alertaCancelacion, ...prev]);
+    setMesasAtendidas(prev => ({ ...prev, [ticket.tableId]: false }));
   };
 
   const mostrarCobroModal = (tableId: string) => {
@@ -856,6 +1034,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           : t
       ));
+      // Si el mesero confirma entrega de un pedido listo de cocina, lo retiramos de Cocina
+      if (alerta.tipo === 'cocina') {
+        setCocinaTickets(prev =>
+          prev.map(k =>
+            k.tableId === alerta.tableId && k.status === 'Listas'
+              ? { ...k, status: 'Entregadas' }
+              : k
+          )
+        );
+      }
     }
     setBarAlerts(prev => prev.filter(a => a.id !== id));
   };
@@ -873,6 +1061,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         : t
     ));
+    // Al confirmar entrega en mesa, retirar los tickets "Listas" de esa mesa en Cocina
+    setCocinaTickets(prev =>
+      prev.map(k =>
+        k.tableId === tableId && k.status === 'Listas'
+          ? { ...k, status: 'Entregadas' }
+          : k
+      )
+    );
     Swal.fire({
       toast: true,
       position: 'top-end',
@@ -1188,6 +1384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         enviarOrdenACocina,
         actualizarCocinaTicketStatus,
         alternarItemCocinaCompletado,
+        cancelarProductoDesdeCocina,
         mostrarCobroModal,
         cerrarCobroModal,
         mostrarTicketModal,

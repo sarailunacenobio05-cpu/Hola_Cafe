@@ -8,6 +8,7 @@ import {
   Plus
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import logoImg from '../img/logo.png';
 
 export const CajaView: React.FC = () => {
   const {
@@ -68,6 +69,7 @@ export const CajaView: React.FC = () => {
 
     const subtotal = corte.total / 1.16;
     const iva = corte.total - subtotal;
+    const logoAbsoluteUrl = new URL(logoImg, window.location.origin).href;
     const fechaImpresion = new Date().toLocaleString('es-MX', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -186,6 +188,7 @@ export const CajaView: React.FC = () => {
   <body>
     <div class="ticket">
       <div class="header">
+        <img src="${logoAbsoluteUrl}" alt="¡Hola, Café!" style="width:112px;height:112px;object-fit:contain;margin:0 auto 10px;display:block;border-radius:14px;" />
         <h1>¡Hola, Café!</h1>
         <p><strong>Café Central</strong></p>
         <p>Av. Principal 123, Col. Centro Cuilapam</p>

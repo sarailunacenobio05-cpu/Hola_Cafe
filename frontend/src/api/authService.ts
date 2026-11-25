@@ -1,4 +1,7 @@
 import { api, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "./client";
+
+const REMEMBERED_EMAIL_KEY = "holacafe_remembered_email";
+
 export interface LoginPayload {
   correo: string;
   password: string;
@@ -30,7 +33,24 @@ export const authService = {
     sessionStorage.removeItem(USER_STORAGE_KEY);
     storage.setItem(TOKEN_STORAGE_KEY, data.token);
     storage.setItem(USER_STORAGE_KEY, JSON.stringify(data.usuario));
+    if (payload.remember) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, payload.correo.trim().toLowerCase());
+    } else {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
     return data;
+  },
+  getRememberedEmail(): string {
+    try {
+      return localStorage.getItem(REMEMBERED_EMAIL_KEY) || "";
+    } catch {
+      return "";
+    }
+  },
+  clearRememberedEmail() {
+    try {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    } catch { }
   },
   logout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);

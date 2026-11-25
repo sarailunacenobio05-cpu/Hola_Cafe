@@ -813,14 +813,14 @@
 
 .kds-order-action {
   width: 100%;
-  margin-top: 12px;
-  padding: 7px 16px;
-  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px 20px;
+  border-radius: 10px;
   background: #e59819;
   border: none;
   font-family: "Plus Jakarta Sans", sans-serif;
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 14px;
   color: white;
   cursor: pointer;
   transition: all 160ms ease;

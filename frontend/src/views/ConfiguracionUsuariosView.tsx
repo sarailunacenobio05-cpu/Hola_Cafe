@@ -134,7 +134,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C7D73]" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o usuario..."
+                  placeholder="Buscar por nombre o correo..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPaginaActual(1); }}
                   className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
@@ -166,7 +166,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
                 <thead className="bg-[#FAF8F5] text-[#8C7D73] font-bold border-b border-[#E5DCD3] uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="py-3.5 px-6">MESERO</th>
-                    <th className="py-3.5 px-6">USUARIO</th>
+                    <th className="py-3.5 px-6">CORREO ELECTRÓNICO</th>
                     <th className="py-3.5 px-6">CONTRASEÑA</th>
                     <th className="py-3.5 px-6">ÚLTIMO ACCESO</th>
                     <th className="py-3.5 px-6">ESTADO</th>

@@ -56,6 +56,7 @@ export interface OrderItem {
   selectedOption?: string;
   notes?: string;
   allergies?: string[];
+  enviadoACocina?: boolean;
 }
 
 export interface TableOrder {
@@ -118,7 +119,7 @@ export interface TableInfo {
   waiterName: string;
   status: TableStatus;
   hasAlert: boolean;
-  alertType?: 'Llamada de cliente' | 'Solicitud de cuenta' | 'Batería baja';
+  alertType?: 'Llamada de cliente' | 'Solicitud de cuenta' | 'Batería baja' | 'Pedido listo en cocina';
   currentOrder?: TableOrder;
   device?: IoTDevice;
 }
@@ -126,7 +127,6 @@ export interface TableInfo {
 export type ActiveView = 
   | 'login'
   | 'recuperar-password'
-  | 'registro'
   | 'mapa-mesas'
   | 'comandero'
   | 'cocina'

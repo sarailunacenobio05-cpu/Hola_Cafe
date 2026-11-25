@@ -10,10 +10,8 @@ import {
   ChefHat,
   Check,
   Coffee,
-  Users,
   UtensilsCrossed,
 } from 'lucide-react';
-import Swal from 'sweetalert2';
 import { TableInfo } from '../types';
 
 export const MapaMesasView: React.FC = () => {
@@ -43,11 +41,7 @@ export const MapaMesasView: React.FC = () => {
 
   const isTableLibre = (table: TableInfo) => {
     const st = (table.status || '').toLowerCase();
-    return st.includes('limpia') || st.includes('disponible') || st === 'libre';
-  };
-
-  const isTableReservada = (table: TableInfo) => {
-    return (table.status || '').toLowerCase().includes('reservada');
+    return st.includes('limpia') || st.includes('disponible') || st === 'libre' || st.includes('reservada');
   };
 
   const hasActiveAlert = (table: TableInfo) => {
@@ -230,43 +224,84 @@ export const MapaMesasView: React.FC = () => {
               const enAlerta = hasActiveAlert(table);
               const fueAtendida = Boolean(mesasAtendidas[table.id]);
               const libre = isTableLibre(table);
-              const reservada = isTableReservada(table);
               const stLower = (table.status || '').toLowerCase();
               const enPreparacion = stLower.includes('preparaci');
-              const pidiendoCuenta = stLower.includes('cuenta') || stLower.includes('cobrar');
               const totalMesa = getOrderTotal(table);
               const meseroNombre = table.waiterName || 'Asignado';
 
-              // 1. MESA CON ALERTA ACTIVA (Por atender)
+              // 1. MESA CON ALERTA ACTIVA (Pedido listo, Cancelación de cocina o Llamado de mesa)
               if (enAlerta) {
+                const alertaMesa = barAlerts.find((a) => a.tableId === table.id);
+                const esPedidoListo = alertaMesa?.tipo === 'cocina';
+                const esCancelacionCocina = alertaMesa?.tipo === 'cocina-cancelacion';
                 return (
                   <div
                     key={table.id}
-                    className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs transition-all border-2 border-[#D32F2F]"
+                    className={`bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs transition-all border-2 ${
+                      esCancelacionCocina
+                        ? 'border-[#D97706]'
+                        : esPedidoListo
+                          ? 'border-[#059669]'
+                          : 'border-[#D32F2F]'
+                    }`}
                   >
                     <div>
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="text-xl font-black leading-tight text-[#D32F2F]">
+                          <h3
+                            className={`text-xl font-black leading-tight ${
+                              esCancelacionCocina
+                                ? 'text-[#D97706]'
+                                : esPedidoListo
+                                  ? 'text-[#059669]'
+                                  : 'text-[#D32F2F]'
+                            }`}
+                          >
                             {table.id}
                           </h3>
                           <span className="text-[11px] text-[#8C7D73] font-medium">
                             Capacidad: {table.capacity} personas
                           </span>
                         </div>
-                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase bg-[#3A1F13] text-white">
-                          Atender
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase ${
+                            esCancelacionCocina
+                              ? 'bg-[#D97706] text-white'
+                              : esPedidoListo
+                                ? 'bg-[#059669] text-white'
+                                : 'bg-[#3A1F13] text-white'
+                          }`}
+                        >
+                          {esCancelacionCocina ? 'Sin ingredientes' : esPedidoListo ? 'Pedido listo' : 'Atender'}
                         </span>
                       </div>
 
                       <div className="py-5 space-y-1">
                         <div className="flex items-center gap-1.5 text-xs font-black text-[#1E110A]">
-                          <Bell className="w-3.5 h-3.5 text-[#D32F2F] animate-bounce" />
-                          <span>Llamado de mesa activo</span>
+                          {esPedidoListo || esCancelacionCocina ? (
+                            <ChefHat className={`w-4 h-4 ${esCancelacionCocina ? 'text-[#D97706]' : 'text-[#059669]'}`} />
+                          ) : (
+                            <Bell className="w-3.5 h-3.5 text-[#D32F2F] animate-bounce" />
+                          )}
+                          <span>
+                            {esCancelacionCocina
+                              ? 'Producto cancelado en cocina'
+                              : esPedidoListo
+                                ? 'Pedido listo para llevar a mesa'
+                                : 'Llamado de mesa activo'}
+                          </span>
                         </div>
                         <p className="text-xs text-[#8C7D73]">
-                          Mesero:{' '}
-                          <strong className="text-[#1E110A] font-semibold">{meseroNombre}</strong>
+                          {(esPedidoListo || esCancelacionCocina) && alertaMesa?.message ? (
+                            <span className={esCancelacionCocina ? 'text-[#92400E] font-medium' : 'text-[#065F46] font-medium'}>
+                              {alertaMesa.message}
+                            </span>
+                          ) : (
+                            <>
+                              Mesero:{' '}
+                              <strong className="text-[#1E110A] font-semibold">{meseroNombre}</strong>
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -275,9 +310,15 @@ export const MapaMesasView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => marcarMesaAtendida(table.id)}
-                        className="py-2.5 px-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center"
+                        className={`py-2.5 px-2 text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center ${
+                          esCancelacionCocina
+                            ? 'bg-[#D97706] hover:bg-[#B45309]'
+                            : esPedidoListo
+                              ? 'bg-[#059669] hover:bg-[#047857]'
+                              : 'bg-[#D32F2F] hover:bg-[#B71C1C]'
+                        }`}
                       >
-                        Atender llamado
+                        {esCancelacionCocina ? 'Enterado' : esPedidoListo ? 'Entregar a mesa' : 'Atender llamado'}
                       </button>
                       <button
                         type="button"
@@ -291,67 +332,7 @@ export const MapaMesasView: React.FC = () => {
                 );
               }
 
-              // 2. MESA RESERVADA
-              if (reservada) {
-                return (
-                  <div
-                    key={table.id}
-                    className="bg-white rounded-2xl border border-[#E5DCD3] p-5 flex flex-col justify-between shadow-2xs"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-xl font-black text-[#1E110A] leading-tight">
-                            {table.id}
-                          </h3>
-                          <p className="text-xs text-[#8C7D73] mt-0.5">
-                            Capacidad: {table.capacity} personas
-                          </p>
-                        </div>
-                        <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
-                          20:30 hrs
-                        </span>
-                      </div>
-
-                      <div className="py-5 space-y-1">
-                        <p className="text-xs font-bold text-[#1E110A] flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5 text-[#8B4513]" />
-                          <span>RESERVADA</span>
-                        </p>
-                        <p className="text-[11px] text-[#8C7D73] font-medium">
-                          Mesero: {meseroNombre}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          Swal.fire({
-                            title: `Reserva ${table.id}`,
-                            html: `<p><b>Mesa:</b> ${table.id} (${table.capacity} personas)</p><p><b>Mesero asignado:</b> ${meseroNombre}</p><p><b>Horario:</b> Hoy · 20:30 hrs</p>`,
-                            icon: 'info',
-                            confirmButtonColor: '#7B3F00',
-                          });
-                        }}
-                        className="py-2 px-2 bg-white hover:bg-stone-50 border border-[#D5C7BA] text-[#1E110A] rounded-xl text-xs font-bold text-center"
-                      >
-                        Detalle Reserva
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenComanda(table.id)}
-                        className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
-                      >
-                        Abrir comanda
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // 3. MESA LIMPIA / DISPONIBLE
+              // 2. MESA LIMPIA / DISPONIBLE
               if (libre) {
                 return (
                   <div
@@ -395,13 +376,11 @@ export const MapaMesasView: React.FC = () => {
                 );
               }
 
-              // 4. MESA OCUPADA (En Preparación / Pidiendo Cuenta / En Consumo / Atendida)
+              // 3. MESA OCUPADA (En Preparación / En Consumo / Atendida)
               return (
                 <div
                   key={table.id}
-                  className={`bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs ${
-                    pidiendoCuenta ? 'border-2 border-[#F6C36C]' : 'border border-[#E5DCD3]'
-                  }`}
+                  className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs border border-[#E5DCD3]"
                 >
                   <div>
                     <div className="flex items-start justify-between">
@@ -421,10 +400,6 @@ export const MapaMesasView: React.FC = () => {
                         <span className="bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
                           Atendida
                         </span>
-                      ) : pidiendoCuenta ? (
-                        <span className="bg-amber-50 text-[#D97706] border border-amber-200 text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                          Cuenta
-                        </span>
                       ) : (
                         <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
                           Activa
@@ -437,11 +412,6 @@ export const MapaMesasView: React.FC = () => {
                         <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
                           <ChefHat className="w-3.5 h-3.5 text-amber-600" />
                           <span>En Preparación</span>
-                        </p>
-                      ) : pidiendoCuenta ? (
-                        <p className="text-xs text-[#DF7B1B] font-bold flex items-center gap-1">
-                          <Bell className="w-3.5 h-3.5 text-[#D32F2F]" />
-                          <span>Pidiendo Cuenta</span>
                         </p>
                       ) : (
                         <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">

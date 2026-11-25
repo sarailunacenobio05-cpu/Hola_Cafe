@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   CreditCard,
   MessageSquarePlus,
+  CheckCircle2,
   X,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -110,6 +111,8 @@ export const ComanderoView: React.FC = () => {
   }, [productosDisponibles, selectedCategory, searchQuery]);
 
   const orderItems: OrderItem[] = activeTable?.currentOrder?.items || [];
+  const itemsPendientes = orderItems.filter((i) => !i.enviadoACocina);
+  const itemsEnviados = orderItems.filter((i) => Boolean(i.enviadoACocina));
 
   const handleAddToCart = (product: MenuItem) => {
     const chosenOption =
@@ -363,8 +366,8 @@ export const ComanderoView: React.FC = () => {
               </p>
             </div>
 
-            {/* Items List */}
-            <div className="p-4 divide-y divide-[#F5EFEB] max-h-[calc(100vh-420px)] overflow-y-auto">
+            {/* Items List: separados en "Por enviar a cocina" y "Ya enviados a cocina" */}
+            <div className="p-4 space-y-4 max-h-[calc(100vh-420px)] overflow-y-auto">
               {orderItems.length === 0 ? (
                 <div className="py-10 text-center space-y-1.5">
                   <p className="text-xs font-bold text-[#1E110A]">
@@ -375,82 +378,150 @@ export const ComanderoView: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                orderItems.map((item) => (
-                  <div key={item.id} className="py-3 first:pt-0 last:pb-0 space-y-1.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded bg-[#7B3F00] text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          {item.quantity}
-                        </span>
-                        <div>
-                          <h4 className="text-xs font-bold text-[#1E110A] leading-tight">
-                            {item.name}
-                          </h4>
-                          {item.selectedOption && (
-                            <p className="text-[11px] font-semibold text-[#8B4513] mt-0.5">
-                              Opción: {item.selectedOption}
-                            </p>
-                          )}
-                          {item.notes && (
-                            <p className="text-[11px] text-[#8C7D73] mt-0.5">
-                              Nota: {item.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <span className="font-extrabold text-[#1E110A] text-xs shrink-0">
-                        ${(item.price * item.quantity).toFixed(2)}
+                <>
+                  {/* 1. Sección de productos nuevos / por enviar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#8B4513]">
+                        Por enviar a cocina
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-[#8B4513] border border-amber-200">
+                        {itemsPendientes.reduce((acc, i) => acc + i.quantity, 0)} pend.
                       </span>
                     </div>
 
-                    {/* Controls: - qty + | Nota | Quitar */}
-                    <div className="flex items-center justify-between pl-7">
-                      <div className="flex items-center gap-1.5 bg-[#FAF8F5] border border-[#E5DCD3] rounded-lg px-1.5 py-0.5">
-                        <button
-                          type="button"
-                          onClick={() => actualizarItemQuantity(currentTableId, item.id, -1)}
-                          className="text-[#8C7D73] hover:text-[#1E110A]"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-xs font-bold text-[#1E110A] w-4 text-center">
-                          {item.quantity}
+                    {itemsPendientes.length === 0 ? (
+                      <div className="py-3 px-3 rounded-xl bg-[#FAF8F5] border border-dashed border-[#D5C7BA] text-center text-[11px] text-[#8C7D73]">
+                        Sin productos pendientes. Agrega nuevos platillos del menú para enviar otra orden.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-[#F5EFEB]">
+                        {itemsPendientes.map((item) => (
+                          <div key={item.id} className="py-3 first:pt-1 last:pb-0 space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2">
+                                <span className="w-5 h-5 rounded bg-[#7B3F00] text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                  {item.quantity}
+                                </span>
+                                <div>
+                                  <h4 className="text-xs font-bold text-[#1E110A] leading-tight">
+                                    {item.name}
+                                  </h4>
+                                  {item.selectedOption && (
+                                    <p className="text-[11px] font-semibold text-[#8B4513] mt-0.5">
+                                      Opción: {item.selectedOption}
+                                    </p>
+                                  )}
+                                  {item.notes && (
+                                    <p className="text-[11px] text-[#8C7D73] mt-0.5">
+                                      Nota: {item.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <span className="font-extrabold text-[#1E110A] text-xs shrink-0">
+                                ${(item.price * item.quantity).toFixed(2)}
+                              </span>
+                            </div>
+
+                            {/* Controls: - qty + | Nota | Quitar */}
+                            <div className="flex items-center justify-between pl-7">
+                              <div className="flex items-center gap-1.5 bg-[#FAF8F5] border border-[#E5DCD3] rounded-lg px-1.5 py-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => actualizarItemQuantity(currentTableId, item.id, -1)}
+                                  className="text-[#8C7D73] hover:text-[#1E110A]"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="text-xs font-bold text-[#1E110A] w-4 text-center">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => actualizarItemQuantity(currentTableId, item.id, 1)}
+                                  className="text-[#8C7D73] hover:text-[#1E110A]"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNotaItemEditando(item);
+                                    setNotaTexto(item.notes || '');
+                                  }}
+                                  className="flex items-center gap-1 text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B]"
+                                >
+                                  <MessageSquarePlus className="w-3 h-3" />
+                                  <span>{item.notes ? 'Editar nota' : '+ Nota'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarItemFromOrder(currentTableId, item.id)}
+                                  className="flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:text-[#B91C1C]"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Quitar</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Apartado de órdenes ya enviadas a cocina (bloqueadas para no duplicar) */}
+                  {itemsEnviados.length > 0 && (
+                    <div className="pt-3 border-t border-dashed border-[#D5C7BA] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#059669] flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Enviados a cocina</span>
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => actualizarItemQuantity(currentTableId, item.id, 1)}
-                          className="text-[#8C7D73] hover:text-[#1E110A]"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0]">
+                          {itemsEnviados.reduce((acc, i) => acc + i.quantity, 0)} en cuenta
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNotaItemEditando(item);
-                            setNotaTexto(item.notes || '');
-                          }}
-                          className="flex items-center gap-1 text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B]"
-                        >
-                          <MessageSquarePlus className="w-3 h-3" />
-                          <span>{item.notes ? 'Editar nota' : '+ Nota'}</span>
-                        </button>
+                      <div className="rounded-xl bg-[#FAF8F5] border border-[#E5DCD3] divide-y divide-[#EDE4DC] px-3 py-1 opacity-85">
+                        {itemsEnviados.map((item) => (
+                          <div key={item.id} className="py-2 flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2">
+                              <span className="w-5 h-5 rounded bg-[#059669]/15 text-[#059669] font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                {item.quantity}
+                              </span>
+                              <div>
+                                <h4 className="text-xs font-semibold text-[#5C4E45] leading-tight">
+                                  {item.name}
+                                </h4>
+                                {item.selectedOption && (
+                                  <p className="text-[10px] text-[#8C7D73] mt-0.5">
+                                    Opción: {item.selectedOption}
+                                  </p>
+                                )}
+                                {item.notes && (
+                                  <p className="text-[10px] text-[#8C7D73] mt-0.5">
+                                    Nota: {item.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
 
-                        <button
-                          type="button"
-                          onClick={() => eliminarItemFromOrder(currentTableId, item.id)}
-                          className="flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:text-[#B91C1C]"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Quitar</span>
-                        </button>
+                            <span className="font-bold text-[#5C4E45] text-xs shrink-0">
+                              ${(item.price * item.quantity).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -478,19 +549,31 @@ export const ComanderoView: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                disabled={orderItems.length === 0}
+                disabled={itemsPendientes.length === 0}
                 onClick={() => {
+                  const enviados = itemsPendientes.reduce((acc, i) => acc + i.quantity, 0);
                   enviarOrdenACocina(currentTableId);
                   Swal.fire({
-                    title: `Enviado a Cocina`,
-                    text: `La comanda de Mesa ${numeroMesaFormateado} se envió correctamente a producción (KDS).`,
+                    title: 'Enviado a Cocina',
+                    text: `Se enviaron ${enviados} producto(s) nuevos de Mesa ${numeroMesaFormateado} a cocina (KDS).`,
                     icon: 'success',
                     confirmButtonColor: '#7B3F00',
                   });
                 }}
-                className="py-3 bg-[#9E5416] hover:bg-[#86440E] disabled:opacity-50 text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
+                className={`py-3 rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98 ${
+                  itemsPendientes.length === 0 && itemsEnviados.length > 0
+                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] cursor-not-allowed shadow-none'
+                    : 'bg-[#9E5416] hover:bg-[#86440E] disabled:opacity-50 text-white'
+                }`}
               >
-                <span>▷ Enviar a Cocina</span>
+                {itemsPendientes.length === 0 && itemsEnviados.length > 0 ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Todo enviado</span>
+                  </>
+                ) : (
+                  <span>▷ Enviar a Cocina</span>
+                )}
               </button>
 
               <button

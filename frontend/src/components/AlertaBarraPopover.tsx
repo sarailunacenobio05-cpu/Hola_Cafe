@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, CheckCircle2, Radio, X } from 'lucide-react';
+import { Bell, CheckCircle2, ChefHat, Radio, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useApp } from '../context/AppContext';
 
@@ -7,13 +7,18 @@ export const AlertaBarraPopover: React.FC = () => {
   const { barAlerts, descartarAlertaBarra, activarAlertaBarra } = useApp();
   const [abierto, setAbierto] = useState(false);
 
-  const handleAtenderAlerta = (id: string, tableId: string) => {
+  const handleAtenderAlerta = (id: string, tableId: string, tipo?: 'boton' | 'cocina' | 'cocina-cancelacion') => {
     descartarAlertaBarra(id);
     Swal.fire({
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: `${tableId.replace('M', 'Mesa ')} atendida`,
+      title:
+        tipo === 'cocina'
+          ? `Pedido entregado en ${tableId.replace('M', 'Mesa ')}`
+          : tipo === 'cocina-cancelacion'
+            ? `Aviso confirmado (${tableId.replace('M', 'Mesa ')})`
+            : `${tableId.replace('M', 'Mesa ')} atendida`,
       showConfirmButton: false,
       timer: 2200,
       background: '#FAF8F5',
@@ -67,32 +72,65 @@ export const AlertaBarraPopover: React.FC = () => {
                 <p className="text-[11px] text-[#8C7D73]">Todas las mesas han sido atendidas.</p>
               </div>
             ) : (
-              barAlerts.map((alerta) => (
-                <div
-                  key={alerta.id}
-                  className="p-3 rounded-xl bg-white border border-[#FECACA] flex items-start justify-between gap-2.5 shadow-2xs"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#D32F2F] animate-pulse" />
-                      <span className="text-xs font-black text-[#D32F2F]">
-                        {alerta.tableId.replace('M', 'Mesa ')}
-                      </span>
-                    </div>
-                    <p className="text-xs font-semibold text-[#1E110A] leading-snug">
-                      {alerta.message}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAtenderAlerta(alerta.id, alerta.tableId)}
-                    className="px-2.5 py-1.5 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[11px] font-bold rounded-lg transition-colors shrink-0"
+              barAlerts.map((alerta) => {
+                const esCocina = alerta.tipo === 'cocina';
+                const esCancelacion = alerta.tipo === 'cocina-cancelacion';
+                return (
+                  <div
+                    key={alerta.id}
+                    className={`p-3 rounded-xl bg-white border flex items-start justify-between gap-2.5 shadow-2xs ${
+                      esCancelacion
+                        ? 'border-[#FDE68A]'
+                        : esCocina
+                          ? 'border-[#A7F3D0]'
+                          : 'border-[#FECACA]'
+                    }`}
                   >
-                    Atender
-                  </button>
-                </div>
-              ))
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        {esCocina || esCancelacion ? (
+                          <ChefHat className={`w-3.5 h-3.5 ${esCancelacion ? 'text-[#D97706]' : 'text-[#059669]'}`} />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-[#D32F2F] animate-pulse" />
+                        )}
+                        <span
+                          className={`text-xs font-black ${
+                            esCancelacion
+                              ? 'text-[#D97706]'
+                              : esCocina
+                                ? 'text-[#059669]'
+                                : 'text-[#D32F2F]'
+                          }`}
+                        >
+                          {esCancelacion
+                            ? `Sin ingredientes · ${alerta.tableId.replace('M', 'Mesa ')}`
+                            : esCocina
+                              ? `Cocina · ${alerta.tableId.replace('M', 'Mesa ')}`
+                              : alerta.tableId.replace('M', 'Mesa ')}
+                        </span>
+                        <span className="text-[10px] text-[#8C7D73] font-medium">{alerta.time}</span>
+                      </div>
+                      <p className="text-xs font-semibold text-[#1E110A] leading-snug">
+                        {alerta.message}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAtenderAlerta(alerta.id, alerta.tableId, alerta.tipo)}
+                      className={`px-2.5 py-1.5 text-white text-[11px] font-bold rounded-lg transition-colors shrink-0 ${
+                        esCancelacion
+                          ? 'bg-[#D97706] hover:bg-[#B45309]'
+                          : esCocina
+                            ? 'bg-[#059669] hover:bg-[#047857]'
+                            : 'bg-[#D32F2F] hover:bg-[#B71C1C]'
+                      }`}
+                    >
+                      {esCancelacion ? 'Enterado' : esCocina ? 'Entregado' : 'Atender'}
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
 

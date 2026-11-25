@@ -5,6 +5,7 @@ import { Logo } from '../Logo';
 import { AlertaBarraPopover } from '../AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../UsuarioPerfilNavbar';
 import { ReceiptPrinter, type ReceiptPrinterStage } from '../ui/ReceiptPrinter';
+import logoImg from '../../img/logo.png';
 import {
   LogOut,
   ArrowLeft,
@@ -20,7 +21,6 @@ import {
   ChevronDown,
   Pencil,
   DoorOpen,
-  RotateCcw,
   Send,
 } from 'lucide-react';
 
@@ -184,11 +184,6 @@ export const CobroRapidoModal: React.FC = () => {
     setPrintRun((n) => n + 1);
   };
 
-  const handleRepetirImpresion = () => {
-    setPrinterStage('processing');
-    setPrintRun((n) => n + 1);
-  };
-
   const handleCerrar = () => {
     setPagoActivo(false);
     setPagado(false);
@@ -200,6 +195,7 @@ export const CobroRapidoModal: React.FC = () => {
 
   const handleImprimirFisico = () => {
     const fecha = fechaPago || formatFechaTicket();
+    const logoAbsoluteUrl = new URL(logoImg, window.location.origin).href;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -316,6 +312,7 @@ export const CobroRapidoModal: React.FC = () => {
 <body>
   <div class="ticket">
     <div class="center">
+      <img src="${logoAbsoluteUrl}" alt="¡Hola, Café!" style="width:110px;height:110px;object-fit:contain;margin:0 auto 10px;display:block;border-radius:14px;" />
       <p class="brand">¡HOLA, CAFÉ!</p>
       <p class="sub">Café Central · Gracias por tu visita</p>
     </div>
@@ -719,14 +716,6 @@ export const CobroRapidoModal: React.FC = () => {
                       <span className="font-mono text-[11px] font-medium tracking-[0.12em] text-grayscale-1/80">
                         HOLA CAFÉ·POS
                       </span>
-                      <button
-                        className="rounded-full border border-grayscale-1/20 px-2.5 py-1 text-[11px] font-medium text-grayscale-1/80 transition hover:bg-grayscale-1/10 inline-flex items-center gap-1"
-                        onClick={handleRepetirImpresion}
-                        type="button"
-                      >
-                        <RotateCcw aria-hidden="true" className="w-3 h-3" strokeWidth={2.5} />
-                        Repetir
-                      </button>
                     </ReceiptPrinter.Header>
 
                     <ReceiptPrinter.Screen>
@@ -740,10 +729,10 @@ export const CobroRapidoModal: React.FC = () => {
                         </div>
                         <ReceiptPrinter.Status>
                           {printerStage === 'processing'
-                            ? 'Procesando pago...'
+                            ? 'Generando ticket...'
                             : printerStage === 'printing'
                               ? 'Imprimiendo tu ticket...'
-                              : 'Pago completado'}
+                              : 'Ticket generado'}
                         </ReceiptPrinter.Status>
                       </div>
                     </ReceiptPrinter.Screen>
@@ -751,6 +740,11 @@ export const CobroRapidoModal: React.FC = () => {
 
                   <ReceiptPrinter.Output>
                     <ReceiptPrinter.Paper id="printable-ticket" className="text-[12px] leading-relaxed">
+                      <img
+                        src={logoImg}
+                        alt="¡Hola, Café!"
+                        className="w-28 h-28 mx-auto mb-3 object-contain rounded-xl"
+                      />
                       <p className="text-center text-[11px] font-semibold tracking-[0.2em]">¡HOLA, CAFÉ!</p>
                       <p className="mt-1 text-center text-[11px] text-grayscale-11">Gracias por tu visita</p>
                       <hr className="my-4 border-dashed border-grayscale-8" />
@@ -833,12 +827,12 @@ export const CobroRapidoModal: React.FC = () => {
               {pagado ? <CheckCircle2 className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
               <span>
                 {pagado
-                  ? 'Pago registrado ✓'
+                  ? 'Ticket generado ✓'
                   : pagoActivo
                     ? printerStage === 'processing'
-                      ? 'Procesando pago...'
+                      ? 'Generando ticket...'
                       : 'Imprimiendo ticket...'
-                    : `Procesar Pago (${fmt(totales.total)} MXN)`}
+                    : `Generar ticket (${fmt(totales.total)} MXN)`}
               </span>
             </button>
 
@@ -906,7 +900,7 @@ export const CobroRapidoModal: React.FC = () => {
                   type="button"
                   onClick={handleLiberarMesa}
                   disabled={!pagado}
-                  title={pagado ? '' : 'Primero procesa el pago'}
+                  title={pagado ? '' : 'Primero genera el ticket'}
                   className="w-full py-2.5 px-3 bg-[#EDE3D8] hover:bg-[#E3D5C6] rounded-xl text-xs font-bold text-[#7B3F00] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <DoorOpen className="w-4 h-4" />

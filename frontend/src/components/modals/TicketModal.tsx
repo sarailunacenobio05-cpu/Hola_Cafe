@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, Printer, Plus, Minus } from 'lucide-react';
+import logoImg from '../../img/logo.png';
 
 export const TicketModal: React.FC = () => {
   const { isTicketModalOpen, cerrarTicketModal, activeTableId, tables, currentUser } = useApp();
@@ -62,6 +63,11 @@ export const TicketModal: React.FC = () => {
           >
             {/* Header */}
             <div className="text-center pb-4 border-b border-dashed border-[#D5C7BA] space-y-0.5">
+              <img
+                src={logoImg}
+                alt="¡Hola, Café!"
+                className="w-28 h-28 mx-auto mb-3 object-contain rounded-xl"
+              />
               <h2 className="text-lg font-black text-[#1E110A] tracking-tight">¡Hola, Café!</h2>
               <p className="text-xs font-bold text-[#6E5A4E]">Café Central</p>
               <p className="text-[11px] text-[#8C7D73]">Av. Principal 123, Col. Centro Cuilapam</p>

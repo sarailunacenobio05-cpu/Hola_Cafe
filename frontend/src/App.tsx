@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginView } from './views/LoginView';
 import { RecuperarPasswordView } from './views/RecuperarPasswordView';
-import { RegistroView } from './views/RegistroView';
 import { MapaMesasView } from './views/MapaMesasView';
 import { ComanderoView } from './views/ComanderoView';
 import { CocinaKDSView } from './views/CocinaKDSView';
@@ -27,7 +26,6 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/login" element={<LoginView />} />
         <Route path="/recuperar-password" element={<RecuperarPasswordView />} />
-        <Route path="/registro" element={<RegistroView />} />
 
         <Route
           path="/mesas"

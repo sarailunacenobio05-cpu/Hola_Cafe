@@ -1,17 +1,19 @@
 import { FormEvent, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { authService } from "../api/authService";
 import logoImg from "../img/logo.png";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { validarCorreo, validarPassword } from "../utils/validaciones";
 
 export const LoginView = () => {
   const { login, setActiveView } = useApp();
-  const [email, setEmail] = useState("barista@holacafe.com");
-  const [password, setPassword] = useState("HolaCafe#2026");
+  const rememberedEmail = authService.getRememberedEmail();
+  const [email, setEmail] = useState(rememberedEmail);
+  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberSession, setRememberSession] = useState(true);
+  const [rememberSession, setRememberSession] = useState(Boolean(rememberedEmail));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,20 +49,21 @@ export const LoginView = () => {
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label className="field">
-            <span className="field-label">Correo o usuario</span>
+            <span className="field-label">Correo electrónico</span>
             <span className="input-wrap">
               <Mail className="field-icon field-icon--email" />
               <input
-                type="text"
+                type="email"
                 name="email"
                 value={email}
+                placeholder="correo@holacafe.com"
                 onChange={(e) => {
                   const val = e.target.value;
                   setEmail(val);
                   setEmailError(validarCorreo(val));
                 }}
-                autoComplete="username"
-                aria-label="Correo o usuario"
+                autoComplete="email"
+                aria-label="Correo electrónico"
                 required
               />
             </span>
@@ -79,6 +82,7 @@ export const LoginView = () => {
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={password}
+                placeholder="Ingresa tu contraseña"
                 onChange={(e) => {
                   const val = e.target.value;
                   setPassword(val);
@@ -110,7 +114,13 @@ export const LoginView = () => {
               <input
                 type="checkbox"
                 checked={rememberSession}
-                onChange={(event) => setRememberSession(event.target.checked)}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setRememberSession(checked);
+                  if (!checked) {
+                    authService.clearRememberedEmail();
+                  }
+                }}
               />
               <span>Recordar sesión</span>
             </label>
@@ -128,14 +138,6 @@ export const LoginView = () => {
             <ArrowRight className="w-4 h-4 ml-2" />
           </button>
         </form>
-
-        <button
-          className="register-link"
-          type="button"
-          onClick={() => setActiveView("registro")}
-        >
-          ¿No tienes una cuenta? Registrarse
-        </button>
       </section>
     </main>
   );
