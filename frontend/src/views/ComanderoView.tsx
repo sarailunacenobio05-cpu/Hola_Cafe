@@ -124,8 +124,7 @@ export const ComanderoView: React.FC = () => {
 
   // Totales de la mesa seleccionada
   const subtotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
+  const total = subtotal;
   const totalArticulos = orderItems.reduce((s, i) => s + i.quantity, 0);
 
   return (
@@ -185,11 +184,10 @@ export const ComanderoView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedCategory('TODOS')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${
-                  selectedCategory === 'TODOS'
-                    ? 'bg-[#7B3F00] text-white shadow-xs'
-                    : 'bg-white/80 border border-[#D5C7BA] text-[#1E110A] hover:bg-white'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${selectedCategory === 'TODOS'
+                  ? 'bg-[#7B3F00] text-white shadow-xs'
+                  : 'bg-white/80 border border-[#D5C7BA] text-[#1E110A] hover:bg-white'
+                  }`}
               >
                 <span className={selectedCategory === 'TODOS' ? 'text-amber-400' : 'text-[#8C7D73]'}>
                   <Coffee className="w-3.5 h-3.5" />
@@ -202,11 +200,10 @@ export const ComanderoView: React.FC = () => {
                   type="button"
                   key={cat.key}
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${
-                    selectedCategory === cat.key
-                      ? 'bg-[#7B3F00] text-white shadow-xs'
-                      : 'bg-white/80 border border-[#D5C7BA] text-[#1E110A] hover:bg-white'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${selectedCategory === cat.key
+                    ? 'bg-[#7B3F00] text-white shadow-xs'
+                    : 'bg-white/80 border border-[#D5C7BA] text-[#1E110A] hover:bg-white'
+                    }`}
                 >
                   <span className={selectedCategory === cat.key ? 'text-amber-400' : 'text-[#8C7D73]'}>
                     {getCategoryIcon(cat.key)}
@@ -319,11 +316,10 @@ export const ComanderoView: React.FC = () => {
                     key={t.id}
                     type="button"
                     onClick={() => selectTable(t.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                      t.id === currentTableId
-                        ? 'bg-[#7B3F00] text-white shadow-2xs'
-                        : 'bg-white border border-[#E5DCD3] text-[#6E5A4E] hover:text-[#1E110A]'
-                    }`}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${t.id === currentTableId
+                      ? 'bg-[#7B3F00] text-white shadow-2xs'
+                      : 'bg-white border border-[#E5DCD3] text-[#6E5A4E] hover:text-[#1E110A]'
+                      }`}
                   >
                     {t.id}
                   </button>
@@ -530,12 +526,8 @@ export const ComanderoView: React.FC = () => {
           <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] space-y-3">
             <div className="space-y-1 text-xs text-[#786B63]">
               <div className="flex justify-between">
-                <span>Subtotal ({totalArticulos} artículos):</span>
+                <span>Artículos en cuenta ({totalArticulos}):</span>
                 <span className="font-semibold text-[#1E110A]">${subtotal.toFixed(2)} MXN</span>
-              </div>
-              <div className="flex justify-between">
-                <span>IVA (16% Trasladado):</span>
-                <span className="font-semibold text-[#1E110A]">${iva.toFixed(2)} MXN</span>
               </div>
               <div className="flex justify-between text-base font-black text-[#1E110A] pt-2 border-t border-[#E5DCD3]">
                 <span>Total a Pagar:</span>
@@ -560,11 +552,10 @@ export const ComanderoView: React.FC = () => {
                     confirmButtonColor: '#7B3F00',
                   });
                 }}
-                className={`py-3 rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98 ${
-                  itemsPendientes.length === 0 && itemsEnviados.length > 0
-                    ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] cursor-not-allowed shadow-none'
-                    : 'bg-[#9E5416] hover:bg-[#86440E] disabled:opacity-50 text-white'
-                }`}
+                className={`py-3 rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98 ${itemsPendientes.length === 0 && itemsEnviados.length > 0
+                  ? 'bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] cursor-not-allowed shadow-none'
+                  : 'bg-[#9E5416] hover:bg-[#86440E] disabled:opacity-50 text-white'
+                  }`}
               >
                 {itemsPendientes.length === 0 && itemsEnviados.length > 0 ? (
                   <>

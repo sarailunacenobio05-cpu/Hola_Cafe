@@ -95,7 +95,7 @@ interface AppContextType {
   cerrarCobroModal: () => void;
   mostrarTicketModal: (tableId: string) => void;
   cerrarTicketModal: () => void;
-  procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi') => void;
+  procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi', customTipAmount?: number) => void;
   liberarMesaDirectamente: (tableId: string) => void;
   realizarCorteCaja: () => CorteCajaItem | null;
 
@@ -908,14 +908,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     tableId: string,
     discount: number,
     tipPercent: number,
-    _method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi'
+    _method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+    customTipAmount?: number
   ) => {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder) return;
 
     const subtotal = table.currentOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const discounted = subtotal * (1 - discount / 100);
-    const tip = discounted * (tipPercent / 100);
+    const tip = typeof customTipAmount === 'number' ? customTipAmount : discounted * (tipPercent / 100);
     const totalCobrado = Number((discounted + tip).toFixed(2));
 
     setVentasPendientesCorte(prev => Number((prev + totalCobrado).toFixed(2)));

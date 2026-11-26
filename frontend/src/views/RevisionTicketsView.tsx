@@ -289,7 +289,6 @@ export const RevisionTicketsView: React.FC = () => {
   };
 
   const imprimirTicket = (t: TicketDia) => {
-    const subtotal = t.total / (1 + IVA);
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
     document.body.appendChild(iframe);
@@ -306,8 +305,7 @@ export const RevisionTicketsView: React.FC = () => {
       <p class="c b">¡HOLA, CAFÉ!</p><p class="c">Ticket ${t.folio} · ${escapeHtml(t.estado)}</p><hr/>
       <table><tr><td>Fecha</td><td class="r">${fechaCorta} · ${t.hora}</td></tr><tr><td>Mesa / Mesero</td><td class="r">${t.mesa} · ${escapeHtml(t.mesero)}</td></tr>
       <tr><td>Forma de pago</td><td class="r">${t.pago}</td></tr></table><hr/><table>${filas}</table><hr/>
-      <table><tr><td>Subtotal</td><td class="r">${fmt(subtotal)}</td></tr><tr><td>IVA (16%)</td><td class="r">${fmt(t.total - subtotal)}</td></tr>
-      <tr class="b"><td>Total</td><td class="r">${fmt(t.total)}</td></tr></table><hr/><p class="c">Copia de revisión de corte</p></div></body></html>`);
+      <table><tr class="b"><td>Total</td><td class="r">${fmt(t.total)}</td></tr></table><hr/><p class="c">Copia de revisión de corte</p></div></body></html>`);
     doc.close();
     setTimeout(() => {
       const w = iframe.contentWindow;
@@ -741,9 +739,6 @@ const DetalleTicket: React.FC<DetalleTicketProps> = ({
   onAlternar,
   onImprimir,
 }) => {
-  const subtotal = ticket.total / (1 + IVA);
-  const iva = ticket.total - subtotal;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -804,15 +799,7 @@ const DetalleTicket: React.FC<DetalleTicketProps> = ({
       </div>
 
       <div className="border-t border-dashed border-[#D5C7BA] pt-3 space-y-1.5 text-xs">
-        <div className="flex justify-between text-[#786B63]">
-          <span>Subtotal</span>
-          <span className="font-semibold text-[#1E110A]">{fmt(subtotal)}</span>
-        </div>
-        <div className="flex justify-between text-[#786B63]">
-          <span>IVA (16%)</span>
-          <span className="font-semibold text-[#1E110A]">{fmt(iva)}</span>
-        </div>
-        <div className="flex justify-between items-end pt-2">
+        <div className="flex justify-between items-end pt-1">
           <span className="text-base font-black">Total</span>
           <span className={`text-2xl font-black ${ticket.estado === 'Cancelado' ? 'line-through text-[#A8988D]' : ''}`}>
             {fmt(ticket.total)}

@@ -46,9 +46,9 @@ const escapeHtml = (value: string) =>
     .replace(/'/g, '&#39;');
 
 /* ---------- Configuración ---------- */
-const IVA = 0.16;
+
 const DESCUENTOS = [0, 5, 10, 15, 20];
-const PROPINAS = [0, 10, 15, 20];
+const PROPINAS = [0, 10, 15];
 const PROCESSING_MS = 1400;
 const PRINTING_MS = 2000;
 
@@ -72,10 +72,10 @@ const METODOS: {
   icon: React.ElementType;
   color: string;
 }[] = [
-  { id: 'terminal', titulo: 'Terminal Bancaria', detalle: 'Tarjeta de débito o crédito', icon: CreditCard, color: 'text-[#8B4513]' },
-  { id: 'efectivo', titulo: 'Efectivo en Mesa', detalle: 'Caja / Monedero', icon: Banknote, color: 'text-[#059669]' },
-  { id: 'qr', titulo: 'Transferencia QR / CoDi', detalle: 'Instantáneo', icon: QrCode, color: 'text-[#0284C7]' },
-];
+    { id: 'terminal', titulo: 'Terminal Bancaria', detalle: 'Tarjeta de débito o crédito', icon: CreditCard, color: 'text-[#8B4513]' },
+    { id: 'efectivo', titulo: 'Efectivo en Mesa', detalle: 'Caja / Monedero', icon: Banknote, color: 'text-[#059669]' },
+    { id: 'qr', titulo: 'Transferencia QR / CoDi', detalle: 'Instantáneo', icon: QrCode, color: 'text-[#0284C7]' },
+  ];
 
 /* Comanda de ejemplo (precios en centavos para evitar errores de redondeo) */
 const COMANDA_DEFAULT = {
@@ -106,6 +106,8 @@ export const CobroRapidoModal: React.FC = () => {
   } = useApp();
 
   const [propinaPct, setPropinaPct] = useState(10);
+  const [esPropinaPersonalizada, setEsPropinaPersonalizada] = useState(false);
+  const [propinaPersonalizadaMonto, setPropinaPersonalizadaMonto] = useState('');
   const [descuentoPct, setDescuentoPct] = useState(0);
   const [menuDescuentoAbierto, setMenuDescuentoAbierto] = useState(false);
   const [metodo, setMetodo] = useState<MetodoId>('terminal');
@@ -143,6 +145,8 @@ export const CobroRapidoModal: React.FC = () => {
       setPrinterStage('processing');
       setMostrarWhatsApp(false);
       setTelefonoWhatsApp('');
+      setEsPropinaPersonalizada(false);
+      setPropinaPersonalizadaMonto('');
     }
   }, [isCobroModalOpen]);
 
@@ -151,13 +155,13 @@ export const CobroRapidoModal: React.FC = () => {
   const comandaItems =
     activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
       ? activeTable.currentOrder.items.map((it, idx) => ({
-          id: idx + 1,
-          cantidad: it.quantity,
-          nombre: it.name,
-          precioCents: Math.round(it.price * 100),
-          modificadores: [it.selectedOption, it.notes].filter(Boolean) as string[],
-          categoria: 'Menú ¡Hola, Café!',
-        }))
+        id: idx + 1,
+        cantidad: it.quantity,
+        nombre: it.name,
+        precioCents: Math.round(it.price * 100),
+        modificadores: [it.selectedOption, it.notes].filter(Boolean) as string[],
+        categoria: 'Menú ¡Hola, Café!',
+      }))
       : COMANDA_DEFAULT.items;
 
   const comanda = {
@@ -172,10 +176,13 @@ export const CobroRapidoModal: React.FC = () => {
     const subtotal = comanda.items.reduce((s, it) => s + it.cantidad * it.precioCents, 0);
     const descuento = Math.round((subtotal * descuentoPct) / 100);
     const base = subtotal - descuento;
-    const propina = Math.round((base * propinaPct) / 100);
-    const iva = Math.round(base * IVA);
-    return { subtotal, descuento, base, propina, iva, total: base + iva + propina };
-  }, [comanda.items, descuentoPct, propinaPct]);
+    const propina = esPropinaPersonalizada
+      ? Math.round((parseFloat(propinaPersonalizadaMonto) || 0) * 100)
+      : Math.round((base * propinaPct) / 100);
+    return { subtotal, descuento, base, propina, total: base + propina };
+  }, [comanda.items, descuentoPct, propinaPct, esPropinaPersonalizada, propinaPersonalizadaMonto]);
+
+  const etiquetaPropina = esPropinaPersonalizada ? 'Propina (Personalizada)' : `Propina (${propinaPct}%)`;
 
   const lineas = comanda.items.length;
   const articulos = comanda.items.reduce((s, it) => s + it.cantidad, 0);
@@ -231,8 +238,8 @@ export const CobroRapidoModal: React.FC = () => {
         : '';
 
     const propinaRow =
-      propinaPct > 0
-        ? `<tr class="muted"><td>Propina (${propinaPct}%)</td><td class="amt">${escapeHtml(fmt(totales.propina))}</td></tr>`
+      totales.propina > 0
+        ? `<tr class="muted"><td>${escapeHtml(etiquetaPropina)}</td><td class="amt">${escapeHtml(fmt(totales.propina))}</td></tr>`
         : '';
 
     const html = `<!doctype html>
@@ -330,7 +337,6 @@ export const CobroRapidoModal: React.FC = () => {
       <tbody>
         <tr class="muted"><td>Subtotal</td><td class="amt">${escapeHtml(fmt(totales.subtotal))}</td></tr>
         ${descuentoRow}
-        <tr class="muted"><td>IVA (16%)</td><td class="amt">${escapeHtml(fmt(totales.iva))}</td></tr>
         ${propinaRow}
         <tr class="total"><td>Total pagado</td><td class="amt">${escapeHtml(fmt(totales.total))}</td></tr>
       </tbody>
@@ -397,8 +403,7 @@ export const CobroRapidoModal: React.FC = () => {
       '──────────────────',
       `Subtotal: ${fmt(totales.subtotal)}`,
       ...(descuentoPct > 0 ? [`Descuento (${descuentoPct}%): -${fmt(totales.descuento)}`] : []),
-      `IVA (16%): ${fmt(totales.iva)}`,
-      ...(propinaPct > 0 ? [`Propina (${propinaPct}%): ${fmt(totales.propina)}`] : []),
+      ...(totales.propina > 0 ? [`${etiquetaPropina}: ${fmt(totales.propina)}`] : []),
       `*Total pagado: ${fmt(totales.total)} MXN*`,
       `*Pagado con:* ${metodoActual.titulo}`,
       '──────────────────',
@@ -448,9 +453,8 @@ export const CobroRapidoModal: React.FC = () => {
         subtotal: fmt(totales.subtotal),
         descuentoPct,
         descuento: fmt(totales.descuento),
-        iva: fmt(totales.iva),
-        propinaPct,
-        propina: fmt(totales.propina),
+        propinaPct: esPropinaPersonalizada ? 1 : propinaPct,
+        propina: totales.propina > 0 ? fmt(totales.propina) : null,
         total: `${fmt(totales.total)} MXN`,
         resumen: resumenUnaLinea,
         items: itemsPdf,
@@ -513,7 +517,8 @@ export const CobroRapidoModal: React.FC = () => {
           activeTableId,
           descuentoPct,
           propinaPct,
-          metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi'
+          metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+          totales.propina / 100
         );
       } else {
         liberarMesaDirectamente(activeTableId);
@@ -638,11 +643,10 @@ export const CobroRapidoModal: React.FC = () => {
                 type="button"
                 onClick={() => setMenuDescuentoAbierto((v) => !v)}
                 disabled={bloqueado}
-                className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-colors disabled:opacity-50 ${
-                  descuentoPct > 0
-                    ? 'bg-[#7B3F00] text-white border-[#7B3F00]'
-                    : 'bg-white border-[#D5C7BA] text-[#1E110A] hover:bg-stone-50'
-                }`}
+                className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-colors disabled:opacity-50 ${descuentoPct > 0
+                  ? 'bg-[#7B3F00] text-white border-[#7B3F00]'
+                  : 'bg-white border-[#D5C7BA] text-[#1E110A] hover:bg-stone-50'
+                  }`}
               >
                 <span className="flex items-center gap-1.5">
                   <Percent className="w-3.5 h-3.5 text-amber-500" />
@@ -661,11 +665,10 @@ export const CobroRapidoModal: React.FC = () => {
                         setDescuentoPct(pct);
                         setMenuDescuentoAbierto(false);
                       }}
-                      className={`py-2 rounded-lg text-xs font-black transition-all ${
-                        descuentoPct === pct
-                          ? 'bg-[#8B4513] text-white shadow-xs'
-                          : 'bg-[#FAF8F5] text-[#1E110A] hover:bg-[#EFE6DC]'
-                      }`}
+                      className={`py-2 rounded-lg text-xs font-black transition-all ${descuentoPct === pct
+                        ? 'bg-[#8B4513] text-white shadow-xs'
+                        : 'bg-[#FAF8F5] text-[#1E110A] hover:bg-[#EFE6DC]'
+                        }`}
                     >
                       {pct}%
                     </button>
@@ -696,11 +699,7 @@ export const CobroRapidoModal: React.FC = () => {
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-[#786B63]">IVA (16%)</span>
-                <span className="font-bold">{fmt(totales.iva)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#786B63]">Propina ({propinaPct}%)</span>
+                <span className="text-[#786B63]">{etiquetaPropina}</span>
                 <span className="font-bold">{fmt(totales.propina)}</span>
               </div>
             </div>
@@ -708,33 +707,66 @@ export const CobroRapidoModal: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold">Seleccionar Propina:</span>
-                <span className="text-[11px] font-semibold text-[#8C7D73]">100% para servicio de sala</span>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {PROPINAS.map((pct) => (
                   <button
                     key={pct}
-                    onClick={() => setPropinaPct(pct)}
+                    type="button"
+                    onClick={() => {
+                      setEsPropinaPersonalizada(false);
+                      setPropinaPct(pct);
+                    }}
                     disabled={bloqueado}
-                    className={`py-2.5 px-1 rounded-xl text-center border transition-all disabled:opacity-60 ${
-                      propinaPct === pct
+                    className={`py-2.5 px-1 rounded-xl text-center border transition-all disabled:opacity-60 ${!esPropinaPersonalizada && propinaPct === pct
                         ? 'bg-[#8B4513] text-white border-[#8B4513] shadow-xs'
                         : 'bg-[#FAF8F5] border-[#E5DCD3] hover:bg-white hover:border-[#D5C7BA]'
-                    }`}
+                      }`}
                   >
                     <span className="block text-sm font-black">{pct}%</span>
-                    <span className={`block text-[10px] font-semibold ${propinaPct === pct ? 'text-amber-200' : 'text-[#8C7D73]'}`}>
+                    <span className={`block text-[10px] font-semibold ${!esPropinaPersonalizada && propinaPct === pct ? 'text-amber-200' : 'text-[#8C7D73]'}`}>
                       {fmt(Math.round((totales.base * pct) / 100))}
                     </span>
                   </button>
                 ))}
+
+                <button
+                  type="button"
+                  onClick={() => setEsPropinaPersonalizada(true)}
+                  disabled={bloqueado}
+                  className={`py-2.5 px-1 rounded-xl text-center border transition-all disabled:opacity-60 ${esPropinaPersonalizada
+                      ? 'bg-[#8B4513] text-white border-[#8B4513] shadow-xs'
+                      : 'bg-[#FAF8F5] border-[#E5DCD3] hover:bg-white hover:border-[#D5C7BA]'
+                    }`}
+                >
+                  <span className="block text-xs font-black leading-tight">Otra</span>
+                  <span className={`block text-[10px] font-semibold mt-0.5 ${esPropinaPersonalizada ? 'text-amber-200' : 'text-[#8C7D73]'}`}>
+                    Monto $
+                  </span>
+                </button>
               </div>
+
+              {esPropinaPersonalizada && (
+                <div className="mt-2.5 flex items-center gap-2 bg-[#FAF8F5] border border-[#D5C7BA] rounded-xl px-3 py-2 focus-within:border-[#8B4513] focus-within:bg-white">
+                  <span className="text-xs font-bold text-[#6E5A4E]">Propina en pesos ($):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    disabled={bloqueado}
+                    placeholder="0.00"
+                    value={propinaPersonalizadaMonto}
+                    onChange={(e) => setPropinaPersonalizadaMonto(e.target.value)}
+                    className="flex-1 bg-transparent text-right text-sm font-black text-[#1E110A] outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="bg-[#FAF8F5] border border-[#E5DCD3] rounded-2xl p-4 flex items-center justify-between" aria-live="polite">
               <div>
                 <span className="text-xs font-black block uppercase tracking-wide">Total a cobrar</span>
-                <span className="text-[11px] text-[#8C7D73] font-medium">Incluye IVA y Propina</span>
+                <span className="text-[11px] text-[#8C7D73] font-medium">Precios finales + Propina</span>
               </div>
               <div className="text-right">
                 <span className="text-3xl font-black text-[#7B3F00] leading-none block">{fmt(totales.total)}</span>
@@ -770,11 +802,10 @@ export const CobroRapidoModal: React.FC = () => {
                         key={id}
                         onClick={() => setMetodo(id)}
                         disabled={bloqueado}
-                        className={`w-full p-3.5 rounded-xl flex items-center justify-between transition-all text-left ${
-                          activo
-                            ? 'bg-[#FFF7ED] border-2 border-[#8B4513] shadow-xs'
-                            : 'bg-white border-2 border-[#E5DCD3] hover:border-[#D5C7BA]'
-                        }`}
+                        className={`w-full p-3.5 rounded-xl flex items-center justify-between transition-all text-left ${activo
+                          ? 'bg-[#FFF7ED] border-2 border-[#8B4513] shadow-xs'
+                          : 'bg-white border-2 border-[#E5DCD3] hover:border-[#D5C7BA]'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl bg-white border border-[#E5DCD3] flex items-center justify-center ${color}`}>
@@ -863,13 +894,9 @@ export const CobroRapidoModal: React.FC = () => {
                             <dd>-{fmt(totales.descuento)}</dd>
                           </div>
                         )}
-                        <div className="flex justify-between gap-4 text-grayscale-11">
-                          <dt>IVA (16%)</dt>
-                          <dd>{fmt(totales.iva)}</dd>
-                        </div>
-                        {propinaPct > 0 && (
+                        {totales.propina > 0 && (
                           <div className="flex justify-between gap-4 text-grayscale-11">
-                            <dt>Propina ({propinaPct}%)</dt>
+                            <dt>{etiquetaPropina}</dt>
                             <dd>{fmt(totales.propina)}</dd>
                           </div>
                         )}
@@ -911,13 +938,12 @@ export const CobroRapidoModal: React.FC = () => {
             <button
               onClick={handleProcesarPago}
               disabled={bloqueado}
-              className={`w-full py-4 rounded-2xl font-black text-base shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                pagado
-                  ? 'bg-[#059669] text-white cursor-default'
-                  : pagoActivo
-                    ? 'bg-[#8B4513] text-white cursor-wait opacity-90'
-                    : 'bg-[#7B3F00] hover:bg-[#683500] text-white'
-              }`}
+              className={`w-full py-4 rounded-2xl font-black text-base shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${pagado
+                ? 'bg-[#059669] text-white cursor-default'
+                : pagoActivo
+                  ? 'bg-[#8B4513] text-white cursor-wait opacity-90'
+                  : 'bg-[#7B3F00] hover:bg-[#683500] text-white'
+                }`}
             >
               {pagado ? <CheckCircle2 className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
               <span>
@@ -947,11 +973,10 @@ export const CobroRapidoModal: React.FC = () => {
                     type="button"
                     onClick={() => setMostrarWhatsApp((v) => !v)}
                     disabled={printerStage !== 'complete'}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border ${
-                      mostrarWhatsApp
-                        ? 'bg-[#16A34A] border-[#16A34A] text-white'
-                        : 'bg-[#ECFDF5] border-[#86EFAC] text-[#15803D] hover:bg-[#DCFCE7]'
-                    }`}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border ${mostrarWhatsApp
+                      ? 'bg-[#16A34A] border-[#16A34A] text-white'
+                      : 'bg-[#ECFDF5] border-[#86EFAC] text-[#15803D] hover:bg-[#DCFCE7]'
+                      }`}
                   >
                     <WhatsAppIcon className="w-4 h-4" />
                     Enviar por WhatsApp

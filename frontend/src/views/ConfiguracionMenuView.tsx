@@ -168,6 +168,7 @@ export const ConfiguracionMenuView: React.FC = () => {
                   <option value="Todos">Todos</option>
                   <option value="DISPONIBLE">Disponible</option>
                   <option value="AGOTADO">Agotado</option>
+                  <option value="OCULTO">Oculto</option>
                 </select>
               </div>
             </div>
@@ -219,8 +220,10 @@ export const ConfiguracionMenuView: React.FC = () => {
                       </td>
                       <td className="py-4 px-6">
                         <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${item.status === 'DISPONIBLE'
-                          ? 'bg-[#E6F7F0] text-[#059669]'
-                          : 'bg-[#FEF3C7] text-[#D97706]'
+                            ? 'bg-[#E6F7F0] text-[#059669]'
+                            : item.status === 'AGOTADO'
+                              ? 'bg-[#FEF3C7] text-[#D97706]'
+                              : 'bg-[#F5EFEB] text-[#786B63]'
                           }`}>
                           {item.status}
                         </span>

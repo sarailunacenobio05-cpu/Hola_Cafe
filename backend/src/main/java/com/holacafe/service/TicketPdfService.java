@@ -13,13 +13,13 @@ import java.util.List;
 @Service
 public class TicketPdfService {
 
-    private static final Color COLOR_CAFE_OSCURO = new Color(30, 17, 10);     // #1E110A
-    private static final Color COLOR_CAFE_MARCA = new Color(123, 63, 0);      // #7B3F00
-    private static final Color COLOR_GRIS_TEXTO = new Color(110, 90, 78);     // #6E5A4E
-    private static final Color COLOR_CREMA_FONDO = new Color(250, 248, 245);  // #FAF8F5
-    private static final Color COLOR_BORDE = new Color(229, 220, 211);        // #E5DCD3
-    private static final Color COLOR_TOTAL_BG = new Color(255, 247, 237);     // #FFF7ED
-    private static final Color COLOR_ROJO = new Color(211, 47, 47);           // #D32F2F
+    private static final Color COLOR_CAFE_OSCURO = new Color(30, 17, 10); // #1E110A
+    private static final Color COLOR_CAFE_MARCA = new Color(123, 63, 0); // #7B3F00
+    private static final Color COLOR_GRIS_TEXTO = new Color(110, 90, 78); // #6E5A4E
+    private static final Color COLOR_CREMA_FONDO = new Color(250, 248, 245); // #FAF8F5
+    private static final Color COLOR_BORDE = new Color(229, 220, 211); // #E5DCD3
+    private static final Color COLOR_TOTAL_BG = new Color(255, 247, 237); // #FFF7ED
+    private static final Color COLOR_ROJO = new Color(211, 47, 47); // #D32F2F
 
     public byte[] generarTicketPdf(EnviarWhatsAppRequest req) {
         List<EnviarWhatsAppRequest.ItemTicket> items = req.getItems();
@@ -161,9 +161,8 @@ public class TicketPdfService {
                 Font fontDesc = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8.5f, COLOR_ROJO);
                 agregarFilaTotal(totTable, "Descuento (" + req.getDescuentoPct() + "%)", "-" + req.getDescuento(), fontChico, fontDesc);
             }
-            agregarFilaTotal(totTable, "IVA (16%)", valorSeguro(req.getIva(), "$0.00"), fontChico, fontValor);
-            if (req.getPropinaPct() != null && req.getPropinaPct() > 0 && req.getPropina() != null) {
-                agregarFilaTotal(totTable, "Propina (" + req.getPropinaPct() + "%)", req.getPropina(), fontChico, fontValor);
+            if (req.getPropina() != null && !req.getPropina().isBlank() && !"$0.00".equals(req.getPropina())) {
+                agregarFilaTotal(totTable, "Propina", req.getPropina(), fontChico, fontValor);
             }
             doc.add(totTable);
 

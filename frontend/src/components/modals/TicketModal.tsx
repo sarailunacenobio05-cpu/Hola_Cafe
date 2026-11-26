@@ -18,18 +18,16 @@ export const TicketModal: React.FC = () => {
   const ticketItems =
     activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
       ? activeTable.currentOrder.items.map((it) => ({
-          qty: it.quantity,
-          name: it.selectedOption ? `${it.name} (${it.selectedOption})` : it.name,
-          price: it.price * it.quantity,
-        }))
+        qty: it.quantity,
+        name: it.selectedOption ? `${it.name} (${it.selectedOption})` : it.name,
+        price: it.price * it.quantity,
+      }))
       : [
-          { qty: 2, name: 'Hamburguesa Clásica', price: 330.00 },
-          { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00 },
-        ];
+        { qty: 2, name: 'Hamburguesa Clásica', price: 330.00 },
+        { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00 },
+      ];
 
   const totalAmount = ticketItems.reduce((acc, it) => acc + it.price, 0);
-  const subtotalAmount = totalAmount / 1.16;
-  const ivaAmount = totalAmount - subtotalAmount;
 
   const handlePrint = () => {
     window.print();
@@ -38,7 +36,7 @@ export const TicketModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs font-sans">
       <div className="bg-white rounded-3xl shadow-2xl border border-[#E5DCD3] w-full max-w-lg max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Modal Header */}
         <div className="p-4 px-6 border-b border-[#F5EFEB] flex items-center justify-between">
           <div>
@@ -57,8 +55,8 @@ export const TicketModal: React.FC = () => {
 
         {/* Printable Ticket Paper Preview (Exact Figma Layout) */}
         <div className="p-6 overflow-y-auto bg-[#FAF8F5] flex justify-center">
-          <div 
-            id="printable-ticket" 
+          <div
+            id="printable-ticket"
             className="w-full max-w-[340px] bg-white p-6 shadow-xs border border-[#E5DCD3] rounded-2xl text-[#1E110A] font-sans text-xs leading-relaxed"
           >
             {/* Header */}
@@ -112,16 +110,8 @@ export const TicketModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Subtotal, IVA, TOTAL */}
+            {/* TOTAL */}
             <div className="py-3 border-b border-dashed border-[#D5C7BA] space-y-1 text-xs">
-              <div className="flex justify-between text-[#6E5A4E]">
-                <span>Subtotal</span>
-                <span className="font-semibold text-[#1E110A]">${subtotalAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-[#6E5A4E]">
-                <span>IVA (16%)</span>
-                <span className="font-semibold text-[#1E110A]">${ivaAmount.toFixed(2)}</span>
-              </div>
               <div className="flex justify-between text-base font-black text-[#1E110A] pt-1">
                 <span>TOTAL</span>
                 <span className="text-lg font-black text-[#7B3F00]">${totalAmount.toFixed(2)}</span>
