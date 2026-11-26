@@ -11,6 +11,8 @@ import com.holacafe.model.Usuario;
 import com.holacafe.repositories.RolRepository;
 import com.holacafe.repositories.TokenRecuperacionRepository;
 import com.holacafe.repositories.UsuarioRepository;
+import com.holacafe.model.TokenRevocado;
+import com.holacafe.repositories.TokenRevocadoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -33,6 +35,7 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final TokenRecuperacionRepository tokenRecuperacionRepository;
+    private final TokenRevocadoRepository tokenRevocadoRepository;
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
 
@@ -160,6 +163,19 @@ public class AuthService {
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("mensaje", "Tu contraseña ha sido actualizada correctamente. Ya puedes iniciar sesión.");
         return respuesta;
+    }
+    @Transactional 
+    public void revocarToken(String authHeader){
+        if(authHeader != null && authHeader.startsWith("Bearer ")){
+            String jwt = authHeader.substring(7).trim();
+            if(!jwt.isEmpty() && !tokenRevocadoRepository.existsByToken(jwt)){
+                TokenRevocado revocado = new TokenRevocado();
+                revocado.setToken(jwt);
+                revocado.setFechaRevocacion(LocalDateTime.now());
+                tokenRevocadoRepository.save(revocado);
+            }
+        }
+
     }
 
     private UsuarioResponse mapearUsuario(Usuario usuario) {

@@ -15,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @RestController
 @RequestMapping("/auth")
@@ -47,4 +50,14 @@ public class AuthController {
             @Valid @RequestBody RestablecerPasswordRequest request) {
         return ResponseEntity.ok(authService.restablecerPassword(request));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(
+        @RequestHeader (value = "Authorization", required = false) String authHeader){
+            authService.revocarToken(authHeader);
+            return ResponseEntity.ok(Map.of("mensaje", "Sesión cerrada y token invalidado correctamente"));
+
+        }
+    
+    
 }

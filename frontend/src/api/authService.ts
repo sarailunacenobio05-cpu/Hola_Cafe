@@ -53,6 +53,10 @@ export const authService = {
     } catch { }
   },
   logout() {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY) || sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token) {
+      api.post("/auth/logout").catch(() => {});
+    }
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     sessionStorage.removeItem(TOKEN_STORAGE_KEY);

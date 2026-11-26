@@ -30,4 +30,10 @@ public class UsuarioController {
         usuarioService.eliminarUsuario(id, correoAdmin);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping ("/{id}/estado")
+    @PreAuthorize ("hasAuthority ('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<UsuarioResponse> alternarEstado(@PathVariable String id){
+        return ResponseEntity.ok(usuarioService.alternarEstado(id));
+    }
 }

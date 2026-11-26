@@ -1,6 +1,6 @@
 package com.holacafe.security;
-
 import com.holacafe.model.Usuario;
+import com.holacafe.repositories.TokenRevocadoRepository;
 import com.holacafe.repositories.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,13 +15,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
-
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
-
+    private final TokenRevocadoRepository tokenRevocadoRepository;
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -31,14 +30,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         final String jwt = authHeader.substring(7);
+        // Si el token fue revocado en logout, rechazar autenticación
+        if (tokenRevocadoRepository.existsByToken(jwt)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         final String correo = jwtService.extraerCorreo(jwt);
         if (correo != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             Usuario usuario = usuarioRepository.findByCorreo(correo).orElse(null);
-            if (usuario != null && jwtService.esTokenValido(jwt, usuario.getCorreo())) {
+            if (usuario != null && "ACTIVO".equalsIgnoreCase(usuario.getEstado())
+                    && jwtService.esTokenValido(jwt, usuario.getCorreo())) {
                 String rol = jwtService.extraerRol(jwt);
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
                         rol != null ? rol : usuario.getRol().getNombre());
-
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         usuario,
                         null,

@@ -81,6 +81,14 @@ public class UsuarioService {
         usuarioRepository.delete(usuario);
     }
 
+    @Transactional 
+    public UsuarioResponse alternarEstado(String id){
+        Usuario usuario = usuarioRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
+        String nuevoEstado = "ACTIVO".equalsIgnoreCase(usuario.getEstado()) ? "BAJA" : "ACTIVO";
+        usuario.setEstado(nuevoEstado);
+        return mapearUsuario(usuarioRepository.save(usuario));
+    }
+
     private UsuarioResponse mapearUsuario(Usuario usuario) {
         return new UsuarioResponse(
                 usuario.getId(),
