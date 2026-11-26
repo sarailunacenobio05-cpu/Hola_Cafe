@@ -4,7 +4,7 @@ import { X, Printer, Plus, Minus } from 'lucide-react';
 import logoImg from '../../img/logo.png';
 
 export const TicketModal: React.FC = () => {
-  const { isTicketModalOpen, cerrarTicketModal, activeTableId, tables, currentUser } = useApp();
+  const { isTicketModalOpen, cerrarTicketModal, activeTableId, tables, menuItems, currentUser } = useApp();
   const [copies, setCopies] = useState(1);
 
   if (!isTicketModalOpen) return null;
@@ -12,22 +12,34 @@ export const TicketModal: React.FC = () => {
   const activeTable = tables.find((t) => t.id === activeTableId);
   const mesaNum = activeTable ? String(activeTable.number).padStart(2, '0') : (activeTableId || 'M04').replace('M', '');
   const folio = activeTable?.currentOrder?.folio || 1039;
-  const mesero = activeTable?.waiterName || currentUser?.name || 'Gael O.';
+  const mesero = currentUser?.name || activeTable?.currentOrder?.waiterName || activeTable?.waiterName || 'Mesero';
   const personas = activeTable?.guests || activeTable?.capacity || 2;
 
   const ticketItems =
     activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
-      ? activeTable.currentOrder.items.map((it) => ({
-        qty: it.quantity,
-        name: it.selectedOption ? `${it.name} (${it.selectedOption})` : it.name,
-        price: it.price * it.quantity,
-      }))
+      ? activeTable.currentOrder.items.map((it) => {
+        const menuMatch = menuItems.find((m) => m.id === it.menuItemId);
+        const discountPct = menuMatch?.discountPercent ?? it.discountPercent ?? 0;
+        const unitOriginal = it.originalPrice ?? menuMatch?.price ?? it.price;
+        const unitFinal = discountPct > 0
+          ? Number((unitOriginal * (1 - discountPct / 100)).toFixed(2))
+          : unitOriginal;
+        return {
+          qty: it.quantity,
+          name: it.selectedOption ? `${it.name} (${it.selectedOption})` : it.name,
+          price: unitFinal * it.quantity,
+          originalPrice: unitOriginal * it.quantity,
+          discountPct,
+        };
+      })
       : [
-        { qty: 2, name: 'Hamburguesa Clásica', price: 330.00 },
-        { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00 },
+        { qty: 2, name: 'Hamburguesa Clásica', price: 330.00, originalPrice: 330.00, discountPct: 0 },
+        { qty: 1, name: 'Hamburguesa Hawaiana', price: 175.00, originalPrice: 175.00, discountPct: 0 },
       ];
 
   const totalAmount = ticketItems.reduce((acc, it) => acc + it.price, 0);
+  const totalOriginal = ticketItems.reduce((acc, it) => acc + it.originalPrice, 0);
+  const ahorroProductos = Math.max(0, totalOriginal - totalAmount);
 
   const handlePrint = () => {
     window.print();
@@ -97,14 +109,28 @@ export const TicketModal: React.FC = () => {
 
               <div className="space-y-1.5 text-xs">
                 {ticketItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <span className="pr-2 font-medium">
-                      <strong className="mr-1.5 font-bold">{item.qty}</strong>
-                      {item.name}
-                    </span>
-                    <span className="font-bold text-[#1E110A] shrink-0">
-                      ${item.price.toFixed(2)}
-                    </span>
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="pr-2 font-medium">
+                        <strong className="mr-1.5 font-bold">{item.qty}</strong>
+                        {item.name}
+                        {item.discountPct > 0 && (
+                          <span className="ml-1.5 inline-block bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                            -{item.discountPct}%
+                          </span>
+                        )}
+                      </span>
+                      <div className="text-right shrink-0">
+                        {item.discountPct > 0 && (
+                          <span className="block text-[10px] line-through text-[#A8988D] leading-tight">
+                            ${item.originalPrice.toFixed(2)}
+                          </span>
+                        )}
+                        <span className={`font-bold ${item.discountPct > 0 ? 'text-[#059669]' : 'text-[#1E110A]'}`}>
+                          ${item.price.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -112,6 +138,18 @@ export const TicketModal: React.FC = () => {
 
             {/* TOTAL */}
             <div className="py-3 border-b border-dashed border-[#D5C7BA] space-y-1 text-xs">
+              {ahorroProductos > 0 && (
+                <>
+                  <div className="flex justify-between text-[#8C7D73]">
+                    <span>Subtotal carta</span>
+                    <span className="line-through">${totalOriginal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-[#059669] font-bold">
+                    <span>Descuento en productos</span>
+                    <span>-${ahorroProductos.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-base font-black text-[#1E110A] pt-1">
                 <span>TOTAL</span>
                 <span className="text-lg font-black text-[#7B3F00]">${totalAmount.toFixed(2)}</span>

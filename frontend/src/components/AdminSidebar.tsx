@@ -8,7 +8,8 @@ import {
   Users, 
   Settings, 
   LogOut,
-  ReceiptText
+  ReceiptText,
+  BadgePercent
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -43,6 +44,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentSubTitle }) =
       view: 'config-menu',
       label: 'Configuración menú',
       icon: <Settings className="w-4 h-4" />
+    },
+    {
+      view: 'config-descuentos',
+      label: 'Descuentos productos',
+      icon: <BadgePercent className="w-4 h-4" />
     }
   ];
 
@@ -54,6 +60,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentSubTitle }) =
       case 'revision-tickets': return 'REVISIÓN DE TICKETS';
       case 'config-usuarios': return 'USUARIOS';
       case 'config-menu': return 'MENÚ';
+      case 'config-descuentos': return 'DESCUENTOS';
       default: return 'CAJA';
     }
   };

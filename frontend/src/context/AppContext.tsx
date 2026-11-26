@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import manitaTiteImg from '../img/ManitaTite.jpg';
 import { authService, UsuarioDTO } from '../api/authService';
 import {
   User,
@@ -112,6 +113,7 @@ interface AppContextType {
   mostrarConfirmEliminarModal: (product: MenuItem) => void;
   cerrarConfirmEliminarModal: () => void;
   confirmarBorrarProducto: () => void;
+  actualizarDescuentoProducto: (productId: string, discountPercent: number) => void;
 
   mostrarAddUserModal: () => void;
   cerrarAddUserModal: () => void;
@@ -139,6 +141,7 @@ const VIEW_TO_PATH: Record<ActiveView, string> = {
   'caja': '/admin/caja',
   'revision-tickets': '/admin/tickets',
   'config-menu': '/admin/menu',
+  'config-descuentos': '/admin/descuentos',
   'config-usuarios': '/admin/usuarios',
   'botones-aviso': '/admin/botones',
 };
@@ -152,6 +155,7 @@ const PATH_TO_VIEW: Record<string, ActiveView> = {
   '/admin/caja': 'caja',
   '/admin/tickets': 'revision-tickets',
   '/admin/menu': 'config-menu',
+  '/admin/descuentos': 'config-descuentos',
   '/admin/usuarios': 'config-usuarios',
   '/admin/botones': 'botones-aviso',
 };
@@ -239,13 +243,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [location.pathname]);
 
+  const TICKET_FOLIO_STORAGE_KEY = 'holacafe_last_ticket_folio_v1';
+
+  const leerUltimoFolioGuardado = (mesasActuales: TableInfo[]): number => {
+    const maxEnMesas = mesasActuales.reduce((max, t) => {
+      const f = t.currentOrder?.folio;
+      return typeof f === 'number' && f >= 1000 && f < 2000 ? Math.max(max, f) : max;
+    }, 1043);
+
+    let ultimoGuardado = 1043;
+    try {
+      const raw = localStorage.getItem(TICKET_FOLIO_STORAGE_KEY);
+      if (raw) {
+        const parsed = parseInt(raw, 10);
+        if (Number.isFinite(parsed) && parsed >= 1000) {
+          ultimoGuardado = parsed;
+        }
+      }
+    } catch { }
+
+    return Math.max(ultimoGuardado, maxEnMesas);
+  };
+
   const [tables, setTables] = useState<TableInfo[]>(() => {
     try {
       const saved = localStorage.getItem(TABLES_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Normalizar cualquier folio aleatorio heredado (>= 2000) a consecutivo para todas las mesas 1-9
+          let ultimo = leerUltimoFolioGuardado(parsed);
+          let huboCambio = false;
+          const normalizadas = parsed.map((t: TableInfo) => {
+            if (t.currentOrder && (t.currentOrder.folio >= 2000 || t.currentOrder.folio < 1000)) {
+              ultimo += 1;
+              huboCambio = true;
+              return {
+                ...t,
+                currentOrder: {
+                  ...t.currentOrder,
+                  folio: ultimo,
+                },
+              };
+            }
+            return t;
+          });
+          if (huboCambio) {
+            try {
+              localStorage.setItem(TICKET_FOLIO_STORAGE_KEY, String(ultimo));
+            } catch { }
+          }
+          return normalizadas;
         }
       }
     } catch { }
@@ -293,6 +341,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setTables(parsed);
+        } catch { }
+      }
+      if (e.key === 'holacafe_product_discounts_v1') {
+        try {
+          const descuentos: Record<string, number> = JSON.parse(e.newValue || '{}');
+          setMenuItems((prevMenu) => {
+            const nextMenu = prevMenu.map((p) => ({
+              ...p,
+              discountPercent: descuentos[p.id] || 0,
+            }));
+            setTables((prevTables) =>
+              prevTables.map((t) => {
+                if (!t.currentOrder) return t;
+                return {
+                  ...t,
+                  currentOrder: {
+                    ...t.currentOrder,
+                    items: t.currentOrder.items.map((it) => {
+                      const prod = nextMenu.find((m) => m.id === it.menuItemId);
+                      if (!prod) return it;
+                      const pct = descuentos[prod.id] || 0;
+                      const orig = it.originalPrice ?? prod.price;
+                      const finalUnit = pct > 0 ? Number((orig * (1 - pct / 100)).toFixed(2)) : orig;
+                      return { ...it, originalPrice: orig, discountPercent: pct, price: finalUnit };
+                    }),
+                  },
+                };
+              })
+            );
+            return nextMenu;
+          });
         } catch { }
       }
       if (e.key === BAR_ALERTS_STORAGE_KEY && e.newValue) {
@@ -357,6 +436,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 1. Cargar Productos del menú
       const resProd = await api.get('/productos');
       if (Array.isArray(resProd.data) && resProd.data.length > 0) {
+        let descuentosGuardados: Record<string, number> = {};
+        try {
+          descuentosGuardados = JSON.parse(
+            localStorage.getItem('holacafe_product_discounts_v1') || '{}'
+          );
+        } catch {}
+
         setMenuItems(
           resProd.data.map((p: any) => ({
             id: p.id,
@@ -364,6 +450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             category: p.categoria || p.categoriaNombre || 'Sin categoría',
             description: p.descripcion || '',
             price: Number(p.precio),
+            discountPercent: descuentosGuardados[p.id] || 0,
             status: (p.estado as 'DISPONIBLE' | 'AGOTADO' | 'OCULTO') || 'DISPONIBLE',
             options: p.opciones ? p.opciones.map((o: any) => o.nombre) : [],
             allowKitchenNotes: Boolean(p.permiteNotasCocina),
@@ -596,10 +683,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         error?.response?.data?.message ||
         'Correo electrónico o contraseña incorrectos';
       Swal.fire({
-        icon: 'error',
+        imageUrl: manitaTiteImg,
+        imageWidth: 130,
+        imageHeight: 130,
+        imageAlt: 'Manita triste',
         title: 'Error de Inicio de Sesión',
         text: mensaje,
-        confirmButtonColor: '#b45309',
+        confirmButtonText: 'Intentar de nuevo',
+        confirmButtonColor: '#D98A1A',
+        background: '#FFFFFF',
+        color: '#1E110A',
+        customClass: {
+          popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+          image: 'mx-auto mb-2 object-contain',
+          title: 'text-[#1E110A] font-extrabold text-xl',
+          confirmButton: 'rounded-xl px-6 py-2.5 font-bold',
+        },
       });
       return false;
     }
@@ -616,7 +715,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTableId(tableId);
   };
 
+  const generarSiguienteFolio = (mesasActuales: TableInfo[]): number => {
+    const siguiente = leerUltimoFolioGuardado(mesasActuales) + 1;
+    try {
+      localStorage.setItem(TICKET_FOLIO_STORAGE_KEY, String(siguiente));
+    } catch { }
+    return siguiente;
+  };
+
   const agregarItemToOrder = (tableId: string, item: MenuItem, selectedOption?: string, notes?: string) => {
+    const targetTable = tables.find(t => t.id === tableId);
+    const nuevoFolio = !targetTable?.currentOrder ? generarSiguienteFolio(tables) : undefined;
+
     setTables(prevTables => prevTables.map(t => {
       if (t.id !== tableId) return t;
 
@@ -624,7 +734,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!order) {
         order = {
           id: `ord-${Date.now()}`,
-          folio: Math.floor(1000 + Math.random() * 9000),
+          folio: nuevoFolio ?? generarSiguienteFolio(prevTables),
           tableId,
           waiterId: currentUser?.id || 'u-1',
           waiterName: currentUser?.name || 'Mesero',
@@ -644,10 +754,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           i.notes === notes
       );
 
+      const pctDescuento = item.discountPercent && item.discountPercent > 0 ? item.discountPercent : 0;
+      const precioOriginal = item.price;
+      const precioFinalUnitario = pctDescuento > 0
+        ? Number((precioOriginal * (1 - pctDescuento / 100)).toFixed(2))
+        : precioOriginal;
+
       let newItems = [...order.items];
       if (existingIdx >= 0) {
         newItems[existingIdx] = {
           ...newItems[existingIdx],
+          price: precioFinalUnitario,
+          originalPrice: precioOriginal,
+          discountPercent: pctDescuento,
           quantity: newItems[existingIdx].quantity + 1
         };
       } else {
@@ -655,7 +774,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
           menuItemId: item.id,
           name: item.name,
-          price: item.price,
+          price: precioFinalUnitario,
+          originalPrice: precioOriginal,
+          discountPercent: pctDescuento,
           quantity: 1,
           selectedOption,
           notes,
@@ -914,7 +1035,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder) return;
 
-    const subtotal = table.currentOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const subtotal = table.currentOrder.items.reduce((sum, i) => {
+      const prod = menuItems.find(m => m.id === i.menuItemId);
+      const pct = prod?.discountPercent ?? i.discountPercent ?? 0;
+      const orig = i.originalPrice ?? prod?.price ?? i.price;
+      const unitPrice = pct > 0 ? Number((orig * (1 - pct / 100)).toFixed(2)) : orig;
+      return sum + unitPrice * i.quantity;
+    }, 0);
     const discounted = subtotal * (1 - discount / 100);
     const tip = typeof customTipAmount === 'number' ? customTipAmount : discounted * (tipPercent / 100);
     const totalCobrado = Number((discounted + tip).toFixed(2));
@@ -1169,6 +1296,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     cerrarConfirmEliminarModal();
   };
 
+  const actualizarDescuentoProducto = (productId: string, discountPercent: number) => {
+    const pct = Math.max(0, Math.min(90, Math.round(discountPercent)));
+    try {
+      const actuales: Record<string, number> = JSON.parse(
+        localStorage.getItem('holacafe_product_discounts_v1') || '{}'
+      );
+      if (pct > 0) {
+        actuales[productId] = pct;
+      } else {
+        delete actuales[productId];
+      }
+      localStorage.setItem('holacafe_product_discounts_v1', JSON.stringify(actuales));
+    } catch {}
+    setMenuItems(prev => {
+      const prod = prev.find(p => p.id === productId);
+      if (prod) {
+        setTables(prevTables =>
+          prevTables.map(t => {
+            if (!t.currentOrder) return t;
+            const hasProd = t.currentOrder.items.some(i => i.menuItemId === productId);
+            if (!hasProd) return t;
+            return {
+              ...t,
+              currentOrder: {
+                ...t.currentOrder,
+                items: t.currentOrder.items.map(i => {
+                  if (i.menuItemId !== productId) return i;
+                  const orig = i.originalPrice ?? prod.price;
+                  const finalUnit = pct > 0 ? Number((orig * (1 - pct / 100)).toFixed(2)) : orig;
+                  return { ...i, originalPrice: orig, discountPercent: pct, price: finalUnit };
+                }),
+              },
+            };
+          })
+        );
+      }
+      return prev.map(p => (p.id === productId ? { ...p, discountPercent: pct } : p));
+    });
+  };
+
   const mostrarAddUserModal = () => {
     setIsUsuarioModalOpen(true);
   };
@@ -1409,6 +1576,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mostrarConfirmEliminarModal,
         cerrarConfirmEliminarModal,
         confirmarBorrarProducto,
+        actualizarDescuentoProducto,
         mostrarAddUserModal,
         cerrarAddUserModal,
         guardarUser,

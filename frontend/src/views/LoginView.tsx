@@ -3,7 +3,7 @@ import { useApp } from "../context/AppContext";
 import { authService } from "../api/authService";
 import logoImg from "../img/logo.png";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { validarCorreo, validarPassword } from "../utils/validaciones";
+import { validarCorreo } from "../utils/validaciones";
 
 export const LoginView = () => {
   const { login, setActiveView } = useApp();
@@ -18,7 +18,7 @@ export const LoginView = () => {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const errCorreo = validarCorreo(email);
-    const errPass = validarPassword(password);
+    const errPass = !password.trim() ? "*La contraseña es obligatoria." : "";
     setEmailError(errCorreo);
     setPasswordError(errPass);
     if (errCorreo || errPass) return;
@@ -84,9 +84,8 @@ export const LoginView = () => {
                 value={password}
                 placeholder="Ingresa tu contraseña"
                 onChange={(e) => {
-                  const val = e.target.value;
-                  setPassword(val);
-                  setPasswordError(validarPassword(val));
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError("");
                 }}
                 autoComplete="current-password"
                 aria-label="Contraseña"

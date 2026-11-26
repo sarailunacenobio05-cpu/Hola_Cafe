@@ -8,6 +8,7 @@ import { CocinaKDSView } from './views/CocinaKDSView';
 import { CajaView } from './views/CajaView';
 import { RevisionTicketsView } from './views/RevisionTicketsView';
 import { ConfiguracionMenuView } from './views/ConfiguracionMenuView';
+import { ConfiguracionDescuentosView } from './views/ConfiguracionDescuentosView';
 import { ConfiguracionUsuariosView } from './views/ConfiguracionUsuariosView';
 import { BotonesAvisoView } from './views/BotonesAvisoView';
 import { ProtegerRuta } from './routes/ProtegerRuta';
@@ -73,6 +74,14 @@ export const App: React.FC = () => {
           element={
             <ProtegerRuta rolesPermitidos={['Administrador']}>
               <ConfiguracionMenuView />
+            </ProtegerRuta>
+          }
+        />
+        <Route
+          path="/admin/descuentos"
+          element={
+            <ProtegerRuta rolesPermitidos={['Administrador']}>
+              <ConfiguracionDescuentosView />
             </ProtegerRuta>
           }
         />

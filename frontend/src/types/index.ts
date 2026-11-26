@@ -41,6 +41,7 @@ export interface MenuItem {
   category: string;
   description: string;
   price: number;
+  discountPercent?: number; // Descuento individual del producto (0 a 100)
   status: 'DISPONIBLE' | 'AGOTADO' | 'OCULTO';
   options?: string[]; // e.g. ['Natural', 'Vainilla', 'Caramelo']
   allowKitchenNotes?: boolean;
@@ -52,6 +53,8 @@ export interface OrderItem {
   menuItemId: string;
   name: string;
   price: number;
+  originalPrice?: number;
+  discountPercent?: number;
   quantity: number;
   selectedOption?: string;
   notes?: string;
@@ -133,5 +136,6 @@ export type ActiveView =
   | 'caja'
   | 'revision-tickets'
   | 'config-menu'
+  | 'config-descuentos'
   | 'config-usuarios'
   | 'botones-aviso';

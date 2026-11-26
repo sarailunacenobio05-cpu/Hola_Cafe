@@ -65,8 +65,25 @@ export const ComanderoView: React.FC = () => {
   const numeroMesaFormateado = activeTable
     ? String(activeTable.number).padStart(2, '0')
     : currentTableId.replace('M', '');
-  const meseroActual = activeTable?.waiterName || currentUser?.name || 'Mesero';
-  const folioActual = activeTable?.currentOrder?.folio || 1030 + (activeTable?.number || 1);
+  const meseroActual = currentUser?.name || activeTable?.currentOrder?.waiterName || activeTable?.waiterName || 'Mesero';
+  const folioActual = useMemo(() => {
+    if (activeTable?.currentOrder?.folio) return activeTable.currentOrder.folio;
+    const maxEnMesas = tables.reduce((max, t) => {
+      const f = t.currentOrder?.folio;
+      return typeof f === 'number' && f >= 1000 && f < 2000 ? Math.max(max, f) : max;
+    }, 1043);
+    let ultimoGuardado = 1043;
+    try {
+      const raw = localStorage.getItem('holacafe_last_ticket_folio_v1');
+      if (raw) {
+        const parsed = parseInt(raw, 10);
+        if (Number.isFinite(parsed) && parsed >= 1000) {
+          ultimoGuardado = parsed;
+        }
+      }
+    } catch { }
+    return Math.max(ultimoGuardado, maxEnMesas) + 1;
+  }, [activeTable, tables]);
 
   // Productos disponibles del menú real (sincronizados con lo que crea/edita el Administrador)
   const productosDisponibles = useMemo(() => {
@@ -244,14 +261,34 @@ export const ComanderoView: React.FC = () => {
                     className="bg-white rounded-2xl border border-[#E5DCD3] p-4 flex flex-col justify-between shadow-2xs hover:border-[#D5C7BA] transition-all"
                   >
                     <div>
-                      {/* Title + Price */}
+                      {/* Title + Price (con soporte de descuento por producto) */}
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-extrabold text-[#1E110A] text-sm leading-snug">
-                          {product.name}
-                        </h3>
-                        <span className="font-black text-[#8B4513] text-sm shrink-0">
-                          ${product.price.toFixed(2)}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-extrabold text-[#1E110A] text-sm leading-snug">
+                            {product.name}
+                          </h3>
+                          {(product.discountPercent || 0) > 0 && (
+                            <span className="bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] text-[10px] font-black px-1.5 py-0.5 rounded-md">
+                              -{product.discountPercent}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          {(product.discountPercent || 0) > 0 ? (
+                            <>
+                              <span className="block text-[10px] line-through text-[#A8988D] font-bold">
+                                ${product.price.toFixed(2)}
+                              </span>
+                              <span className="font-black text-[#059669] text-sm">
+                                ${(product.price * (1 - (product.discountPercent || 0) / 100)).toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-black text-[#8B4513] text-sm">
+                              ${product.price.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Description */}

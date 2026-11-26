@@ -21,7 +21,6 @@ import {
   CheckCircle2,
   Percent,
   ChevronDown,
-  Pencil,
   DoorOpen,
   Send,
 } from 'lucide-react';
@@ -84,9 +83,9 @@ const COMANDA_DEFAULT = {
   mesero: 'Carlos R.',
   boton: { id: 'BOT-1', bateria: 88, estado: 'En espera' },
   items: [
-    { id: 1, cantidad: 2, nombre: 'Cappuccino Artesanal', precioCents: 6500, modificadores: ['Leche deslactosada', 'Taza caliente'], categoria: 'Cafetería' },
-    { id: 2, cantidad: 1, nombre: 'Croissant Almendras', precioCents: 5800, modificadores: ['Tibio'], categoria: 'Panadería artesanal' },
-    { id: 3, cantidad: 1, nombre: 'Tostada de Aguacate', precioCents: 11000, modificadores: ['Huevo término medio'], categoria: 'Cocina Salada' },
+    { id: 1, cantidad: 2, nombre: 'Cappuccino Artesanal', precioCents: 6500, precioOriginalCents: 6500, descuentoProductoPct: 0, modificadores: ['Leche deslactosada', 'Taza caliente'], categoria: 'Cafetería' },
+    { id: 2, cantidad: 1, nombre: 'Croissant Almendras', precioCents: 5800, precioOriginalCents: 5800, descuentoProductoPct: 0, modificadores: ['Tibio'], categoria: 'Panadería artesanal' },
+    { id: 3, cantidad: 1, nombre: 'Tostada de Aguacate', precioCents: 11000, precioOriginalCents: 11000, descuentoProductoPct: 0, modificadores: ['Huevo término medio'], categoria: 'Cocina Salada' },
   ],
 };
 
@@ -101,6 +100,7 @@ export const CobroRapidoModal: React.FC = () => {
     liberarMesaDirectamente,
     activeTableId,
     tables,
+    menuItems,
     currentUser,
     logout,
   } = useApp();
@@ -154,32 +154,44 @@ export const CobroRapidoModal: React.FC = () => {
 
   const comandaItems =
     activeTable?.currentOrder && activeTable.currentOrder.items.length > 0
-      ? activeTable.currentOrder.items.map((it, idx) => ({
-        id: idx + 1,
-        cantidad: it.quantity,
-        nombre: it.name,
-        precioCents: Math.round(it.price * 100),
-        modificadores: [it.selectedOption, it.notes].filter(Boolean) as string[],
-        categoria: 'Menú ¡Hola, Café!',
-      }))
+      ? activeTable.currentOrder.items.map((it, idx) => {
+        const menuMatch = menuItems.find((m) => m.id === it.menuItemId);
+        const descuentoProductoPct = menuMatch?.discountPercent ?? it.discountPercent ?? 0;
+        const unitOriginal = it.originalPrice ?? menuMatch?.price ?? it.price;
+        const unitFinal = descuentoProductoPct > 0
+          ? Number((unitOriginal * (1 - descuentoProductoPct / 100)).toFixed(2))
+          : unitOriginal;
+        return {
+          id: idx + 1,
+          cantidad: it.quantity,
+          nombre: it.name,
+          precioCents: Math.round(unitFinal * 100),
+          precioOriginalCents: Math.round(unitOriginal * 100),
+          descuentoProductoPct,
+          modificadores: [it.selectedOption, it.notes].filter(Boolean) as string[],
+          categoria: menuMatch?.category || 'Menú ¡Hola, Café!',
+        };
+      })
       : COMANDA_DEFAULT.items;
 
   const comanda = {
     ...COMANDA_DEFAULT,
     mesa: activeTable ? activeTable.number.toString().padStart(2, '0') : COMANDA_DEFAULT.mesa,
     ticket: activeTable?.currentOrder?.folio || COMANDA_DEFAULT.ticket,
-    mesero: activeTable?.waiterName || currentUser?.name || COMANDA_DEFAULT.mesero,
+    mesero: currentUser?.name || activeTable?.currentOrder?.waiterName || activeTable?.waiterName || COMANDA_DEFAULT.mesero,
     items: comandaItems,
   };
 
   const totales = useMemo(() => {
+    const subtotalOriginal = comanda.items.reduce((s, it) => s + it.cantidad * it.precioOriginalCents, 0);
     const subtotal = comanda.items.reduce((s, it) => s + it.cantidad * it.precioCents, 0);
+    const ahorroProductos = Math.max(0, subtotalOriginal - subtotal);
     const descuento = Math.round((subtotal * descuentoPct) / 100);
     const base = subtotal - descuento;
     const propina = esPropinaPersonalizada
       ? Math.round((parseFloat(propinaPersonalizadaMonto) || 0) * 100)
       : Math.round((base * propinaPct) / 100);
-    return { subtotal, descuento, base, propina, total: base + propina };
+    return { subtotalOriginal, ahorroProductos, subtotal, descuento, base, propina, total: base + propina };
   }, [comanda.items, descuentoPct, propinaPct, esPropinaPersonalizada, propinaPersonalizadaMonto]);
 
   const etiquetaPropina = esPropinaPersonalizada ? 'Propina (Personalizada)' : `Propina (${propinaPct}%)`;
@@ -226,11 +238,19 @@ export const CobroRapidoModal: React.FC = () => {
       .map(
         (it) => `
           <tr>
-            <td class="desc">${it.cantidad}x ${escapeHtml(it.nombre)}</td>
+            <td class="desc">
+              ${it.cantidad}x ${escapeHtml(it.nombre)}${it.descuentoProductoPct > 0 ? ` <strong>(-${it.descuentoProductoPct}%)</strong>` : ''}
+              ${it.descuentoProductoPct > 0 ? `<div class="sub">Antes ${escapeHtml(fmt(it.cantidad * it.precioOriginalCents))}</div>` : ''}
+            </td>
             <td class="amt">${escapeHtml(fmt(it.cantidad * it.precioCents))}</td>
           </tr>`,
       )
       .join('');
+
+    const ahorroProductosRow =
+      totales.ahorroProductos > 0
+        ? `<tr class="muted"><td>Desc. en productos</td><td class="amt">-${escapeHtml(fmt(totales.ahorroProductos))}</td></tr>`
+        : '';
 
     const descuentoRow =
       descuentoPct > 0
@@ -335,6 +355,8 @@ export const CobroRapidoModal: React.FC = () => {
     <hr />
     <table>
       <tbody>
+        ${totales.ahorroProductos > 0 ? `<tr class="muted"><td>Subtotal carta</td><td class="amt">${escapeHtml(fmt(totales.subtotalOriginal))}</td></tr>` : ''}
+        ${ahorroProductosRow}
         <tr class="muted"><td>Subtotal</td><td class="amt">${escapeHtml(fmt(totales.subtotal))}</td></tr>
         ${descuentoRow}
         ${propinaRow}
@@ -345,7 +367,8 @@ export const CobroRapidoModal: React.FC = () => {
     <table class="meta">
       <tbody>
         <tr><td>Folio</td><td class="amt">#${comanda.ticket}</td></tr>
-        <tr><td>Mesa / Mesero</td><td class="amt">M${escapeHtml(comanda.mesa)} · ${escapeHtml(comanda.mesero)}</td></tr>
+        <tr><td>Mesa</td><td class="amt">M${escapeHtml(comanda.mesa)}</td></tr>
+        <tr><td>Atendió</td><td class="amt">${escapeHtml(comanda.mesero)}</td></tr>
         <tr><td>Pagado con</td><td class="amt">${escapeHtml(metodoActual.titulo)}</td></tr>
         <tr><td>Fecha</td><td class="amt">${escapeHtml(fecha)}</td></tr>
       </tbody>
@@ -387,7 +410,11 @@ export const CobroRapidoModal: React.FC = () => {
     if (e) e.preventDefault();
     const fecha = fechaPago || formatFechaTicket();
     const lineasItems = comanda.items
-      .map((it) => `• ${it.cantidad}x ${it.nombre} — ${fmt(it.cantidad * it.precioCents)}`)
+      .map((it) =>
+        it.descuentoProductoPct > 0
+          ? `• ${it.cantidad}x ${it.nombre} (-${it.descuentoProductoPct}%) — ${fmt(it.cantidad * it.precioCents)} (Antes ${fmt(it.cantidad * it.precioOriginalCents)})`
+          : `• ${it.cantidad}x ${it.nombre} — ${fmt(it.cantidad * it.precioCents)}`
+      )
       .join('\n');
 
     const lineasMensaje = [
@@ -401,6 +428,12 @@ export const CobroRapidoModal: React.FC = () => {
       '──────────────────',
       lineasItems,
       '──────────────────',
+      ...(totales.ahorroProductos > 0
+        ? [
+            `Subtotal carta: ${fmt(totales.subtotalOriginal)}`,
+            `Desc. en productos: -${fmt(totales.ahorroProductos)}`,
+          ]
+        : []),
       `Subtotal: ${fmt(totales.subtotal)}`,
       ...(descuentoPct > 0 ? [`Descuento (${descuentoPct}%): -${fmt(totales.descuento)}`] : []),
       ...(totales.propina > 0 ? [`${etiquetaPropina}: ${fmt(totales.propina)}`] : []),
@@ -432,12 +465,21 @@ export const CobroRapidoModal: React.FC = () => {
       .map((it) => `${it.cantidad}x ${it.nombre}`)
       .join(', ');
 
-    const itemsPdf = comanda.items.map((it) => ({
-      cantidad: it.cantidad,
-      nombre: it.nombre,
-      importe: fmt(it.cantidad * it.precioCents),
-      detalle: it.modificadores.length > 0 ? it.modificadores.join(' · ') : '',
-    }));
+    const itemsPdf = comanda.items.map((it) => {
+      const partesDetalle: string[] = [];
+      if (it.descuentoProductoPct > 0) {
+        partesDetalle.push(`Desc. -${it.descuentoProductoPct}% (Antes ${fmt(it.cantidad * it.precioOriginalCents)})`);
+      }
+      if (it.modificadores.length > 0) {
+        partesDetalle.push(it.modificadores.join(' · '));
+      }
+      return {
+        cantidad: it.cantidad,
+        nombre: it.descuentoProductoPct > 0 ? `${it.nombre} (-${it.descuentoProductoPct}%)` : it.nombre,
+        importe: fmt(it.cantidad * it.precioCents),
+        detalle: partesDetalle.join(' · '),
+      };
+    });
 
     setEnviandoWhatsApp(true);
     try {
@@ -575,10 +617,6 @@ export const CobroRapidoModal: React.FC = () => {
             <span>Ticket #{comanda.ticket}</span>
           </span>
           <span className="flex items-center gap-1.5 bg-white border border-[#E5DCD3] px-3 py-1.5 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            <span>{comanda.boton.id}: <strong>{comanda.boton.bateria}%</strong> <span className="text-[#8C7D73]">({comanda.boton.estado})</span></span>
-          </span>
-          <span className="flex items-center gap-1.5 bg-white border border-[#E5DCD3] px-3 py-1.5 rounded-xl">
             <User className="w-3.5 h-3.5 text-[#8B4513]" />
             <span>Mesero: <strong>{comanda.mesero}</strong></span>
           </span>
@@ -607,11 +645,25 @@ export const CobroRapidoModal: React.FC = () => {
               {comanda.items.map((it) => (
                 <li key={it.id} className="border border-[#E5DCD3] rounded-xl p-3.5 hover:border-[#D5C7BA] transition-colors">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="bg-[#7B3F00] text-white text-xs font-black px-1.5 py-0.5 rounded">{it.cantidad}x</span>
                       <h3 className="text-sm font-bold">{it.nombre}</h3>
+                      {it.descuentoProductoPct > 0 && (
+                        <span className="bg-[#E6F7F0] text-[#059669] border border-[#A7F3D0] text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                          -{it.descuentoProductoPct}%
+                        </span>
+                      )}
                     </div>
-                    <span className="font-black text-sm">{fmt(it.cantidad * it.precioCents)}</span>
+                    <div className="text-right shrink-0">
+                      {it.descuentoProductoPct > 0 && (
+                        <span className="block text-[11px] line-through text-[#A8988D] font-semibold leading-tight">
+                          {fmt(it.cantidad * it.precioOriginalCents)}
+                        </span>
+                      )}
+                      <span className={`font-black text-sm ${it.descuentoProductoPct > 0 ? 'text-[#059669]' : ''}`}>
+                        {fmt(it.cantidad * it.precioCents)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mt-2 pl-8">
@@ -624,15 +676,12 @@ export const CobroRapidoModal: React.FC = () => {
 
                   <div className="flex items-center justify-between mt-2 pl-8">
                     <span className="text-[11px] text-[#A8988D]">
-                      {it.cantidad > 1 ? `Sub: ${fmt(it.precioCents)} c/u` : it.categoria}
+                      {it.cantidad > 1
+                        ? `Sub: ${fmt(it.precioCents)} c/u`
+                        : it.descuentoProductoPct > 0
+                          ? `Ahorro: ${fmt(it.cantidad * (it.precioOriginalCents - it.precioCents))}`
+                          : it.categoria}
                     </span>
-                    <button
-                      disabled={bloqueado}
-                      className="flex items-center gap-1 text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      Modificar
-                    </button>
                   </div>
                 </li>
               ))}
@@ -688,13 +737,25 @@ export const CobroRapidoModal: React.FC = () => {
             </div>
 
             <div className="space-y-1.5 text-xs">
+              {totales.ahorroProductos > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-[#786B63]">Subtotal (precio de carta)</span>
+                    <span className="font-semibold text-[#8C7D73] line-through">{fmt(totales.subtotalOriginal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#059669] font-semibold">Descuento en productos</span>
+                    <span className="font-bold text-[#059669]">−{fmt(totales.ahorroProductos)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between">
                 <span className="text-[#786B63]">Subtotal Alimentos &amp; Bebidas</span>
                 <span className="font-bold">{fmt(totales.subtotal)}</span>
               </div>
               {descuentoPct > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[#786B63]">Descuento ({descuentoPct}%)</span>
+                  <span className="text-[#786B63]">Descuento general ({descuentoPct}%)</span>
                   <span className="font-bold text-[#D32F2F]">−{fmt(totales.descuento)}</span>
                 </div>
               )}
@@ -876,14 +937,39 @@ export const CobroRapidoModal: React.FC = () => {
                       <hr className="my-4 border-dashed border-grayscale-8" />
                       <dl className="space-y-1.5">
                         {comanda.items.map((it) => (
-                          <div key={it.id} className="flex justify-between gap-4">
-                            <dt className="truncate">{it.cantidad}x {it.nombre}</dt>
-                            <dd className="shrink-0">{fmt(it.cantidad * it.precioCents)}</dd>
+                          <div key={it.id} className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <dt className="truncate">
+                                {it.cantidad}x {it.nombre}
+                                {it.descuentoProductoPct > 0 && (
+                                  <span className="ml-1 font-bold text-[#059669]">(-{it.descuentoProductoPct}%)</span>
+                                )}
+                              </dt>
+                              <dd className="shrink-0">{fmt(it.cantidad * it.precioCents)}</dd>
+                            </div>
+                            {it.descuentoProductoPct > 0 && (
+                              <div className="flex justify-between gap-4 text-[10px] text-grayscale-11 pl-3">
+                                <span>Antes {fmt(it.cantidad * it.precioOriginalCents)}</span>
+                                <span>-{fmt(it.cantidad * (it.precioOriginalCents - it.precioCents))}</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </dl>
                       <hr className="my-4 border-dashed border-grayscale-8" />
                       <dl className="space-y-1.5">
+                        {totales.ahorroProductos > 0 && (
+                          <>
+                            <div className="flex justify-between gap-4 text-grayscale-11">
+                              <dt>Subtotal carta</dt>
+                              <dd>{fmt(totales.subtotalOriginal)}</dd>
+                            </div>
+                            <div className="flex justify-between gap-4 text-[#059669] font-medium">
+                              <dt>Desc. productos</dt>
+                              <dd>-{fmt(totales.ahorroProductos)}</dd>
+                            </div>
+                          </>
+                        )}
                         <div className="flex justify-between gap-4 text-grayscale-11">
                           <dt>Subtotal</dt>
                           <dd>{fmt(totales.subtotal)}</dd>
@@ -912,8 +998,12 @@ export const CobroRapidoModal: React.FC = () => {
                           <dd>#{comanda.ticket}</dd>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <dt>Mesa / Mesero</dt>
-                          <dd>M{comanda.mesa} · {comanda.mesero}</dd>
+                          <dt>Mesa</dt>
+                          <dd>M{comanda.mesa}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt>Atendió</dt>
+                          <dd className="truncate">{comanda.mesero}</dd>
                         </div>
                         <div className="flex justify-between gap-4">
                           <dt>Pagado con</dt>
