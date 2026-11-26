@@ -11,7 +11,9 @@ import {
   Check,
   Coffee,
   UtensilsCrossed,
+  XCircle,
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { TableInfo } from '../types';
 
 export const MapaMesasView: React.FC = () => {
@@ -22,6 +24,7 @@ export const MapaMesasView: React.FC = () => {
     selectTable,
     setActiveView,
     mostrarCobroModal,
+    liberarMesaDirectamente,
     mesasAtendidas,
     marcarMesaAtendida,
     logout,
@@ -37,6 +40,33 @@ export const MapaMesasView: React.FC = () => {
   const handleCobrar = (tableId: string) => {
     selectTable(tableId);
     mostrarCobroModal(tableId);
+  };
+
+  const handleCancelarMesa = async (tableId: string) => {
+    const mesaLabel = tableId.replace('M', 'Mesa ');
+    const res = await Swal.fire({
+      icon: 'warning',
+      title: `¿Cancelar comanda de ${mesaLabel}?`,
+      text: 'Esta acción liberará la mesa, descartará la comanda actual y quitará las alertas activas.',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cancelar y liberar mesa',
+      cancelButtonText: 'No, conservar',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#786B63',
+    });
+    if (res.isConfirmed) {
+      liberarMesaDirectamente(tableId);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `${mesaLabel} liberada correctamente`,
+        showConfirmButton: false,
+        timer: 2200,
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
+    }
   };
 
   const isTableLibre = (table: TableInfo) => {
@@ -328,6 +358,14 @@ export const MapaMesasView: React.FC = () => {
                         Abrir comanda
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCancelarMesa(table.id)}
+                      className="mt-2 w-full py-2 px-2 bg-[#FFF5F5] hover:bg-[#FEE2E2] border border-[#FECACA] text-[#DC2626] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Cancelar mesa</span>
+                    </button>
                   </div>
                 );
               }
@@ -445,6 +483,14 @@ export const MapaMesasView: React.FC = () => {
                       Cobrar
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelarMesa(table.id)}
+                    className="mt-2 w-full py-2 px-2 bg-[#FFF5F5] hover:bg-[#FEE2E2] border border-[#FECACA] text-[#DC2626] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Cancelar mesa</span>
+                  </button>
                 </div>
               );
             })}

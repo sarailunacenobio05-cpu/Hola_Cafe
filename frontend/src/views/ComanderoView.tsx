@@ -47,6 +47,7 @@ export const ComanderoView: React.FC = () => {
     enviarOrdenACocina,
     mostrarCobroModal,
     mostrarTicketModal,
+    liberarMesaDirectamente,
   } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
@@ -578,16 +579,39 @@ export const ComanderoView: React.FC = () => {
               </button>
             </div>
 
-            {/* Secondary action: Pre-cuenta */}
-            <div className="pt-1">
+            {/* Secondary actions: Pre-cuenta + Cancelar Mesa */}
+            <div className="pt-1 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 disabled={orderItems.length === 0}
                 onClick={() => mostrarTicketModal(currentTableId)}
-                className="w-full py-2 px-3 bg-white hover:bg-stone-50 disabled:opacity-50 border border-[#D5C7BA] rounded-xl text-xs font-bold text-[#1E110A] flex items-center justify-center gap-1.5 transition-colors"
+                className="py-2 px-3 bg-white hover:bg-stone-50 disabled:opacity-50 border border-[#D5C7BA] rounded-xl text-xs font-bold text-[#1E110A] flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Receipt className="w-3.5 h-3.5 text-[#8C7D73]" />
                 <span>Pre-cuenta</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const res = await Swal.fire({
+                    icon: 'warning',
+                    title: `¿Cancelar Mesa ${numeroMesaFormateado}?`,
+                    text: 'Esta acción liberará la mesa y cancelará su comanda activa.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, liberar mesa',
+                    cancelButtonText: 'Volver',
+                    confirmButtonColor: '#DC2626',
+                    cancelButtonColor: '#786B63',
+                  });
+                  if (res.isConfirmed) {
+                    liberarMesaDirectamente(currentTableId);
+                    setActiveView('mapa-mesas');
+                  }
+                }}
+                className="py-2 px-3 bg-[#FFF5F5] hover:bg-[#FEE2E2] border border-[#FECACA] rounded-xl text-xs font-bold text-[#DC2626] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Cancelar mesa</span>
               </button>
             </div>
           </div>

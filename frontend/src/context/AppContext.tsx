@@ -984,6 +984,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }));
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
+    setCocinaTickets(prev => prev.filter(k => k.tableId !== tableId));
+    api.patch(`/mesas/${encodeURIComponent(tableId)}/estado`, null, {
+      params: { estado: 'Limpia / Disponible' }
+    }).catch(() => {});
   };
 
   const activarAlertaBarra = (tableId: string, message: string) => {
