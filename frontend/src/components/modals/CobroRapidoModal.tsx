@@ -587,7 +587,7 @@ export const CobroRapidoModal: React.FC = () => {
           <UsuarioPerfilNavbar />
 
           <button
-            onClick={() => { handleCerrar(); logout(); }}
+            onClick={logout}
             className="flex items-center gap-1.5 text-xs font-semibold text-[#6E5A4E] hover:text-[#1E110A] transition-colors ml-1"
           >
             <LogOut className="w-3.5 h-3.5" />

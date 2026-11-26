@@ -13,7 +13,6 @@ import {
   Layers,
   CupSoda,
   Utensils,
-  Receipt,
   RefreshCw,
   ArrowLeft,
   CreditCard,
@@ -22,6 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import manitaComandaImg from '../img/ManitaComanda.jpg';
+import manitaCancelarMesaImg from '../img/ManitaCancelarMesa.jpg';
 import { MenuItem, OrderItem } from '../types';
 
 const normalizeText = (value: string) =>
@@ -46,7 +47,6 @@ export const ComanderoView: React.FC = () => {
     eliminarItemFromOrder,
     enviarOrdenACocina,
     mostrarCobroModal,
-    mostrarTicketModal,
     liberarMesaDirectamente,
   } = useApp();
 
@@ -131,6 +131,7 @@ export const ComanderoView: React.FC = () => {
   const orderItems: OrderItem[] = activeTable?.currentOrder?.items || [];
   const itemsPendientes = orderItems.filter((i) => !i.enviadoACocina);
   const itemsEnviados = orderItems.filter((i) => Boolean(i.enviadoACocina));
+  const tieneProductoEntregado = orderItems.some((i) => Boolean(i.entregado));
 
   const handleAddToCart = (product: MenuItem) => {
     const chosenOption =
@@ -584,10 +585,22 @@ export const ComanderoView: React.FC = () => {
                   const enviados = itemsPendientes.reduce((acc, i) => acc + i.quantity, 0);
                   enviarOrdenACocina(currentTableId);
                   Swal.fire({
-                    title: 'Enviado a Cocina',
-                    text: `Se enviaron ${enviados} producto(s) nuevos de Mesa ${numeroMesaFormateado} a cocina (KDS).`,
-                    icon: 'success',
+                    imageUrl: manitaComandaImg,
+                    imageWidth: 135,
+                    imageHeight: 135,
+                    imageAlt: 'Manita enviando comanda a cocina',
+                    title: '¡Comanda enviada a Cocina!',
+                    text: `Se enviaron ${enviados} producto(s) nuevos de Mesa ${numeroMesaFormateado} a cocina.`,
+                    confirmButtonText: 'Entendido',
                     confirmButtonColor: '#7B3F00',
+                    background: '#FFFFFF',
+                    color: '#1E110A',
+                    customClass: {
+                      popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+                      image: 'mx-auto mb-2 object-contain',
+                      title: 'text-[#1E110A] font-extrabold text-xl',
+                      confirmButton: 'rounded-xl px-6 py-2.5 font-bold',
+                    },
                   });
                 }}
                 className={`py-3 rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98 ${itemsPendientes.length === 0 && itemsEnviados.length > 0
@@ -607,31 +620,30 @@ export const ComanderoView: React.FC = () => {
 
               <button
                 type="button"
-                disabled={orderItems.length === 0}
+                disabled={!tieneProductoEntregado}
+                title={
+                  tieneProductoEntregado
+                    ? 'Ir a cobro rápido'
+                    : 'Disponible hasta que se entregue al menos un producto de cocina'
+                }
                 onClick={() => mostrarCobroModal(currentTableId)}
-                className="py-3 bg-[#8B4513] hover:bg-[#72380F] disabled:opacity-50 text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
+                className="py-3 bg-[#8B4513] hover:bg-[#72380F] disabled:opacity-45 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
               >
                 <CreditCard className="w-4 h-4" />
                 <span>Cobrar</span>
               </button>
             </div>
 
-            {/* Secondary actions: Pre-cuenta + Cancelar Mesa */}
-            <div className="pt-1 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={orderItems.length === 0}
-                onClick={() => mostrarTicketModal(currentTableId)}
-                className="py-2 px-3 bg-white hover:bg-stone-50 disabled:opacity-50 border border-[#D5C7BA] rounded-xl text-xs font-bold text-[#1E110A] flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Receipt className="w-3.5 h-3.5 text-[#8C7D73]" />
-                <span>Pre-cuenta</span>
-              </button>
+            {/* Secondary action: Cancelar Mesa */}
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={async () => {
                   const res = await Swal.fire({
-                    icon: 'warning',
+                    imageUrl: manitaCancelarMesaImg,
+                    imageWidth: 135,
+                    imageHeight: 135,
+                    imageAlt: 'Manita cancelar mesa',
                     title: `¿Cancelar Mesa ${numeroMesaFormateado}?`,
                     text: 'Esta acción liberará la mesa y cancelará su comanda activa.',
                     showCancelButton: true,
@@ -639,13 +651,23 @@ export const ComanderoView: React.FC = () => {
                     cancelButtonText: 'Volver',
                     confirmButtonColor: '#DC2626',
                     cancelButtonColor: '#786B63',
+                    reverseButtons: true,
+                    background: '#FFFFFF',
+                    color: '#1E110A',
+                    customClass: {
+                      popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+                      image: 'mx-auto mb-2 object-contain',
+                      title: 'text-[#1E110A] font-extrabold text-xl',
+                      confirmButton: 'rounded-xl px-5 py-2.5 font-bold',
+                      cancelButton: 'rounded-xl px-5 py-2.5 font-bold',
+                    },
                   });
                   if (res.isConfirmed) {
                     liberarMesaDirectamente(currentTableId);
                     setActiveView('mapa-mesas');
                   }
                 }}
-                className="py-2 px-3 bg-[#FFF5F5] hover:bg-[#FEE2E2] border border-[#FECACA] rounded-xl text-xs font-bold text-[#DC2626] flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full py-2 px-3 bg-[#FFF5F5] hover:bg-[#FEE2E2] border border-[#FECACA] rounded-xl text-xs font-bold text-[#DC2626] flex items-center justify-center gap-1.5 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Cancelar mesa</span>

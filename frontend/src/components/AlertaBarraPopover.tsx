@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Bell, CheckCircle2, ChefHat, Radio, X } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { useApp } from '../context/AppContext';
+import { useApp, esAlertaParaMesero } from '../context/AppContext';
 
 export const AlertaBarraPopover: React.FC = () => {
-  const { barAlerts, descartarAlertaBarra, activarAlertaBarra } = useApp();
+  const { barAlerts, currentUser, descartarAlertaBarra, activarAlertaBarra } = useApp();
   const [abierto, setAbierto] = useState(false);
+
+  const visibleAlerts = barAlerts.filter((a) => esAlertaParaMesero(a, currentUser));
 
   const handleAtenderAlerta = (id: string, tableId: string, tipo?: 'boton' | 'cocina' | 'cocina-cancelacion') => {
     descartarAlertaBarra(id);
@@ -41,9 +43,9 @@ export const AlertaBarraPopover: React.FC = () => {
       >
         <Bell className="w-3.5 h-3.5 fill-current" />
         <span>Alerta Barra</span>
-        {barAlerts.length > 0 && (
+        {visibleAlerts.length > 0 && (
           <span className="ml-0.5 bg-white text-[#D32F2F] text-[10px] font-black px-1.5 py-0.2 rounded-full leading-tight">
-            {barAlerts.length}
+            {visibleAlerts.length}
           </span>
         )}
       </button>
@@ -65,14 +67,14 @@ export const AlertaBarraPopover: React.FC = () => {
           </div>
 
           <div className="p-3 max-h-72 overflow-y-auto space-y-2 bg-[#FAF8F5]">
-            {barAlerts.length === 0 ? (
+            {visibleAlerts.length === 0 ? (
               <div className="py-6 text-center space-y-1.5">
                 <CheckCircle2 className="w-6 h-6 text-[#059669] mx-auto" />
                 <p className="text-xs font-bold text-[#1E110A]">Sin alertas pendientes</p>
                 <p className="text-[11px] text-[#8C7D73]">Todas las mesas han sido atendidas.</p>
               </div>
             ) : (
-              barAlerts.map((alerta) => {
+              visibleAlerts.map((alerta) => {
                 const esCocina = alerta.tipo === 'cocina';
                 const esCancelacion = alerta.tipo === 'cocina-cancelacion';
                 return (

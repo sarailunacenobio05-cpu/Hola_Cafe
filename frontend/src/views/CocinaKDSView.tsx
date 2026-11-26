@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { UsuarioPerfilNavbar } from "../components/UsuarioPerfilNavbar";
 import logoImg from "../img/logo.png";
+import manitaPedidoListoImg from "../img/ManitaPedidoListo.jpg";
 import { Bell, CheckCircle2, ChevronRight, Clock, LogOut, Trash2, UtensilsCrossed } from "lucide-react";
 import Swal from "sweetalert2";
 import { KitchenTicket } from "../types";
@@ -207,12 +208,23 @@ export const CocinaKDSView = () => {
       Swal.fire({
         toast: true,
         position: "top-end",
-        icon: "success",
-        title: `Mesero notificado · ${order.table} lista`,
+        html: `
+          <div style="display:flex;align-items:center;gap:12px;text-align:left;">
+            <img src="${manitaPedidoListoImg}" alt="Pedido listo" style="width:50px;height:50px;object-fit:contain;border-radius:10px;flex-shrink:0;" />
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:800;color:#065F46;line-height:1.25;">¡Pedido listo! · ${order.table}</div>
+              <div style="font-size:11.5px;color:#374151;margin-top:3px;line-height:1.35;">Se notificó a ${order.waiter} para pasar a recogerlo.</div>
+            </div>
+          </div>
+        `,
         showConfirmButton: false,
-        timer: 2600,
-        background: "#ECFDF5",
-        color: "#065F46",
+        timer: 3200,
+        timerProgressBar: true,
+        background: "#FFFFFF",
+        customClass: {
+          popup: "rounded-2xl shadow-xl border border-[#A7F3D0] !p-3 !w-auto !max-w-sm",
+          htmlContainer: "!m-0 !p-0",
+        },
       });
     }
   };

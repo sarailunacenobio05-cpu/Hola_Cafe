@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, esAlertaParaMesero } from '../context/AppContext';
 import { Logo } from '../components/Logo';
 import { AlertaBarraPopover } from '../components/AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -14,12 +14,14 @@ import {
   XCircle,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import manitaCancelarMesaImg from '../img/ManitaCancelarMesa.jpg';
 import { TableInfo } from '../types';
 
 export const MapaMesasView: React.FC = () => {
   const {
     tables,
     barAlerts,
+    currentUser,
     activeTableId,
     selectTable,
     setActiveView,
@@ -29,6 +31,8 @@ export const MapaMesasView: React.FC = () => {
     marcarMesaAtendida,
     logout,
   } = useApp();
+
+  const visibleAlerts = barAlerts.filter((a) => esAlertaParaMesero(a, currentUser));
 
   const [activeFilter, setActiveFilter] = useState<'Todas' | 'Libres' | 'Ocupadas' | 'Atención'>('Todas');
 
@@ -45,7 +49,10 @@ export const MapaMesasView: React.FC = () => {
   const handleCancelarMesa = async (tableId: string) => {
     const mesaLabel = tableId.replace('M', 'Mesa ');
     const res = await Swal.fire({
-      icon: 'warning',
+      imageUrl: manitaCancelarMesaImg,
+      imageWidth: 135,
+      imageHeight: 135,
+      imageAlt: 'Manita cancelar mesa',
       title: `¿Cancelar comanda de ${mesaLabel}?`,
       text: 'Esta acción liberará la mesa, descartará la comanda actual y quitará las alertas activas.',
       showCancelButton: true,
@@ -53,6 +60,16 @@ export const MapaMesasView: React.FC = () => {
       cancelButtonText: 'No, conservar',
       confirmButtonColor: '#DC2626',
       cancelButtonColor: '#786B63',
+      reverseButtons: true,
+      background: '#FFFFFF',
+      color: '#1E110A',
+      customClass: {
+        popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+        image: 'mx-auto mb-2 object-contain',
+        title: 'text-[#1E110A] font-extrabold text-xl',
+        confirmButton: 'rounded-xl px-5 py-2.5 font-bold',
+        cancelButton: 'rounded-xl px-5 py-2.5 font-bold',
+      },
     });
     if (res.isConfirmed) {
       liberarMesaDirectamente(tableId);
@@ -75,7 +92,7 @@ export const MapaMesasView: React.FC = () => {
   };
 
   const hasActiveAlert = (table: TableInfo) => {
-    return barAlerts.some((a) => a.tableId === table.id);
+    return visibleAlerts.some((a) => a.tableId === table.id);
   };
 
   const getOrderTotal = (table: TableInfo): number => {
@@ -89,7 +106,7 @@ export const MapaMesasView: React.FC = () => {
   const totalMesas = tables.length;
   const libresCount = tables.filter((t) => isTableLibre(t)).length;
   const ocupadasCount = tables.filter((t) => !isTableLibre(t)).length;
-  const alertasCount = barAlerts.length;
+  const alertasCount = visibleAlerts.length;
 
   const filteredTables = tables.filter((table) => {
     if (activeFilter === 'Libres') return isTableLibre(table);
@@ -257,11 +274,13 @@ export const MapaMesasView: React.FC = () => {
               const stLower = (table.status || '').toLowerCase();
               const enPreparacion = stLower.includes('preparaci');
               const totalMesa = getOrderTotal(table);
-              const meseroNombre = table.waiterName || 'Asignado';
+              const tieneProductoEntregado = Boolean(
+                table.currentOrder?.items.some((i) => Boolean(i.entregado))
+              );
 
               // 1. MESA CON ALERTA ACTIVA (Pedido listo, Cancelación de cocina o Llamado de mesa)
               if (enAlerta) {
-                const alertaMesa = barAlerts.find((a) => a.tableId === table.id);
+                const alertaMesa = visibleAlerts.find((a) => a.tableId === table.id);
                 const esPedidoListo = alertaMesa?.tipo === 'cocina';
                 const esCancelacionCocina = alertaMesa?.tipo === 'cocina-cancelacion';
                 return (
@@ -327,10 +346,7 @@ export const MapaMesasView: React.FC = () => {
                               {alertaMesa.message}
                             </span>
                           ) : (
-                            <>
-                              Mesero:{' '}
-                              <strong className="text-[#1E110A] font-semibold">{meseroNombre}</strong>
-                            </>
+                            <span>{alertaMesa?.message || 'El cliente solicita atención en esta mesa'}</span>
                           )}
                         </p>
                       </div>
@@ -398,7 +414,7 @@ export const MapaMesasView: React.FC = () => {
                           <span>Disponible / Libre</span>
                         </p>
                         <p className="text-[11px] text-[#8C7D73]">
-                          Lista para tomar orden ({meseroNombre})
+                          Lista para tomar orden
                         </p>
                       </div>
                     </div>
@@ -427,7 +443,7 @@ export const MapaMesasView: React.FC = () => {
                           {table.id}
                         </h3>
                         <span className="text-[11px] text-[#8C7D73] font-medium">
-                          Mesero: {meseroNombre}
+                          Capacidad: {table.capacity} personas
                         </span>
                       </div>
                       {enPreparacion ? (
@@ -451,10 +467,15 @@ export const MapaMesasView: React.FC = () => {
                           <ChefHat className="w-3.5 h-3.5 text-amber-600" />
                           <span>En Preparación</span>
                         </p>
-                      ) : (
+                      ) : tieneProductoEntregado ? (
                         <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
                           <Coffee className="w-3.5 h-3.5 text-[#8B4513]" />
                           <span>En Consumo</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
+                          <UtensilsCrossed className="w-3.5 h-3.5 text-[#DF7B1B]" />
+                          <span>Tomando Comanda</span>
                         </p>
                       )}
 
@@ -477,8 +498,14 @@ export const MapaMesasView: React.FC = () => {
                     </button>
                     <button
                       type="button"
+                      disabled={!tieneProductoEntregado}
+                      title={
+                        tieneProductoEntregado
+                          ? 'Cobrar mesa'
+                          : 'Disponible hasta que se entregue al menos un producto de cocina'
+                      }
                       onClick={() => handleCobrar(table.id)}
-                      className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] text-white rounded-xl text-xs font-bold text-center shadow-xs"
+                      className="py-2 px-2 bg-[#8B4513] hover:bg-[#72380F] disabled:opacity-45 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold text-center shadow-xs"
                     >
                       Cobrar
                     </button>

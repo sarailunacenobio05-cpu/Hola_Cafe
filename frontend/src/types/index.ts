@@ -14,6 +14,7 @@ export interface User {
 
 export type TableStatus = 
   | 'Limpia / Disponible'
+  | 'Tomando Comanda'
   | 'En Consumo'
   | 'En Preparación'
   | 'Atendido'
@@ -60,6 +61,7 @@ export interface OrderItem {
   notes?: string;
   allergies?: string[];
   enviadoACocina?: boolean;
+  entregado?: boolean;
 }
 
 export interface TableOrder {
@@ -84,6 +86,7 @@ export interface KitchenTicket {
   id: string;
   orderFolio: number;
   tableId: string;
+  waiterId?: string;
   waiterName: string;
   items: {
     name: string;

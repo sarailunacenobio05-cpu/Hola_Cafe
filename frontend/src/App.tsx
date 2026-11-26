@@ -14,7 +14,6 @@ import { BotonesAvisoView } from './views/BotonesAvisoView';
 import { ProtegerRuta } from './routes/ProtegerRuta';
 
 import { CobroRapidoModal } from './components/modals/CobroRapidoModal';
-import { TicketModal } from './components/modals/TicketModal';
 import { ProductoModal } from './components/modals/ProductoModal';
 import { UsuarioModal } from './components/modals/UsuarioModal';
 import { BotonModal } from './components/modals/BotonModal';
@@ -106,7 +105,6 @@ export const App: React.FC = () => {
       </Routes>
 
       <CobroRapidoModal />
-      <TicketModal />
       <ProductoModal />
       <UsuarioModal />
       <BotonModal />

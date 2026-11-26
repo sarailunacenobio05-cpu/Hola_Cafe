@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import manitaTiteImg from '../img/ManitaTite.jpg';
+import manitaDudaImg from '../img/ManitaDuda.jpg';
+import manitaPedidoListoImg from '../img/ManitaPedidoListo.jpg';
 import { authService, UsuarioDTO } from '../api/authService';
 import {
   User,
@@ -29,7 +31,24 @@ export interface BarAlert {
   message: string;
   time: string;
   tipo?: 'boton' | 'cocina' | 'cocina-cancelacion';
+  waiterId?: string;
+  waiterName?: string;
 }
+
+export const esAlertaParaMesero = (alerta: BarAlert, user: User | null): boolean => {
+  if (alerta.tipo !== 'cocina' && alerta.tipo !== 'cocina-cancelacion') return true;
+  if (!alerta.waiterId && !alerta.waiterName) return true;
+  if (!user) return false;
+  if (alerta.waiterId && user.id && alerta.waiterId === user.id) return true;
+  if (
+    alerta.waiterName &&
+    user.name &&
+    alerta.waiterName.trim().toLowerCase() === user.name.trim().toLowerCase()
+  ) {
+    return true;
+  }
+  return false;
+};
 
 export interface AdminNotificacion {
   id: string;
@@ -66,7 +85,6 @@ interface AppContextType {
   mesasAtendidas: Record<string, boolean>;
 
   isCobroModalOpen: boolean;
-  isTicketModalOpen: boolean;
   isProductoModalOpen: boolean;
   productoEditando: MenuItem | null;
   isUsuarioModalOpen: boolean;
@@ -94,8 +112,6 @@ interface AppContextType {
 
   mostrarCobroModal: (tableId: string) => void;
   cerrarCobroModal: () => void;
-  mostrarTicketModal: (tableId: string) => void;
-  cerrarTicketModal: () => void;
   procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi', customTipAmount?: number) => void;
   liberarMesaDirectamente: (tableId: string) => void;
   realizarCorteCaja: () => CorteCajaItem | null;
@@ -378,39 +394,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const parsed: BarAlert[] = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
-            setBarAlerts((prev) => {
-              const prevIds = new Set(prev.map((a) => a.id));
-              const nuevaCocina = parsed.find((a) => a.tipo === 'cocina' && !prevIds.has(a.id));
-              const nuevaCancelacion = parsed.find((a) => a.tipo === 'cocina-cancelacion' && !prevIds.has(a.id));
-              if (nuevaCancelacion) {
-                Swal.fire({
-                  toast: true,
-                  position: 'top-end',
-                  icon: 'warning',
-                  title: `Sin ingredientes · ${nuevaCancelacion.tableId.replace('M', 'Mesa ')}`,
-                  text: nuevaCancelacion.message,
-                  showConfirmButton: false,
-                  timer: 6000,
-                  timerProgressBar: true,
-                  background: '#FFFBEB',
-                  color: '#92400E',
-                });
-              } else if (nuevaCocina) {
-                Swal.fire({
-                  toast: true,
-                  position: 'top-end',
-                  icon: 'success',
-                  title: `Pedido listo · ${nuevaCocina.tableId.replace('M', 'Mesa ')}`,
-                  text: nuevaCocina.message,
-                  showConfirmButton: false,
-                  timer: 5000,
-                  timerProgressBar: true,
-                  background: '#ECFDF5',
-                  color: '#065F46',
-                });
-              }
-              return parsed;
-            });
+            setBarAlerts(parsed);
           }
         } catch { }
       }
@@ -570,6 +554,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch { }
   }, [barAlerts]);
 
+  const notifiedAlertIdsRef = useRef<Set<string>>(new Set());
+
+  // Mostrar alerta en vivo únicamente al mesero que envió la comanda cuando Cocina la finaliza o cancela un platillo
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'Mesero') return;
+
+    const alertasCocinaParaMi = barAlerts.filter(
+      (a) =>
+        (a.tipo === 'cocina' || a.tipo === 'cocina-cancelacion') &&
+        esAlertaParaMesero(a, currentUser) &&
+        !notifiedAlertIdsRef.current.has(a.id)
+    );
+
+    if (alertasCocinaParaMi.length === 0) return;
+
+    alertasCocinaParaMi.forEach((a) => notifiedAlertIdsRef.current.add(a.id));
+    const reciente = alertasCocinaParaMi[0];
+
+    if (reciente.tipo === 'cocina-cancelacion') {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'warning',
+        title: `Sin ingredientes · ${reciente.tableId.replace('M', 'Mesa ')}`,
+        text: reciente.message,
+        showConfirmButton: false,
+        timer: 6500,
+        timerProgressBar: true,
+        background: '#FFFBEB',
+        color: '#92400E',
+      });
+    } else {
+      const mesaTitulo = `¡Pedido listo! · ${reciente.tableId.replace('M', 'Mesa ')}`;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        html: `
+          <div style="display:flex;align-items:center;gap:12px;text-align:left;">
+            <img src="${manitaPedidoListoImg}" alt="Pedido listo" style="width:52px;height:52px;object-fit:contain;border-radius:10px;flex-shrink:0;" />
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:800;color:#065F46;line-height:1.25;">${mesaTitulo}</div>
+              <div style="font-size:11.5px;color:#374151;margin-top:3px;line-height:1.35;">${reciente.message}</div>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        timer: 6500,
+        timerProgressBar: true,
+        background: '#FFFFFF',
+        customClass: {
+          popup: 'rounded-2xl shadow-xl border border-[#A7F3D0] !p-3 !w-auto !max-w-sm',
+          htmlContainer: '!m-0 !p-0',
+        },
+      });
+    }
+  }, [barAlerts, currentUser]);
+
   const [mesasAtendidas, setMesasAtendidas] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem(MESAS_ATENDIDAS_STORAGE_KEY);
@@ -643,7 +684,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isCobroModalOpen, setIsCobroModalOpen] = useState(false);
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isProductoModalOpen, setIsProductoModalOpen] = useState(false);
   const [productoEditando, setProductoEditando] = useState<MenuItem | null>(null);
   const [isUsuarioModalOpen, setIsUsuarioModalOpen] = useState(false);
@@ -705,10 +745,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    authService.logout();
-    setCurrentUser(null);
-    setActiveViewState('login');
-    navigate('/login', { replace: true });
+    Swal.fire({
+      imageUrl: manitaDudaImg,
+      imageWidth: 130,
+      imageHeight: 130,
+      imageAlt: 'Manita con duda',
+      title: '¿Cerrar sesión?',
+      text: '¿Estás seguro de que deseas salir del sistema?',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#D32F2F',
+      cancelButtonColor: '#786B63',
+      reverseButtons: true,
+      background: '#FFFFFF',
+      color: '#1E110A',
+      customClass: {
+        popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+        image: 'mx-auto mb-2 object-contain',
+        title: 'text-[#1E110A] font-extrabold text-xl',
+        confirmButton: 'rounded-xl px-5 py-2.5 font-bold',
+        cancelButton: 'rounded-xl px-5 py-2.5 font-bold',
+      },
+    }).then((res) => {
+      if (res.isConfirmed) {
+        setIsCobroModalOpen(false);
+        authService.logout();
+        setCurrentUser(null);
+        setActiveViewState('login');
+        navigate('/login', { replace: true });
+      }
+    });
   };
 
   const selectTable = (tableId: string | null) => {
@@ -786,7 +853,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return {
         ...t,
-        status: t.status === 'Limpia / Disponible' ? 'En Consumo' : t.status,
+        status: t.status === 'Limpia / Disponible' ? 'Tomando Comanda' : t.status,
         currentOrder: {
           ...order,
           items: newItems
@@ -852,11 +919,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const itemsPendientes = table.currentOrder.items.filter(i => !i.enviadoACocina);
     if (itemsPendientes.length === 0) return;
 
+    const meseroIdEnvio = currentUser?.id || table.currentOrder.waiterId;
+    const meseroNombreEnvio = currentUser?.name || table.currentOrder.waiterName;
+
     const ticketNuevoCocina: CocinaTicket = {
       id: `k-${Date.now()}`,
       orderFolio: table.currentOrder.folio,
       tableId,
-      waiterName: table.currentOrder.waiterName,
+      waiterId: meseroIdEnvio,
+      waiterName: meseroNombreEnvio,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       elapsedMinutes: 1,
       status: 'Nuevas',
@@ -907,6 +978,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: `Pedido #${ticket.orderFolio} listo en cocina para llevar a ${mesaLabel}${resumenPlatillos ? ` (${resumenPlatillos})` : ''}`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         tipo: 'cocina',
+        waiterId: ticket.waiterId,
+        waiterName: ticket.waiterName,
       };
 
       setBarAlerts(prev => [nuevaAlertaCocina, ...prev]);
@@ -932,6 +1005,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: 'En Consumo',
             hasAlert: false,
             alertType: undefined,
+            currentOrder: t.currentOrder
+              ? {
+                  ...t.currentOrder,
+                  items: t.currentOrder.items.map(i =>
+                    i.enviadoACocina ? { ...i, entregado: true } : i
+                  ),
+                }
+              : t.currentOrder,
           };
         }
         return t;
@@ -1002,6 +1083,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       message: `Cocina canceló ${itemCancelado.quantity}x ${itemCancelado.name} en ${mesaLabel} (${razon}). Avisa al comensal para elegir otra opción.`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       tipo: 'cocina-cancelacion',
+      waiterId: ticket.waiterId,
+      waiterName: ticket.waiterName,
     };
     setBarAlerts(prev => [alertaCancelacion, ...prev]);
     setMesasAtendidas(prev => ({ ...prev, [ticket.tableId]: false }));
@@ -1014,15 +1097,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const cerrarCobroModal = () => {
     setIsCobroModalOpen(false);
-  };
-
-  const mostrarTicketModal = (tableId: string) => {
-    setActiveTableId(tableId);
-    setIsTicketModalOpen(true);
-  };
-
-  const cerrarTicketModal = () => {
-    setIsTicketModalOpen(false);
   };
 
   const procesarPagoYLiberar = (
@@ -1155,6 +1229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const descartarAlertaBarra = (id: string) => {
     const alerta = barAlerts.find(a => a.id === id);
     if (alerta) {
+      const esEntregaCocina = alerta.tipo === 'cocina';
       setMesasAtendidas(prev => ({ ...prev, [alerta.tableId]: true }));
       setTables(prev => prev.map(t =>
         t.id === alerta.tableId
@@ -1163,11 +1238,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               hasAlert: false,
               alertType: undefined,
               status: t.status === 'Atendido' ? 'En Consumo' : t.status,
+              currentOrder:
+                esEntregaCocina && t.currentOrder
+                  ? {
+                      ...t.currentOrder,
+                      items: t.currentOrder.items.map(i =>
+                        i.enviadoACocina ? { ...i, entregado: true } : i
+                      ),
+                    }
+                  : t.currentOrder,
             }
           : t
       ));
       // Si el mesero confirma entrega de un pedido listo de cocina, lo retiramos de Cocina
-      if (alerta.tipo === 'cocina') {
+      if (esEntregaCocina) {
         setCocinaTickets(prev =>
           prev.map(k =>
             k.tableId === alerta.tableId && k.status === 'Listas'
@@ -1181,6 +1265,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const marcarMesaAtendida = (tableId: string) => {
+    const tienePedidoListo =
+      barAlerts.some(a => a.tableId === tableId && a.tipo === 'cocina') ||
+      CocinaTickets.some(k => k.tableId === tableId && k.status === 'Listas');
+
     setMesasAtendidas(prev => ({ ...prev, [tableId]: true }));
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
     setTables(prev => prev.map(t =>
@@ -1190,6 +1278,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             hasAlert: false,
             alertType: undefined,
             status: t.status === 'Atendido' ? 'En Consumo' : t.status,
+            currentOrder:
+              tienePedidoListo && t.currentOrder
+                ? {
+                    ...t.currentOrder,
+                    items: t.currentOrder.items.map(i =>
+                      i.enviadoACocina ? { ...i, entregado: true } : i
+                    ),
+                  }
+                : t.currentOrder,
           }
         : t
     ));
@@ -1535,7 +1632,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminNotificaciones,
         mesasAtendidas,
         isCobroModalOpen,
-        isTicketModalOpen,
         isProductoModalOpen,
         productoEditando,
         isUsuarioModalOpen,
@@ -1559,8 +1655,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelarProductoDesdeCocina,
         mostrarCobroModal,
         cerrarCobroModal,
-        mostrarTicketModal,
-        cerrarTicketModal,
         procesarPagoYLiberar,
         liberarMesaDirectamente,
         realizarCorteCaja,
