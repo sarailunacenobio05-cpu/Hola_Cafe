@@ -96,6 +96,7 @@ export const CobroRapidoModal: React.FC = () => {
   const {
     isCobroModalOpen,
     cerrarCobroModal,
+    registrarTicketCobro,
     procesarPagoYLiberar,
     liberarMesaDirectamente,
     activeTableId,
@@ -113,6 +114,7 @@ export const CobroRapidoModal: React.FC = () => {
   const [metodo, setMetodo] = useState<MetodoId>('terminal');
   const [pagado, setPagado] = useState(false);
   const [pagoActivo, setPagoActivo] = useState(false);
+  const [ticketRegistrado, setTicketRegistrado] = useState(false);
   const [printerStage, setPrinterStage] = useState<ReceiptPrinterStage>('processing');
   const [printRun, setPrintRun] = useState(0);
   const [fechaPago, setFechaPago] = useState('');
@@ -142,6 +144,7 @@ export const CobroRapidoModal: React.FC = () => {
     if (!isCobroModalOpen) {
       setPagoActivo(false);
       setPagado(false);
+      setTicketRegistrado(false);
       setPrinterStage('processing');
       setMostrarWhatsApp(false);
       setTelefonoWhatsApp('');
@@ -202,6 +205,16 @@ export const CobroRapidoModal: React.FC = () => {
   const handleProcesarPago = () => {
     setMenuDescuentoAbierto(false);
     setFechaPago(formatFechaTicket());
+    if (!ticketRegistrado && activeTableId && activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
+      registrarTicketCobro(
+        activeTableId,
+        descuentoPct,
+        propinaPct,
+        metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+        totales.propina / 100
+      );
+      setTicketRegistrado(true);
+    }
     setPagoActivo(true);
     setPrintRun((n) => n + 1);
   };
@@ -554,7 +567,7 @@ export const CobroRapidoModal: React.FC = () => {
 
   const handleLiberarMesa = () => {
     if (activeTableId) {
-      if (activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
+      if (!ticketRegistrado && activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
         procesarPagoYLiberar(
           activeTableId,
           descuentoPct,

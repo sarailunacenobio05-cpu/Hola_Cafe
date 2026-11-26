@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import manitaTiteImg from '../img/ManitaTite.jpg';
 import manitaDudaImg from '../img/ManitaDuda.jpg';
 import manitaPedidoListoImg from '../img/ManitaPedidoListo.jpg';
+import manitaNoIngredientesImg from '../img/ManitaNoIngredientes.jpg';
 import { authService, UsuarioDTO } from '../api/authService';
 import {
   User,
@@ -62,9 +63,34 @@ export interface AdminNotificacion {
 export interface CorteCajaItem {
   id: string;
   fecha: string;
+  fechaClave?: string;
+  horaCorte?: string;
   mesero: string;
   total: number;
   tickets?: number;
+}
+
+export interface TicketRegistrado {
+  id: string;
+  folio: string;
+  fechaClave: string;
+  hora: string;
+  pago: 'Efectivo' | 'Tarjeta' | 'Transferencia';
+  estado: 'Pagado' | 'Cancelado';
+  mesa: string;
+  mesero: string;
+  personas: number;
+  lineas: {
+    cantidad: number;
+    nombre: string;
+    detalle: string;
+    precioUnitario: number;
+  }[];
+  subtotal: number;
+  descuento: number;
+  propina: number;
+  total: number;
+  corteId?: string;
 }
 
 interface AppContextType {
@@ -78,6 +104,7 @@ interface AppContextType {
   CocinaTickets: CocinaTicket[];
   cashClosings: CashClosingRecord[];
   cortesCaja: CorteCajaItem[];
+  ticketsRegistrados: TicketRegistrado[];
   ventasPendientesCorte: number;
   ticketsPendientesCorte: number;
   barAlerts: BarAlert[];
@@ -112,6 +139,13 @@ interface AppContextType {
 
   mostrarCobroModal: (tableId: string) => void;
   cerrarCobroModal: () => void;
+  registrarTicketCobro: (
+    tableId: string,
+    discount: number,
+    tipPercent: number,
+    method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+    customTipAmount?: number
+  ) => TicketRegistrado | null;
   procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi', customTipAmount?: number) => void;
   liberarMesaDirectamente: (tableId: string) => void;
   realizarCorteCaja: () => CorteCajaItem | null;
@@ -398,22 +432,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         } catch { }
       }
+      if (e.key === CORTES_CAJA_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed: CorteCajaItem[] = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setCortesCaja(parsed);
+        } catch { }
+      }
+      if (e.key === TICKETS_REGISTRADOS_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed: TicketRegistrado[] = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setTicketsRegistrados(parsed);
+        } catch { }
+      }
+      if (e.key === 'holacafe_menu_updated_v1') {
+        cargarDatosBackend();
+      }
     };
     window.addEventListener('storage', handleStorageSync);
     return () => window.removeEventListener('storage', handleStorageSync);
   }, []);
+  const CORTES_CAJA_STORAGE_KEY = 'holacafe_cortes_caja_v1';
+  const TICKETS_REGISTRADOS_STORAGE_KEY = 'holacafe_tickets_registrados_v1';
+
+  const aClaveFechaLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   const [cashClosings, setCashClosings] = useState<CashClosingRecord[]>(INITIAL_CASH_CLOSINGS);
-  const [cortesCaja, setCortesCaja] = useState<CorteCajaItem[]>([
-    { id: '#07', fecha: '26/03/2026 · 20:00', mesero: 'Melissa H.', total: 7450.00, tickets: 24 },
-    { id: '#06', fecha: '25/03/2026 · 20:00', mesero: 'Dante M.', total: 4310.00, tickets: 15 },
-    { id: '#05', fecha: '24/03/2026 · 20:00', mesero: 'Gael O.', total: 6980.00, tickets: 22 },
-    { id: '#04', fecha: '23/03/2026 · 20:00', mesero: 'Melissa H.', total: 5150.00, tickets: 18 },
-    { id: '#03', fecha: '22/03/2026 · 20:00', mesero: 'Melissa H.', total: 6390.00, tickets: 21 },
-    { id: '#02', fecha: '21/03/2026 · 20:00', mesero: 'Gael O.', total: 7210.00, tickets: 25 },
-    { id: '#01', fecha: '20/03/2026 · 20:00', mesero: 'Dante M.', total: 4820.00, tickets: 16 },
-  ]);
-  const [ventasPendientesCorte, setVentasPendientesCorte] = useState<number>(18420.00);
-  const [ticketsPendientesCorte, setTicketsPendientesCorte] = useState<number>(37);
+  const [cortesCaja, setCortesCaja] = useState<CorteCajaItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(CORTES_CAJA_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch { }
+    return [];
+  });
+  const [ticketsRegistrados, setTicketsRegistrados] = useState<TicketRegistrado[]>(() => {
+    try {
+      const saved = localStorage.getItem(TICKETS_REGISTRADOS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch { }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CORTES_CAJA_STORAGE_KEY, JSON.stringify(cortesCaja));
+    } catch { }
+  }, [cortesCaja]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TICKETS_REGISTRADOS_STORAGE_KEY, JSON.stringify(ticketsRegistrados));
+    } catch { }
+  }, [ticketsRegistrados]);
+
+  const ticketsPendientesList = ticketsRegistrados.filter(
+    (t) => !t.corteId && t.estado === 'Pagado'
+  );
+  const ventasPendientesCorte = Number(
+    ticketsPendientesList.reduce((acc, t) => acc + t.total, 0).toFixed(2)
+  );
+  const ticketsPendientesCorte = ticketsPendientesList.length;
 
   const cargarDatosBackend = async () => {
     try {
@@ -573,17 +657,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const reciente = alertasCocinaParaMi[0];
 
     if (reciente.tipo === 'cocina-cancelacion') {
+      const tituloCancel = `Sin ingredientes · ${reciente.tableId.replace('M', 'Mesa ')}`;
       Swal.fire({
         toast: true,
         position: 'top-end',
-        icon: 'warning',
-        title: `Sin ingredientes · ${reciente.tableId.replace('M', 'Mesa ')}`,
-        text: reciente.message,
+        html: `
+          <div style="display:flex;align-items:center;gap:12px;text-align:left;">
+            <img src="${manitaNoIngredientesImg}" alt="Sin ingredientes" style="width:52px;height:52px;object-fit:contain;border-radius:10px;flex-shrink:0;" />
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:800;color:#92400E;line-height:1.25;">${tituloCancel}</div>
+              <div style="font-size:11.5px;color:#374151;margin-top:3px;line-height:1.35;">${reciente.message}</div>
+            </div>
+          </div>
+        `,
         showConfirmButton: false,
         timer: 6500,
         timerProgressBar: true,
-        background: '#FFFBEB',
-        color: '#92400E',
+        background: '#FFFFFF',
+        customClass: {
+          popup: 'rounded-2xl shadow-xl border border-[#FDE68A] !p-3 !w-auto !max-w-sm',
+          htmlContainer: '!m-0 !p-0',
+        },
       });
     } else {
       const mesaTitulo = `¡Pedido listo! · ${reciente.tableId.replace('M', 'Mesa ')}`;
@@ -1055,7 +1149,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTables(prev => prev.map(t => {
       if (t.id !== ticket.tableId) return t;
       if (!t.currentOrder) {
-        return { ...t, hasAlert: true, alertType: 'Llamada de cliente' };
+        return {
+          ...t,
+          status: 'Tomando comanda por cancelación',
+          hasAlert: true,
+          alertType: 'Llamada de cliente',
+        };
       }
       let removido = false;
       const nuevosItems = t.currentOrder.items.filter(it => {
@@ -1067,10 +1166,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return {
         ...t,
+        status: 'Tomando comanda por cancelación',
         hasAlert: true,
         alertType: 'Llamada de cliente',
         currentOrder: {
           ...t.currentOrder,
+          status: 'Abierta',
           items: nuevosItems,
         },
       };
@@ -1099,29 +1200,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsCobroModalOpen(false);
   };
 
-  const procesarPagoYLiberar = (
+  const registrarTicketCobro = (
     tableId: string,
     discount: number,
     tipPercent: number,
-    _method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+    method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
     customTipAmount?: number
-  ) => {
+  ): TicketRegistrado | null => {
     const table = tables.find(t => t.id === tableId);
-    if (!table || !table.currentOrder) return;
+    if (!table || !table.currentOrder || table.currentOrder.items.length === 0) return null;
 
-    const subtotal = table.currentOrder.items.reduce((sum, i) => {
+    const lineas = table.currentOrder.items.map((i) => {
       const prod = menuItems.find(m => m.id === i.menuItemId);
       const pct = prod?.discountPercent ?? i.discountPercent ?? 0;
       const orig = i.originalPrice ?? prod?.price ?? i.price;
       const unitPrice = pct > 0 ? Number((orig * (1 - pct / 100)).toFixed(2)) : orig;
-      return sum + unitPrice * i.quantity;
-    }, 0);
-    const discounted = subtotal * (1 - discount / 100);
-    const tip = typeof customTipAmount === 'number' ? customTipAmount : discounted * (tipPercent / 100);
-    const totalCobrado = Number((discounted + tip).toFixed(2));
+      const partes: string[] = [];
+      if (pct > 0) partes.push(`Desc. -${pct}%`);
+      if (i.selectedOption) partes.push(i.selectedOption);
+      if (i.notes) partes.push(i.notes);
+      return {
+        cantidad: i.quantity,
+        nombre: i.name,
+        detalle: partes.join(' · ') || prod?.category || 'Menú ¡Hola, Café!',
+        precioUnitario: unitPrice,
+      };
+    });
 
-    setVentasPendientesCorte(prev => Number((prev + totalCobrado).toFixed(2)));
-    setTicketsPendientesCorte(prev => prev + 1);
+    const subtotal = Number(
+      lineas.reduce((sum, l) => sum + l.precioUnitario * l.cantidad, 0).toFixed(2)
+    );
+    const descuentoMonto = Number(((subtotal * discount) / 100).toFixed(2));
+    const base = Number((subtotal - descuentoMonto).toFixed(2));
+    const propinaMonto = Number(
+      (typeof customTipAmount === 'number' ? customTipAmount : (base * tipPercent) / 100).toFixed(2)
+    );
+    const totalCobrado = Number((base + propinaMonto).toFixed(2));
+
+    const pagoNormalizado: 'Efectivo' | 'Tarjeta' | 'Transferencia' =
+      method === 'Efectivo en Mesa'
+        ? 'Efectivo'
+        : method === 'Transferencia QR / CoDi'
+          ? 'Transferencia'
+          : 'Tarjeta';
+
+    const ahora = new Date();
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fechaClave = aClaveFechaLocal(ahora);
+    const folioNum = table.currentOrder.folio;
+
+    const nuevoTicket: TicketRegistrado = {
+      id: `tkt-${folioNum}-${Date.now()}`,
+      folio: `#${folioNum}`,
+      fechaClave,
+      hora,
+      pago: pagoNormalizado,
+      estado: 'Pagado',
+      mesa: String(table.number).padStart(2, '0'),
+      mesero: currentUser?.name || table.currentOrder.waiterName || table.waiterName || 'Mesero',
+      personas: table.guests || table.capacity || 2,
+      lineas,
+      subtotal,
+      descuento: descuentoMonto,
+      propina: propinaMonto,
+      total: totalCobrado,
+    };
+
+    setTicketsRegistrados(prev => [nuevoTicket, ...prev]);
+    return nuevoTicket;
+  };
+
+  const procesarPagoYLiberar = (
+    tableId: string,
+    discount: number,
+    tipPercent: number,
+    method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
+    customTipAmount?: number
+  ) => {
+    registrarTicketCobro(tableId, discount, tipPercent, method, customTipAmount);
 
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
@@ -1136,37 +1292,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     setBarAlerts(prev => prev.filter(a => a.tableId !== tableId));
+    setCocinaTickets(prev => prev.filter(k => k.tableId !== tableId));
     cerrarCobroModal();
   };
 
   const realizarCorteCaja = (): CorteCajaItem | null => {
-    if (ventasPendientesCorte <= 0) {
+    const pendientes = ticketsRegistrados.filter((t) => !t.corteId && t.estado === 'Pagado');
+    if (pendientes.length === 0 || ventasPendientesCorte <= 0) {
       return null;
     }
 
     const num = cortesCaja.length + 1;
     const nuevoId = `#${num < 10 ? `0${num}` : num}`;
-    const totalNuevo = ventasPendientesCorte;
-    const ticketsNuevos = ticketsPendientesCorte;
-    const responsable = currentUser?.name || 'Dante M.';
+    const totalNuevo = Number(pendientes.reduce((acc, t) => acc + t.total, 0).toFixed(2));
+    const ticketsNuevos = pendientes.length;
+    const responsable = currentUser?.name || 'Administrador';
+    const ahora = new Date();
+    const fechaStr = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaStr = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fechaClave = aClaveFechaLocal(ahora);
 
     const nuevoCorte: CorteCajaItem = {
       id: nuevoId,
-      fecha: `Hoy · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      fecha: `${fechaStr} · ${horaStr}`,
+      fechaClave,
+      horaCorte: horaStr,
       mesero: responsable,
       total: totalNuevo,
       tickets: ticketsNuevos,
     };
 
+    const idsPendientes = new Set(pendientes.map((t) => t.id));
+    setTicketsRegistrados(prev =>
+      prev.map((t) => (idsPendientes.has(t.id) ? { ...t, corteId: nuevoId } : t))
+    );
     setCortesCaja(prev => [nuevoCorte, ...prev]);
-    setVentasPendientesCorte(0);
-    setTicketsPendientesCorte(0);
 
     agregarAdminNotificacion({
       tipo: 'corte',
       titulo: `Corte de caja ${nuevoId} realizado`,
-      mensaje: `Registrado por ${responsable} por $${totalNuevo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
-      vistaDestino: 'caja',
+      mensaje: `Realizado por ${responsable} a las ${horaStr} h por $${totalNuevo.toLocaleString('es-MX', { minimumFractionDigits: 2 })} (${ticketsNuevos} tickets)`,
+      vistaDestino: 'revision-tickets',
     });
 
     return nuevoCorte;
@@ -1358,6 +1524,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         categoriaNombre: productData.category || 'Alimentos Salados',
         estado: productData.status || 'DISPONIBLE',
         permiteNotasCocina: productData.allowKitchenNotes ?? true,
+        opciones: (productData.options || []).map((o) => o.trim()).filter(Boolean),
       };
       if (productoEditando) {
         await api.put(`/productos/${productoEditando.id}`, payload);
@@ -1365,6 +1532,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await api.post('/productos', payload);
       }
       await cargarDatosBackend();
+      try {
+        localStorage.setItem('holacafe_menu_updated_v1', String(Date.now()));
+      } catch {}
       cerrarProductModal();
     } catch (error: any) {
       Swal.fire('Error', error.message || 'No se pudo guardar el producto en la base de datos', 'error');
@@ -1626,6 +1796,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         CocinaTickets,
         cashClosings,
         cortesCaja,
+        ticketsRegistrados,
         ventasPendientesCorte,
         ticketsPendientesCorte,
         barAlerts,
@@ -1655,6 +1826,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelarProductoDesdeCocina,
         mostrarCobroModal,
         cerrarCobroModal,
+        registrarTicketCobro,
         procesarPagoYLiberar,
         liberarMesaDirectamente,
         realizarCorteCaja,

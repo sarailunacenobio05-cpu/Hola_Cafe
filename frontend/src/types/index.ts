@@ -15,6 +15,7 @@ export interface User {
 export type TableStatus = 
   | 'Limpia / Disponible'
   | 'Tomando Comanda'
+  | 'Tomando comanda por cancelación'
   | 'En Consumo'
   | 'En Preparación'
   | 'Atendido'

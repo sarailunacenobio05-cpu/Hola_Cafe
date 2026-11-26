@@ -3,6 +3,7 @@ import { useApp } from "../context/AppContext";
 import { UsuarioPerfilNavbar } from "../components/UsuarioPerfilNavbar";
 import logoImg from "../img/logo.png";
 import manitaPedidoListoImg from "../img/ManitaPedidoListo.jpg";
+import manitaNoIngredientesImg from "../img/ManitaNoIngredientes.jpg";
 import { Bell, CheckCircle2, ChevronRight, Clock, LogOut, Trash2, UtensilsCrossed } from "lucide-react";
 import Swal from "sweetalert2";
 import { KitchenTicket } from "../types";
@@ -231,20 +232,31 @@ export const CocinaKDSView = () => {
 
   const handleCancelDish = async (order: Order, dish: Dish) => {
     const result = await Swal.fire({
+      imageUrl: manitaNoIngredientesImg,
+      imageWidth: 135,
+      imageHeight: 135,
+      imageAlt: "Manita sin ingredientes",
       title: "Quitar producto del pedido",
-      html: `<p style="font-size:13px;">Se eliminará <strong>${dish.quantity}× ${dish.name}</strong> de la comanda de <strong>${order.table}</strong> y se notificará al mesero para que avise al comensal.</p>`,
+      html: `<p style="font-size:13px;color:#5C4E45;">Se eliminará <strong>${dish.quantity}× ${dish.name}</strong> de la comanda de <strong>${order.table}</strong> y se notificará al mesero para que avise al comensal.</p>`,
       input: "text",
       inputLabel: "Motivo (opcional)",
       inputValue: "Falta de ingredientes",
       inputPlaceholder: "Ej. Falta de ingredientes, producto agotado...",
-      icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Eliminar y avisar al mesero",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#DC2626",
-      cancelButtonColor: "#8C7D73",
-      background: "#FAF8F5",
+      cancelButtonColor: "#786B63",
+      reverseButtons: true,
+      background: "#FFFFFF",
       color: "#1E110A",
+      customClass: {
+        popup: "rounded-2xl shadow-xl border border-[#EFE6DA]",
+        image: "mx-auto mb-2 object-contain",
+        title: "text-[#1E110A] font-extrabold text-xl",
+        confirmButton: "rounded-xl px-5 py-2.5 font-bold",
+        cancelButton: "rounded-xl px-5 py-2.5 font-bold",
+      },
     });
 
     if (result.isConfirmed) {
@@ -252,12 +264,23 @@ export const CocinaKDSView = () => {
       Swal.fire({
         toast: true,
         position: "top-end",
-        icon: "info",
-        title: `Producto retirado y mesero notificado (${order.table})`,
+        html: `
+          <div style="display:flex;align-items:center;gap:12px;text-align:left;">
+            <img src="${manitaNoIngredientesImg}" alt="Sin ingredientes" style="width:48px;height:48px;object-fit:contain;border-radius:10px;flex-shrink:0;" />
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:800;color:#92400E;line-height:1.25;">Producto retirado · ${order.table}</div>
+              <div style="font-size:11.5px;color:#5C4E45;margin-top:2px;line-height:1.35;">Se notificó a ${order.waiter} para avisar al comensal.</div>
+            </div>
+          </div>
+        `,
         showConfirmButton: false,
-        timer: 2800,
-        background: "#FFFBEB",
-        color: "#92400E",
+        timer: 3200,
+        timerProgressBar: true,
+        background: "#FFFFFF",
+        customClass: {
+          popup: "rounded-2xl shadow-xl border border-[#FDE68A] !p-3 !w-auto !max-w-sm",
+          htmlContainer: "!m-0 !p-0",
+        },
       });
     }
   };

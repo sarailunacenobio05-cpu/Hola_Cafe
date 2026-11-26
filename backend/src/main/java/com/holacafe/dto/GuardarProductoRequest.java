@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class GuardarProductoRequest {
@@ -23,4 +24,6 @@ public class GuardarProductoRequest {
     private String estado = "DISPONIBLE";
 
     private Boolean permiteNotasCocina = true;
+
+    private List<String> opciones;
 }

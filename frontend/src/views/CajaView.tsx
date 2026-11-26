@@ -21,9 +21,15 @@ export const CajaView: React.FC = () => {
   const [paginaActual, setPaginaActual] = useState(1);
   const filasPorPagina = 5;
 
-  const cuentasAbiertas = tables.filter(
-    t => t.status !== 'Limpia / Disponible' && t.status !== 'Reservada'
-  ).length;
+  const cuentasAbiertas = tables.filter((t) => {
+    const st = (t.status || '').toLowerCase();
+    const esLibre =
+      st.includes('limpia') ||
+      st.includes('disponible') ||
+      st === 'libre' ||
+      st.includes('reservada');
+    return !esLibre && Boolean(t.currentOrder);
+  }).length;
   const hayIngresosPendientes = ventasPendientesCorte > 0;
 
   const handleNuevoCorte = () => {
@@ -47,9 +53,10 @@ export const CajaView: React.FC = () => {
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: `Corte ${nuevoCorte.id} registrado ($${nuevoCorte.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })})`,
+      title: `Corte ${nuevoCorte.id} registrado${nuevoCorte.horaCorte ? ` (${nuevoCorte.horaCorte} h)` : ''}`,
+      text: `$${nuevoCorte.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} · Ya disponible en Revisión de tickets.`,
       showConfirmButton: false,
-      timer: 2500,
+      timer: 3200,
       background: '#FAF8F5',
       color: '#1E110A',
     });
@@ -206,7 +213,7 @@ export const CajaView: React.FC = () => {
           <span class="value">${escapeHtml(corte.fecha)}</span>
         </div>
         <div class="row">
-          <span class="label">Responsable / Mesero:</span>
+          <span class="label">Encargado del corte:</span>
           <span class="value">${escapeHtml(corte.mesero)}</span>
         </div>
         ${corte.tickets !== undefined ? `<div class="row">
@@ -234,14 +241,11 @@ export const CajaView: React.FC = () => {
         </div>
       </div>
 
-      <div class="signatures">
-        <div class="sig-box">
+      <div class="signatures" style="justify-content:center;">
+        <div class="sig-box" style="max-width:210px;">
           <div class="sig-line"></div>
-          <span>Entrega (${escapeHtml(corte.mesero)})</span>
-        </div>
-        <div class="sig-box">
-          <div class="sig-line"></div>
-          <span>Recibe (Administrador)</span>
+          <span style="font-weight:700;color:#1E110A;">${escapeHtml(corte.mesero)}</span>
+          <div style="font-size:9.5px;color:#8C7D73;margin-top:2px;">Encargado del corte</div>
         </div>
       </div>
 
@@ -398,33 +402,41 @@ export const CajaView: React.FC = () => {
                 <thead className="bg-[#FAF8F5] text-[#8C7D73] font-bold border-b border-[#E5DCD3] uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="py-3.5 px-6">ID</th>
-                    <th className="py-3.5 px-6">FECHA</th>
-                    <th className="py-3.5 px-6 text-right">MESERO</th>
+                    <th className="py-3.5 px-6">FECHA Y HORA</th>
+                    <th className="py-3.5 px-6 text-right">ENCARGADO DEL CORTE</th>
                     <th className="py-3.5 px-6 text-right">TOTAL</th>
                     <th className="py-3.5 px-6 text-right">IMPRIMIR</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F5EFEB] font-medium text-[#1E110A]">
-                  {elementosPaginados.map(corte => (
-                    <tr key={corte.id} className="hover:bg-amber-50/20 transition-colors">
-                      <td className="py-4 px-6 font-bold text-[#1E110A]">{corte.id}</td>
-                      <td className="py-4 px-6 text-[#786B63]">{corte.fecha}</td>
-                      <td className="py-4 px-6 text-right text-[#786B63] font-medium">{corte.mesero}</td>
-                      <td className="py-4 px-6 text-right font-black text-[#1E110A]">
-                        ${corte.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleImprimirCorte(corte)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold text-[#1E110A] transition-colors shadow-2xs"
-                        >
-                          <Printer className="w-3.5 h-3.5 text-[#8C7D73]" />
-                          <span>Imprimir</span>
-                        </button>
+                  {elementosPaginados.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 px-6 text-center text-[#8C7D73] text-xs font-semibold">
+                        Aún no hay cortes realizados. Cuando un mesero genere tickets podrás realizar el corte de caja aquí.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    elementosPaginados.map(corte => (
+                      <tr key={corte.id} className="hover:bg-amber-50/20 transition-colors">
+                        <td className="py-4 px-6 font-bold text-[#1E110A]">{corte.id}</td>
+                        <td className="py-4 px-6 text-[#786B63]">{corte.fecha}</td>
+                        <td className="py-4 px-6 text-right text-[#786B63] font-medium">{corte.mesero}</td>
+                        <td className="py-4 px-6 text-right font-black text-[#1E110A]">
+                          ${corte.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleImprimirCorte(corte)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5C7BA] hover:bg-stone-50 rounded-xl text-xs font-bold text-[#1E110A] transition-colors shadow-2xs"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-[#8C7D73]" />
+                            <span>Imprimir</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

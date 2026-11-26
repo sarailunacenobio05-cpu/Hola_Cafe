@@ -45,8 +45,12 @@ export const ProductoModal: React.FC = () => {
   if (!isProductoModalOpen) return null;
 
   const handleAddOption = () => {
-    if (newOptionInput.trim() && !options.includes(newOptionInput.trim())) {
-      setOptions([...options, newOptionInput.trim()]);
+    const nuevas = newOptionInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => Boolean(s) && !options.includes(s));
+    if (nuevas.length > 0) {
+      setOptions([...options, ...nuevas]);
       setNewOptionInput('');
     }
   };
@@ -65,13 +69,19 @@ export const ProductoModal: React.FC = () => {
     setPriceError(errPrice);
     if (errName || errDesc || errPrice) return;
 
+    const pendientes = newOptionInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => Boolean(s) && !options.includes(s));
+    const opcionesFinales = [...options, ...pendientes];
+
     guardarProducto({
       name: name.trim(),
       category,
       description: description.trim(),
       price: parseFloat(price) || 0,
       status,
-      options,
+      options: opcionesFinales,
       allowKitchenNotes
     });
   };

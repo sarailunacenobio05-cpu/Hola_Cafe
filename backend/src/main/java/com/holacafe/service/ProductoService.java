@@ -5,6 +5,7 @@ import com.holacafe.dto.CategoriaResponse;
 import com.holacafe.dto.ProductoResponse;
 import com.holacafe.exception.ResourceNotFoundException;
 import com.holacafe.model.CategoriaMenu;
+import com.holacafe.model.OpcionProducto;
 import com.holacafe.model.ProductoMenu;
 import com.holacafe.repositories.CategoriaMenuRepository;
 import com.holacafe.repositories.ProductoMenuRepository;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Collections;
 import java.util.UUID;
@@ -115,6 +117,7 @@ public class ProductoService {
                 nuevo.setPermiteNotasCocina(
                                 request.getPermiteNotasCocina() != null ? request.getPermiteNotasCocina() : true);
                 nuevo.setCategoria(categoria);
+                aplicarOpciones(nuevo, request.getOpciones());
                 return mapearProducto(productoMenuRepository.save(nuevo));
         }
 
@@ -135,7 +138,23 @@ public class ProductoService {
                 if (request.getPermiteNotasCocina() != null) {
                         producto.setPermiteNotasCocina(request.getPermiteNotasCocina());
                 }
+                if (request.getOpciones() != null) {
+                        aplicarOpciones(producto, request.getOpciones());
+                }
                 return mapearProducto(productoMenuRepository.save(producto));
+        }
+
+        private void aplicarOpciones(ProductoMenu producto, List<String> nombresOpciones) {
+                if (nombresOpciones == null) return;
+                producto.getOpciones().clear();
+                for (String nombre : nombresOpciones) {
+                        if (nombre == null || nombre.isBlank()) continue;
+                        OpcionProducto opcion = new OpcionProducto();
+                        opcion.setProducto(producto);
+                        opcion.setNombre(nombre.trim());
+                        opcion.setPrecioExtra(BigDecimal.ZERO);
+                        producto.getOpciones().add(opcion);
+                }
         }
 
         @Transactional

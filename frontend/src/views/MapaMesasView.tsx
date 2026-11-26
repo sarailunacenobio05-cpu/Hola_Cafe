@@ -272,6 +272,7 @@ export const MapaMesasView: React.FC = () => {
               const fueAtendida = Boolean(mesasAtendidas[table.id]);
               const libre = isTableLibre(table);
               const stLower = (table.status || '').toLowerCase();
+              const enCancelacion = stLower.includes('cancelaci');
               const enPreparacion = stLower.includes('preparaci');
               const totalMesa = getOrderTotal(table);
               const tieneProductoEntregado = Boolean(
@@ -446,7 +447,11 @@ export const MapaMesasView: React.FC = () => {
                           Capacidad: {table.capacity} personas
                         </span>
                       </div>
-                      {enPreparacion ? (
+                      {enCancelacion ? (
+                        <span className="bg-[#FFFBEB] border border-[#FDE68A] text-[#B45309] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                          Cancelado
+                        </span>
+                      ) : enPreparacion ? (
                         <span className="bg-[#FAF8F5] border border-[#E5DCD3] text-[#786B63] text-[10px] font-bold px-2 py-0.5 rounded-md">
                           KDS
                         </span>
@@ -462,7 +467,12 @@ export const MapaMesasView: React.FC = () => {
                     </div>
 
                     <div className="py-4 space-y-1">
-                      {enPreparacion ? (
+                      {enCancelacion ? (
+                        <p className="text-xs text-[#B45309] flex items-center gap-1 font-semibold">
+                          <UtensilsCrossed className="w-3.5 h-3.5 text-[#D97706]" />
+                          <span>Tomando comanda por cancelación</span>
+                        </p>
+                      ) : enPreparacion ? (
                         <p className="text-xs text-[#786B63] flex items-center gap-1 font-medium">
                           <ChefHat className="w-3.5 h-3.5 text-amber-600" />
                           <span>En Preparación</span>

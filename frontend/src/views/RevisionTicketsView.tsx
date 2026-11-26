@@ -52,50 +52,12 @@ interface RevisionDia {
 }
 
 const FONDO_CAJA = 500;
+const MAX_EFECTIVO_CONTADO = 100_000_000;
 const IVA = 0.16;
 const STORAGE_KEY = 'hc-revision-tickets';
 
-const CATALOGO: { nombre: string; detalle: string; precio: number }[] = [
-  { nombre: 'Latte', detalle: 'Bebida caliente', precio: 85 },
-  { nombre: 'Cappuccino Artesanal', detalle: 'Bebida caliente', precio: 65 },
-  { nombre: 'Americano', detalle: 'Bebida caliente', precio: 45 },
-  { nombre: 'Frappé Moka', detalle: 'Bebida fría', precio: 95 },
-  { nombre: 'Limonada Natural', detalle: 'Bebida fría', precio: 50 },
-  { nombre: 'Chilaquiles', detalle: 'Desayuno', precio: 180 },
-  { nombre: 'Sándwich de pollo', detalle: 'Alimentos salados', precio: 160 },
-  { nombre: 'Club Sandwich Clásico', detalle: 'Alimentos salados', precio: 150 },
-  { nombre: 'Hamburguesa Clásica', detalle: 'Alimentos salados', precio: 165 },
-  { nombre: 'Papas Gajo', detalle: 'Alimentos salados', precio: 95 },
-  { nombre: 'Croissant Almendras', detalle: 'Panadería', precio: 58 },
-  { nombre: 'Crepa Nutella & Frutos Rojos', detalle: 'Dulces', precio: 120 },
-  { nombre: 'Tostada de Aguacate', detalle: 'Desayuno', precio: 110 },
-];
-
-const MESEROS = ['Melissa H.', 'Gael O.', 'David H.', 'Santiago M.', 'Sarai L.'];
-
 const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
 const fmt = (n: number) => mxn.format(n);
-
-/* Generador pseudoaleatorio con semilla para que cada día tenga siempre los mismos tickets */
-const hashTexto = (texto: string) => {
-  let h = 2166136261;
-  for (let i = 0; i < texto.length; i++) {
-    h ^= texto.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-};
-
-const crearAleatorio = (semilla: number) => {
-  let a = semilla;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
 
 const aClaveFecha = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -103,64 +65,6 @@ const aClaveFecha = (d: Date) =>
 const desdeClaveFecha = (clave: string) => {
   const [y, m, d] = clave.split('-').map(Number);
   return new Date(y, m - 1, d);
-};
-
-const generarTicketsDelDia = (clave: string): TicketDia[] => {
-  const hoy = new Date();
-  const claveHoy = aClaveFecha(hoy);
-  if (clave > claveHoy) return [];
-
-  const rnd = crearAleatorio(hashTexto(clave));
-  const cantidad = 9 + Math.floor(rnd() * 6);
-  const folioInicial = 20 + Math.floor(rnd() * 30);
-
-  const minutos: number[] = [];
-  for (let i = 0; i < cantidad; i++) {
-    minutos.push(8 * 60 + Math.floor(rnd() * 12 * 60));
-  }
-  minutos.sort((a, b) => a - b);
-
-  const minutosAhora = hoy.getHours() * 60 + hoy.getMinutes();
-
-  const tickets: TicketDia[] = minutos.map((min, idx) => {
-    const numLineas = 1 + Math.floor(rnd() * 3);
-    const usados = new Set<number>();
-    const lineas: TicketLinea[] = [];
-    while (lineas.length < numLineas) {
-      const p = Math.floor(rnd() * CATALOGO.length);
-      if (usados.has(p)) continue;
-      usados.add(p);
-      const prod = CATALOGO[p];
-      lineas.push({
-        cantidad: 1 + Math.floor(rnd() * 3),
-        nombre: prod.nombre,
-        detalle: prod.detalle,
-        precioUnitario: prod.precio,
-      });
-    }
-    const total = lineas.reduce((s, l) => s + l.cantidad * l.precioUnitario, 0);
-    const r = rnd();
-    const pago: MetodoPago = r < 0.42 ? 'Efectivo' : r < 0.82 ? 'Tarjeta' : 'Transferencia';
-    const folioNum = folioInicial + idx;
-
-    return {
-      id: `${clave}-${folioNum}`,
-      folio: `#T-${String(folioNum).padStart(3, '0')}`,
-      hora: `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`,
-      pago,
-      estado: rnd() < 0.08 ? 'Cancelado' : 'Pagado',
-      mesa: String(1 + Math.floor(rnd() * 8)).padStart(2, '0'),
-      mesero: MESEROS[Math.floor(rnd() * MESEROS.length)],
-      personas: 1 + Math.floor(rnd() * 4),
-      lineas,
-      total,
-      _min: min,
-    } as TicketDia & { _min: number };
-  });
-
-  return (tickets as (TicketDia & { _min: number })[])
-    .filter((t) => clave !== claveHoy || t._min <= minutosAhora)
-    .reverse();
 };
 
 const cargarRevisiones = (): Record<string, RevisionDia> => {
@@ -180,9 +84,10 @@ const escapeHtml = (v: string) =>
    ------------------------------------------------------------------------ */
 
 export const RevisionTicketsView: React.FC = () => {
-  const { agregarAdminNotificacion } = useApp();
+  const { agregarAdminNotificacion, ticketsRegistrados, cortesCaja } = useApp();
 
   const [fecha, setFecha] = useState(() => aClaveFecha(new Date()));
+  const [corteSeleccionadoId, setCorteSeleccionadoId] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState<FiltroTickets>('todos');
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
@@ -192,15 +97,47 @@ export const RevisionTicketsView: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(revisiones));
   }, [revisiones]);
 
-  const tickets = useMemo(() => generarTicketsDelDia(fecha), [fecha]);
+  const cortesDelDia = useMemo(
+    () => cortesCaja.filter((c) => c.fechaClave === fecha),
+    [cortesCaja, fecha]
+  );
+
+  const tickets: TicketDia[] = useMemo(() => {
+    return ticketsRegistrados
+      .filter(
+        (t) =>
+          t.fechaClave === fecha &&
+          Boolean(t.corteId) &&
+          (corteSeleccionadoId === 'todos' || t.corteId === corteSeleccionadoId)
+      )
+      .map((t) => ({
+        id: t.id,
+        folio: t.folio,
+        hora: t.hora,
+        pago: t.pago,
+        estado: t.estado,
+        mesa: t.mesa,
+        mesero: t.mesero,
+        personas: t.personas,
+        lineas: t.lineas,
+        total: t.total,
+      }));
+  }, [ticketsRegistrados, fecha, corteSeleccionadoId]);
+
   const revisionDia: RevisionDia = revisiones[fecha] ?? { revisados: [], efectivoContado: '', finalizado: false };
   const revisados = useMemo(() => new Set(revisionDia.revisados), [revisionDia.revisados]);
 
   useEffect(() => {
-    setSeleccionadoId(tickets[0]?.id ?? null);
+    setCorteSeleccionadoId('todos');
     setBusqueda('');
     setFiltro('todos');
-  }, [fecha]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fecha]);
+
+  useEffect(() => {
+    if (!tickets.some((t) => t.id === seleccionadoId)) {
+      setSeleccionadoId(tickets[0]?.id ?? null);
+    }
+  }, [tickets, seleccionadoId]);
 
   const actualizarRevision = (cambios: Partial<RevisionDia>) => {
     setRevisiones((prev) => ({
@@ -228,10 +165,29 @@ export const RevisionTicketsView: React.FC = () => {
   const numRevisados = tickets.filter((t) => revisados.has(t.id)).length;
   const pendientes = tickets.length - numRevisados;
 
-  const efectivoEsperado = FONDO_CAJA + totalEfectivo;
+  const hayCorteRegistrado = cortesDelDia.length > 0 && tickets.length > 0;
+  const efectivoEsperado = hayCorteRegistrado ? FONDO_CAJA + totalEfectivo : 0;
   const contadoNum = parseFloat(revisionDia.efectivoContado.replace(/[^0-9.]/g, ''));
-  const hayContado = !Number.isNaN(contadoNum);
+  const hayContado = hayCorteRegistrado && !Number.isNaN(contadoNum);
   const diferencia = hayContado ? contadoNum - efectivoEsperado : 0;
+
+  const handleEfectivoContadoChange = (raw: string) => {
+    const limpio = raw.replace(/[^0-9.]/g, '');
+    // Permitir solo un punto decimal y máximo 2 decimales
+    const partes = limpio.split('.');
+    const normalizado =
+      partes.length > 1 ? `${partes[0]}.${partes.slice(1).join('').slice(0, 2)}` : partes[0];
+    if (normalizado === '' || normalizado === '.') {
+      actualizarRevision({ efectivoContado: normalizado });
+      return;
+    }
+    const valorNum = parseFloat(normalizado);
+    if (!Number.isNaN(valorNum) && valorNum > MAX_EFECTIVO_CONTADO) {
+      actualizarRevision({ efectivoContado: String(MAX_EFECTIVO_CONTADO) });
+      return;
+    }
+    actualizarRevision({ efectivoContado: normalizado });
+  };
 
   /* ---- Filtro de tabla ---- */
   const ticketsFiltrados = tickets.filter((t) => {
@@ -430,9 +386,51 @@ export const RevisionTicketsView: React.FC = () => {
                 </div>
               </div>
               <div className="pb-0.5">
-                <p className="text-sm font-black">{diaSemanaCap} · 08:00–20:00</p>
-                <p className="text-[11px] text-[#8C7D73]">Corte {numCorte}{esHoy ? ' · En curso' : ''}</p>
+                {cortesDelDia.length > 0 ? (
+                  <>
+                    <p className="text-sm font-black">
+                      {diaSemanaCap} · Corte realizado a las{' '}
+                      {(corteSeleccionadoId === 'todos'
+                        ? cortesDelDia[0]?.horaCorte
+                        : cortesDelDia.find((c) => c.id === corteSeleccionadoId)?.horaCorte) ||
+                        cortesDelDia[0]?.fecha}{' '}
+                      h
+                    </p>
+                    <p className="text-[11px] text-[#8C7D73]">
+                      {corteSeleccionadoId === 'todos'
+                        ? `${cortesDelDia.length === 1 ? `Corte ${cortesDelDia[0].id}` : `${cortesDelDia.length} cortes en el día`} · Encargado: ${cortesDelDia[0].mesero}`
+                        : (() => {
+                            const c = cortesDelDia.find((x) => x.id === corteSeleccionadoId);
+                            return c ? `Corte ${c.id} · Encargado: ${c.mesero}` : `Corte ${numCorte}`;
+                          })()}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-black">{diaSemanaCap}</p>
+                    <p className="text-[11px] text-[#8C7D73]">
+                      Sin cortes realizados aún en esta fecha · Realiza un corte desde Caja
+                    </p>
+                  </>
+                )}
               </div>
+              {cortesDelDia.length > 1 && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#8C7D73] mb-1.5">Corte del día</label>
+                  <select
+                    value={corteSeleccionadoId}
+                    onChange={(e) => setCorteSeleccionadoId(e.target.value)}
+                    className="px-3 py-2 border border-[#D5C7BA] rounded-xl bg-[#FAF8F5] text-xs font-bold text-[#1E110A] outline-none"
+                  >
+                    <option value="todos">Todos los cortes ({cortesDelDia.length})</option>
+                    {cortesDelDia.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        Corte {c.id} · {c.horaCorte || c.fecha} ({c.mesero})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <span
               className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${
@@ -629,32 +627,50 @@ export const RevisionTicketsView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border border-[#E5DCD3] rounded-xl p-3.5">
+              <div className="border border-[#E5DCD3] rounded-xl p-3.5 min-w-0">
                 <span className="block text-[11px] font-semibold text-[#8C7D73]">Efectivo esperado</span>
-                <span className="block text-xl font-black mt-1">{fmt(efectivoEsperado)}</span>
+                <span className="block text-xl font-black mt-1 truncate">{fmt(efectivoEsperado)}</span>
                 <span className="text-[10px] text-[#8C7D73]">
-                  Fondo {fmt(FONDO_CAJA)} + {cuentaEfectivo} ventas
+                  {hayCorteRegistrado
+                    ? `Fondo ${fmt(FONDO_CAJA)} + ${cuentaEfectivo} ventas`
+                    : 'Sin corte registrado'}
                 </span>
               </div>
 
-              <div className="border border-[#E5DCD3] rounded-xl p-3.5">
+              <div className={`border border-[#E5DCD3] rounded-xl p-3.5 min-w-0 ${!hayCorteRegistrado ? 'opacity-65' : ''}`}>
                 <label className="block text-[11px] font-semibold text-[#8C7D73]">Efectivo contado</label>
-                <div className="mt-1 flex items-center border border-[#D5C7BA] rounded-lg bg-[#FAF8F5] px-2.5 focus-within:border-[#DF7B1B] focus-within:bg-white">
+                <div
+                  className={`mt-1 flex items-center border rounded-lg px-2.5 ${
+                    !hayCorteRegistrado || revisionDia.finalizado
+                      ? 'border-[#E5DCD3] bg-[#F3EFEA]'
+                      : 'border-[#D5C7BA] bg-[#FAF8F5] focus-within:border-[#DF7B1B] focus-within:bg-white'
+                  }`}
+                >
                   <span className="text-sm font-black text-[#8C7D73]">$</span>
                   <input
                     inputMode="decimal"
-                    value={revisionDia.efectivoContado}
-                    disabled={revisionDia.finalizado}
-                    onChange={(e) => actualizarRevision({ efectivoContado: e.target.value.replace(/[^0-9.]/g, '') })}
+                    value={hayCorteRegistrado ? revisionDia.efectivoContado : ''}
+                    disabled={revisionDia.finalizado || !hayCorteRegistrado}
+                    onChange={(e) => handleEfectivoContadoChange(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-transparent outline-none text-lg font-black py-1 pl-1 disabled:cursor-not-allowed"
+                    maxLength={12}
+                    title={
+                      !hayCorteRegistrado
+                        ? 'Disponible cuando se registre un corte de caja'
+                        : 'Máximo $100,000,000.00'
+                    }
+                    className="w-full min-w-0 bg-transparent outline-none text-lg font-black py-1 pl-1 disabled:cursor-not-allowed"
                   />
                 </div>
-                <span className="text-[10px] text-[#8C7D73]">Conteo registrado</span>
+                <span className="text-[10px] text-[#8C7D73]">
+                  {!hayCorteRegistrado
+                    ? 'Disponible al registrar un corte'
+                    : 'Máx. $100,000,000.00'}
+                </span>
               </div>
 
               <div
-                className={`rounded-xl p-3.5 border ${
+                className={`rounded-xl p-3.5 border min-w-0 ${
                   !hayContado
                     ? 'border-[#E5DCD3]'
                     : diferencia === 0
@@ -666,7 +682,7 @@ export const RevisionTicketsView: React.FC = () => {
               >
                 <span className="block text-[11px] font-semibold text-[#8C7D73]">Diferencia</span>
                 <span
-                  className={`block text-xl font-black mt-1 ${
+                  className={`block text-xl font-black mt-1 truncate ${
                     !hayContado
                       ? 'text-[#A8988D]'
                       : diferencia === 0
@@ -675,17 +691,20 @@ export const RevisionTicketsView: React.FC = () => {
                           ? 'text-[#C2410C]'
                           : 'text-[#B45309]'
                   }`}
+                  title={!hayContado ? undefined : `${diferencia > 0 ? '+' : diferencia < 0 ? '−' : ''}${fmt(Math.abs(diferencia))}`}
                 >
                   {!hayContado ? '—' : `${diferencia > 0 ? '+' : diferencia < 0 ? '−' : ''}${fmt(Math.abs(diferencia))}`}
                 </span>
                 <span className="text-[10px] text-[#8C7D73]">
-                  {!hayContado
-                    ? 'Captura el conteo'
-                    : diferencia === 0
-                      ? 'La caja cuadra'
-                      : diferencia < 0
-                        ? 'Faltante de efectivo'
-                        : 'Sobrante de efectivo'}
+                  {!hayCorteRegistrado
+                    ? 'Sin corte por conciliar'
+                    : !hayContado
+                      ? 'Captura el conteo'
+                      : diferencia === 0
+                        ? 'La caja cuadra'
+                        : diferencia < 0
+                          ? 'Faltante de efectivo'
+                          : 'Sobrante de efectivo'}
                 </span>
               </div>
             </div>
