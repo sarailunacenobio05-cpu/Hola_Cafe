@@ -30,6 +30,46 @@ public class ProductoService {
                                 .map(this::mapearProducto)
                                 .toList();
         }
+        @Transactional(readOnly = true)
+        public List<ProductoResponse> listarFiltrados(String search, String categoria, String estado) {
+                return productoMenuRepository.findAll()
+                                .stream()
+                                .filter(p -> !"ELIMINADO".equalsIgnoreCase(p.getEstado()))
+                                .filter(p -> {
+                                        if (search == null || search.isBlank()) return true;
+                                        String q = search.trim().toLowerCase();
+                                        return p.getNombre().toLowerCase().contains(q)
+                                                        || (p.getDescripcion() != null && p.getDescripcion().toLowerCase().contains(q));
+                                })
+                                .filter(p -> {
+                                        if (categoria == null || categoria.isBlank() || "Todas".equalsIgnoreCase(categoria)) return true;
+                                        return p.getCategoria() != null
+                                                        && p.getCategoria().getNombre().trim().equalsIgnoreCase(categoria.trim());
+                                })
+                                .filter(p -> {
+                                        if (estado == null || estado.isBlank() || "Todos".equalsIgnoreCase(estado)) return true;
+                                        return p.getEstado().equalsIgnoreCase(estado.trim());
+                                })
+                                .map(this::mapearProducto)
+                                .toList();
+        }
+        @Transactional(readOnly = true)
+        public java.util.Map<String, Object> listarPaginado(int page, int size, String search, String categoria, String estado) {
+                List<ProductoResponse> filtrados = listarFiltrados(search, categoria, estado);
+                int totalElements = filtrados.size();
+                int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / size));
+                int paginaSegura = Math.max(1, Math.min(page, totalPages));
+                int inicio = (paginaSegura - 1) * size;
+                int fin = Math.min(inicio + size, totalElements);
+                List<ProductoResponse> content = (inicio < totalElements) ? filtrados.subList(inicio, fin) : Collections.emptyList();
+                java.util.Map<String, Object> res = new java.util.HashMap<>();
+                res.put("content", content);
+                res.put("totalElements", totalElements);
+                res.put("totalPages", totalPages);
+                res.put("number", paginaSegura);
+                return res;
+        }
+
 
         @Transactional(readOnly = true)
         public List<ProductoResponse> listarProductosDisponibles() {

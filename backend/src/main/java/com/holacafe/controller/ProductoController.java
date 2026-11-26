@@ -19,8 +19,20 @@ public class ProductoController {
     private final ProductoService productoService;
 
     @GetMapping
-    public ResponseEntity<List<ProductoResponse>> listarTodos() {
-        return ResponseEntity.ok(productoService.listarTodos());
+    public ResponseEntity<List<ProductoResponse>> listarTodos(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(productoService.listarFiltrados(search, categoria, estado));
+    }
+    @GetMapping("/paginado")
+    public ResponseEntity< java.util.Map<String, Object> > listarPaginado(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String categoria,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(productoService.listarPaginado(page, size, search, categoria, estado));
     }
 
     @GetMapping("/categoria/{categoriaId}")
