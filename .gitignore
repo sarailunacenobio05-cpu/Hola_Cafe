@@ -1,6 +1,6 @@
 # Dependencias
 node_modules/
-
+target/
 # Build
 dist/
 dist-ssr/
@@ -23,4 +23,4 @@ Thumbs.db
 *.local
 
 application.properties
-application.properties.example
+!application.properties.example
