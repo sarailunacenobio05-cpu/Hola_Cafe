@@ -50,6 +50,56 @@ public class MesaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<BotonResponse> listarBotonesFiltrados(String search, String estado) {
+        return botonRepository.findAll().stream()
+                .map(this::mapearBoton)
+                .filter(b -> {
+                    if (search == null || search.isBlank()) return true;
+                    String q = search.trim().toLowerCase();
+                    return b.getId().toLowerCase().contains(q)
+                            || (b.getNombre() != null && b.getNombre().toLowerCase().contains(q))
+                            || (b.getMesaId() != null && b.getMesaId().toLowerCase().contains(q));
+                })
+                .filter(b -> {
+                    if (estado == null || estado.isBlank() || "Todos".equalsIgnoreCase(estado)) return true;
+                    String estadoVisual = resolverEstadoVisualBoton(b);
+                    return estadoVisual.equalsIgnoreCase(estado.trim())
+                            || (b.getEstado() != null && b.getEstado().equalsIgnoreCase(estado.trim()));
+                })
+                .toList();
+    }
+
+    private String resolverEstadoVisualBoton(BotonResponse b) {
+        if ("Sin conexión".equalsIgnoreCase(b.getEstado())) return "Sin conexión";
+        int bat = b.getBateria() != null ? b.getBateria() : 100;
+        if (bat <= 10) return "Batería crítica";
+        if (bat <= 25) return "Batería baja";
+        if ("ONLINE".equalsIgnoreCase(b.getEstado()) || "En línea".equalsIgnoreCase(b.getEstado())) {
+            return "En línea";
+        }
+        return "Sin conexión";
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> listarBotonesPaginado(int page, int size, String search, String estado) {
+        List<BotonResponse> filtrados = listarBotonesFiltrados(search, estado);
+        int totalElements = filtrados.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / size));
+        int paginaSegura = Math.max(1, Math.min(page, totalPages));
+        int inicio = (paginaSegura - 1) * size;
+        int fin = Math.min(inicio + size, totalElements);
+        List<BotonResponse> content = (inicio < totalElements)
+                ? filtrados.subList(inicio, fin)
+                : java.util.Collections.emptyList();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("content", content);
+        res.put("totalElements", totalElements);
+        res.put("totalPages", totalPages);
+        res.put("number", paginaSegura);
+        return res;
+    }
+
     @Transactional
     public BotonResponse crearBoton(GuardarBotonRequest request) {
         String idLimpio = request.getId().trim().toUpperCase();

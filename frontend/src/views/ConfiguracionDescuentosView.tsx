@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { useApp } from '../context/AppContext';
+import { obtenerPaginado } from '../api/servicios';
+import { MenuItem } from '../types';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -38,12 +40,73 @@ export const ConfiguracionDescuentosView: React.FC = () => {
     setCurrentPage(1);
   }, [search, categoryFilter, onlyWithDiscount]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const [serverPage, setServerPage] = useState<{
+    content: MenuItem[];
+    totalPages: number;
+    totalElements: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (onlyWithDiscount) {
+      setServerPage(null);
+      return;
+    }
+    let activo = true;
+    let descuentosGuardados: Record<string, number> = {};
+    try {
+      descuentosGuardados = JSON.parse(
+        localStorage.getItem('holacafe_product_discounts_v1') || '{}'
+      );
+    } catch {}
+
+    obtenerPaginado<MenuItem>(
+      '/productos/paginado',
+      {
+        page: currentPage,
+        size: ITEMS_PER_PAGE,
+        search: search.trim() || undefined,
+        categoria: categoryFilter !== 'Todas' ? categoryFilter : undefined,
+      },
+      filtered,
+      (p: any) => ({
+        id: p.id,
+        name: p.nombre ?? p.name,
+        category: p.categoria || p.categoriaNombre || p.category || 'Sin categoría',
+        description: p.descripcion ?? p.description ?? '',
+        price: Number(p.precio ?? p.price ?? 0),
+        discountPercent: descuentosGuardados[p.id] ?? p.discountPercent ?? 0,
+        status: (p.estado ?? p.status ?? 'DISPONIBLE') as 'DISPONIBLE' | 'AGOTADO' | 'OCULTO',
+        options: Array.isArray(p.opciones)
+          ? p.opciones.map((o: any) => (typeof o === 'string' ? o : o.nombre))
+          : p.options || [],
+        allowKitchenNotes: Boolean(p.permiteNotasCocina ?? p.allowKitchenNotes ?? true),
+      })
+    ).then((res) => {
+      if (activo) {
+        setServerPage({
+          content: res.content,
+          totalPages: res.totalPages,
+          totalElements: res.totalElements,
+        });
+      }
+    });
+
+    return () => {
+      activo = false;
+    };
+  }, [currentPage, search, categoryFilter, onlyWithDiscount, menuItems]);
+
+  const totalElements = serverPage && !onlyWithDiscount ? serverPage.totalElements : filtered.length;
+  const totalPages = serverPage && !onlyWithDiscount
+    ? serverPage.totalPages
+    : Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
-  const paginatedItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  const showingFrom = filtered.length === 0 ? 0 : startIndex + 1;
-  const showingTo = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
+  const paginatedItems = serverPage && !onlyWithDiscount
+    ? serverPage.content
+    : filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const showingFrom = totalElements === 0 ? 0 : startIndex + 1;
+  const showingTo = Math.min(startIndex + ITEMS_PER_PAGE, totalElements);
 
   const handleSetDiscount = (productId: string, productName: string, pct: number) => {
     actualizarDescuentoProducto(productId, pct);

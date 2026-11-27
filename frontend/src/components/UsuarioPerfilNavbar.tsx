@@ -3,7 +3,6 @@ import {
   ChevronDown,
   Mail,
   ShieldCheck,
-  Clock,
   CheckCircle2,
   LogOut,
   X,
@@ -27,7 +26,6 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
       : `${currentUser.username}@holacafe.com`
     : 'usuario@holacafe.com';
   const rol = currentUser?.role || 'Mesero';
-  const turno = currentUser?.shift || 'Turno completo';
   const estado = currentUser?.status || 'ACTIVO';
   const avatarSeed = correo || nombre;
 
@@ -129,25 +127,13 @@ export const UsuarioPerfilNavbar: React.FC<UsuarioPerfilNavbarProps> = ({ varian
             </div>
           </div>
 
-          <div className="border-t border-[#F5EFEB] pt-2.5 grid grid-cols-2 gap-2">
-            <div className="flex items-start gap-2">
-              <Clock className="w-3.5 h-3.5 text-[#8C7D73] shrink-0 mt-0.5" />
-              <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8C7D73]">
-                  Turno
-                </span>
-                <span className="font-semibold text-[#1E110A] text-[11px]">{turno}</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8C7D73]">
-                  Estado
-                </span>
-                <span className="font-bold text-emerald-700 text-[11px]">{estado}</span>
-              </div>
+          <div className="border-t border-[#F5EFEB] pt-2.5 flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8C7D73]">
+                Estado
+              </span>
+              <span className="font-bold text-emerald-700 text-[11px]">{estado}</span>
             </div>
           </div>
         </div>

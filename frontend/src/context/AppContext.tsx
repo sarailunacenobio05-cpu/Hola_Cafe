@@ -304,9 +304,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const maxEnMesas = mesasActuales.reduce((max, t) => {
       const f = t.currentOrder?.folio;
       return typeof f === 'number' && f >= 1000 && f < 2000 ? Math.max(max, f) : max;
-    }, 1043);
+    }, 1041);
 
-    let ultimoGuardado = 1043;
+    let ultimoGuardado = 1041;
     try {
       const raw = localStorage.getItem(TICKET_FOLIO_STORAGE_KEY);
       if (raw) {
@@ -473,12 +473,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch { }
     return [];
   });
+  const normalizarSecuenciaTickets = (lista: TicketRegistrado[]): TicketRegistrado[] => {
+    if (!Array.isArray(lista) || lista.length === 0) return [];
+    // En ticketsRegistrados los más recientes están al principio ([nuevoTicket, ...prev]),
+    // por lo que el orden cronológico de cobro va del último elemento al primero.
+    const cronologicos = [...lista].reverse();
+    const baseFolio = 1035;
+    const resecuenciados = cronologicos.map((t, index) => {
+      const folioLineal = baseFolio + index;
+      return {
+        ...t,
+        folio: `#${folioLineal}`,
+      };
+    });
+    return resecuenciados.reverse();
+  };
+
+  const obtenerSiguienteFolioCobro = (listaTickets: TicketRegistrado[]): number => {
+    const baseFolio = 1035;
+    if (!listaTickets || listaTickets.length === 0) return baseFolio;
+    const maxFolioCobrado = listaTickets.reduce((max, t) => {
+      const num = parseInt(String(t.folio || '').replace(/\D+/g, ''), 10);
+      return Number.isFinite(num) && num >= baseFolio ? Math.max(max, num) : max;
+    }, baseFolio - 1);
+    return maxFolioCobrado + 1;
+  };
+
   const [ticketsRegistrados, setTicketsRegistrados] = useState<TicketRegistrado[]>(() => {
     try {
       const saved = localStorage.getItem(TICKETS_REGISTRADOS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return normalizarSecuenciaTickets(parsed);
       }
     } catch { }
     return [];
@@ -1240,6 +1266,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const mostrarCobroModal = (tableId: string) => {
+    const folioConsecutivo = obtenerSiguienteFolioCobro(ticketsRegistrados);
+    setTables(prev => {
+      const mesaObjetivo = prev.find(t => t.id === tableId);
+      const folioAnteriorMesa = mesaObjetivo?.currentOrder?.folio;
+      return prev.map(t => {
+        if (!t.currentOrder) return t;
+        if (t.id === tableId) {
+          return {
+            ...t,
+            currentOrder: {
+              ...t.currentOrder,
+              folio: folioConsecutivo,
+            },
+          };
+        }
+        // Si otra mesa abierta tenía asignado provisionalmente ese mismo folio, intercambiarlo para evitar duplicados
+        if (t.currentOrder.folio === folioConsecutivo && typeof folioAnteriorMesa === 'number') {
+          return {
+            ...t,
+            currentOrder: {
+              ...t.currentOrder,
+              folio: folioAnteriorMesa,
+            },
+          };
+        }
+        return t;
+      });
+    });
     setActiveTableId(tableId);
     setIsCobroModalOpen(true);
   };
@@ -1297,7 +1351,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const ahora = new Date();
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
     const fechaClave = aClaveFechaLocal(ahora);
-    const folioNum = table.currentOrder.folio;
+    const folioNum = obtenerSiguienteFolioCobro(ticketsRegistrados);
 
     const folioStr = `#${folioNum}`;
     const yaExiste = ticketsRegistrados.some(

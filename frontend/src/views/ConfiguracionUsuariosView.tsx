@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { useApp } from '../context/AppContext';
+import { obtenerPaginado } from '../api/servicios';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -77,11 +78,76 @@ export const ConfiguracionUsuariosView: React.FC = () => {
     return 'bg-[#E6F7F0] text-[#059669] border-[#A7F3D0]';
   };
 
-  const totalPaginas = Math.ceil(filteredUsers.length / filasPorPagina) || 1;
-  const elementosPaginados = filteredUsers.slice(
-    (paginaActual - 1) * filasPorPagina,
-    paginaActual * filasPorPagina
-  );
+  const [serverPage, setServerPage] = useState<{
+    content: User[];
+    totalPages: number;
+    totalElements: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    obtenerPaginado<User>(
+      '/usuarios/paginado',
+      {
+        page: paginaActual,
+        size: filasPorPagina,
+        search: search.trim() || undefined,
+      },
+      filteredUsers,
+      (u: any) => {
+        if (u.username && u.role) return u as User;
+        const nombre = u.nombre || 'Usuario';
+        const initials =
+          nombre
+            .trim()
+            .split(/\s+/)
+            .map((n: string) => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase() || 'HC';
+        return {
+          id: u.id,
+          name: nombre,
+          initials,
+          username: u.correo,
+          role:
+            u.rol === 'ROLE_ADMINISTRADOR'
+              ? 'Administrador'
+              : u.rol === 'ROLE_COCINERO'
+                ? 'Cocinero'
+                : 'Mesero',
+          shift: 'Turno completo',
+          lastAccess: 'En línea',
+          status: u.estado === 'ACTIVO' ? 'ACTIVO' : 'BAJA',
+          avatar: u.avatarUrl || '/img/admin-avatar.jpg',
+          authMethod: u.metodoAcceso?.toUpperCase() === 'GOOGLE' ? 'Google' : 'Correo',
+          registeredAt: u.fechaRegistro || '—',
+        };
+      }
+    ).then((res) => {
+      if (activo) {
+        setServerPage({
+          content: res.content,
+          totalPages: res.totalPages,
+          totalElements: res.totalElements,
+        });
+      }
+    });
+    return () => {
+      activo = false;
+    };
+  }, [paginaActual, search, users]);
+
+  const totalElements = serverPage ? serverPage.totalElements : filteredUsers.length;
+  const totalPaginas = serverPage
+    ? serverPage.totalPages
+    : Math.ceil(filteredUsers.length / filasPorPagina) || 1;
+  const elementosPaginados = serverPage
+    ? serverPage.content
+    : filteredUsers.slice(
+        (paginaActual - 1) * filasPorPagina,
+        paginaActual * filasPorPagina
+      );
 
   return (
     <div className="min-h-screen bg-[#F5EFEB] text-[#1E110A] flex flex-row font-sans selection:bg-amber-100">
@@ -164,7 +230,7 @@ export const ConfiguracionUsuariosView: React.FC = () => {
             <div className="p-5 border-b border-[#F5EFEB] flex items-center justify-between">
               <h2 className="text-base font-black text-[#1E110A]">Usuarios registrados</h2>
               <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-3 py-1 rounded-lg">
-                {filteredUsers.length} usuarios
+                {totalElements} usuarios
               </span>
             </div>
 

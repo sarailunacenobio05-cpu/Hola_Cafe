@@ -34,8 +34,21 @@ public class MesaController {
     // Listar botones IoT asociados a las mesas
     @GetMapping("/botones")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_MESERO')")
-    public ResponseEntity<List<BotonResponse>> listarBotones() {
-        return ResponseEntity.ok(mesaService.listarBotones());
+    public ResponseEntity<List<BotonResponse>> listarBotones(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(mesaService.listarBotonesFiltrados(search, estado));
+    }
+
+    // Listar botones IoT paginados y filtrados (Server-Side Pagination)
+    @GetMapping("/botones/paginado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_MESERO')")
+    public ResponseEntity<java.util.Map<String, Object>> listarBotonesPaginado(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "8") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(mesaService.listarBotonesPaginado(page, size, search, estado));
     }
 
     // Crear un nuevo botón IoT (Solo Administrador)

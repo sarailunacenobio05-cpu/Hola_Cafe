@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { obtenerPaginado } from '../api/servicios';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -41,7 +42,7 @@ export const ConfiguracionMenuView: React.FC = () => {
     ),
   ];
 
-  // Filtrado
+  // Filtrado local de respaldo
   const filtered = menuItems.filter((item) => {
     const matchSearch =
       item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,8 +56,64 @@ export const ConfiguracionMenuView: React.FC = () => {
     return matchSearch && matchCat && matchStatus;
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const [serverPage, setServerPage] = useState<{
+    content: MenuItem[];
+    totalPages: number;
+    totalElements: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    let descuentosGuardados: Record<string, number> = {};
+    try {
+      descuentosGuardados = JSON.parse(
+        localStorage.getItem('holacafe_product_discounts_v1') || '{}'
+      );
+    } catch {}
+
+    obtenerPaginado<MenuItem>(
+      '/productos/paginado',
+      {
+        page: currentPage,
+        size: itemsPerPage,
+        search: search.trim() || undefined,
+        categoria: categoryFilter !== 'Todas' ? categoryFilter : undefined,
+        estado: statusFilter !== 'Todos' ? statusFilter : undefined,
+      },
+      filtered,
+      (p: any) => ({
+        id: p.id,
+        name: p.nombre ?? p.name,
+        category: p.categoria || p.categoriaNombre || p.category || 'Sin categoría',
+        description: p.descripcion ?? p.description ?? '',
+        price: Number(p.precio ?? p.price ?? 0),
+        discountPercent: descuentosGuardados[p.id] ?? p.discountPercent ?? 0,
+        status: (p.estado ?? p.status ?? 'DISPONIBLE') as 'DISPONIBLE' | 'AGOTADO' | 'OCULTO',
+        options: Array.isArray(p.opciones)
+          ? p.opciones.map((o: any) => (typeof o === 'string' ? o : o.nombre))
+          : p.options || [],
+        allowKitchenNotes: Boolean(p.permiteNotasCocina ?? p.allowKitchenNotes ?? true),
+      })
+    ).then((res) => {
+      if (activo) {
+        setServerPage({
+          content: res.content,
+          totalPages: res.totalPages,
+          totalElements: res.totalElements,
+        });
+      }
+    });
+
+    return () => {
+      activo = false;
+    };
+  }, [currentPage, search, categoryFilter, statusFilter, menuItems]);
+
+  const totalElements = serverPage ? serverPage.totalElements : filtered.length;
+  const totalPages = serverPage ? serverPage.totalPages : (Math.ceil(filtered.length / itemsPerPage) || 1);
+  const paginatedItems = serverPage
+    ? serverPage.content
+    : filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const agotadosCount = menuItems.filter(i => i.status === 'AGOTADO').length;
 
@@ -186,7 +243,7 @@ export const ConfiguracionMenuView: React.FC = () => {
             <div className="p-5 border-b border-[#F5EFEB] flex items-center justify-between">
               <h2 className="text-base font-black text-[#1E110A]">Productos del menú</h2>
               <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-3 py-1 rounded-lg">
-                {filtered.length} productos
+                {totalElements} productos
               </span>
             </div>
 
@@ -251,7 +308,7 @@ export const ConfiguracionMenuView: React.FC = () => {
             {/* Pagination Controls */}
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#8C7D73]">
               <span>
-                Mostrando {Math.min(filtered.length, (currentPage - 1) * itemsPerPage + 1)} de {filtered.length} productos
+                Mostrando {Math.min(totalElements, (currentPage - 1) * itemsPerPage + 1)}-{Math.min(totalElements, currentPage * itemsPerPage)} de {totalElements} productos
               </span>
 
               <div className="flex items-center gap-1">

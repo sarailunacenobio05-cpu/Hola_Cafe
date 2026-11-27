@@ -19,8 +19,20 @@ public class UsuarioController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
-    public ResponseEntity<List<UsuarioResponse>> listarUsuarios() {
-        return ResponseEntity.ok(usuarioService.listarTodos());
+    public ResponseEntity<List<UsuarioResponse>> listarUsuarios(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(usuarioService.listarFiltrados(search, estado));
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<java.util.Map<String, Object>> listarPaginado(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(usuarioService.listarPaginado(page, size, search, estado));
     }
 
     @DeleteMapping("/{id}")

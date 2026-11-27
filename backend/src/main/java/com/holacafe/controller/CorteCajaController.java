@@ -27,6 +27,16 @@ public class CorteCajaController {
         }
         return ResponseEntity.ok(corteCajaService.listarTodos());
     }
+
+    // Listar cortes paginados
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<java.util.Map<String, Object>> listarPaginado(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return ResponseEntity.ok(corteCajaService.listarPaginado(page, size, fecha));
+    }
     // Registrar nuevo corte de turno/caja (Admin o Cajero)
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")

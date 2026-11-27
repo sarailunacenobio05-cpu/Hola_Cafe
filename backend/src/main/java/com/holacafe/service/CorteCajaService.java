@@ -37,6 +37,25 @@ public class CorteCajaService {
                 .map(this::mapearCorte)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> listarPaginado(int page, int size, LocalDate fecha) {
+        List<CorteCajaResponse> filtrados = (fecha != null) ? listarPorFecha(fecha) : listarTodos();
+        int totalElements = filtrados.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / size));
+        int paginaSegura = Math.max(1, Math.min(page, totalPages));
+        int inicio = (paginaSegura - 1) * size;
+        int fin = Math.min(inicio + size, totalElements);
+        List<CorteCajaResponse> content = (inicio < totalElements)
+                ? filtrados.subList(inicio, fin)
+                : java.util.Collections.emptyList();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("content", content);
+        res.put("totalElements", totalElements);
+        res.put("totalPages", totalPages);
+        res.put("number", paginaSegura);
+        return res;
+    }
     @Transactional
     public CorteCajaResponse registrarCorte(RegistrarCorteRequest request, String correoResponsable) {
         Usuario responsable = usuarioRepository.findByCorreo(correoResponsable)

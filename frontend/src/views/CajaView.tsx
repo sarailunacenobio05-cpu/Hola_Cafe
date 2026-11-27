@@ -74,8 +74,6 @@ export const CajaView: React.FC = () => {
     const formatoMoneda = (monto: number) =>
       monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const subtotal = corte.total / 1.16;
-    const iva = corte.total - subtotal;
     const logoAbsoluteUrl = new URL(logoImg, window.location.origin).href;
     const fechaImpresion = new Date().toLocaleString('es-MX', {
       dateStyle: 'short',
@@ -227,15 +225,7 @@ export const CajaView: React.FC = () => {
       </div>
 
       <div class="section">
-        <div class="row">
-          <span class="label">Subtotal (sin IVA)</span>
-          <span class="value">$${formatoMoneda(subtotal)}</span>
-        </div>
-        <div class="row">
-          <span class="label">IVA (16%)</span>
-          <span class="value">$${formatoMoneda(iva)}</span>
-        </div>
-        <div class="total-row">
+        <div class="total-row" style="margin-top:0;padding-top:0;border-top:none;">
           <span>TOTAL CORTE</span>
           <span class="total-amount">$${formatoMoneda(corte.total)}</span>
         </div>

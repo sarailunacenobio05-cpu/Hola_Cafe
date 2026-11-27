@@ -36,6 +36,43 @@ public class UsuarioService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<UsuarioResponse> listarFiltrados(String search, String estado) {
+        return usuarioRepository.findAll().stream()
+                .filter(u -> {
+                    if (search == null || search.isBlank()) return true;
+                    String q = search.trim().toLowerCase();
+                    return u.getNombre().toLowerCase().contains(q)
+                            || u.getCorreo().toLowerCase().contains(q)
+                            || (u.getRol() != null && u.getRol().getNombre().toLowerCase().contains(q));
+                })
+                .filter(u -> {
+                    if (estado == null || estado.isBlank() || "Todos".equalsIgnoreCase(estado)) return true;
+                    return u.getEstado() != null && u.getEstado().equalsIgnoreCase(estado.trim());
+                })
+                .map(this::mapearUsuario)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> listarPaginado(int page, int size, String search, String estado) {
+        List<UsuarioResponse> filtrados = listarFiltrados(search, estado);
+        int totalElements = filtrados.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / size));
+        int paginaSegura = Math.max(1, Math.min(page, totalPages));
+        int inicio = (paginaSegura - 1) * size;
+        int fin = Math.min(inicio + size, totalElements);
+        List<UsuarioResponse> content = (inicio < totalElements)
+                ? filtrados.subList(inicio, fin)
+                : java.util.Collections.emptyList();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("content", content);
+        res.put("totalElements", totalElements);
+        res.put("totalPages", totalPages);
+        res.put("number", paginaSegura);
+        return res;
+    }
+
     @Transactional
     public void eliminarUsuario(String id, String correoAdminActual) {
         Usuario usuario = usuarioRepository.findById(id)

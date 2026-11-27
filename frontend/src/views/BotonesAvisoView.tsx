@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { obtenerPaginado } from '../api/servicios';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
@@ -68,11 +69,72 @@ export const BotonesAvisoView: React.FC = () => {
     return matchSearch && matchStatus;
   });
 
-  const totalPaginas = Math.ceil(filtered.length / filasPorPagina) || 1;
-  const elementosPaginados = filtered.slice(
-    (paginaActual - 1) * filasPorPagina,
-    paginaActual * filasPorPagina
-  );
+  const [serverPage, setServerPage] = useState<{
+    content: IoTDevice[];
+    totalPages: number;
+    totalElements: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    obtenerPaginado<IoTDevice>(
+      '/mesas/botones/paginado',
+      {
+        page: paginaActual,
+        size: filasPorPagina,
+        search: search.trim() || undefined,
+        estado: statusFilter !== 'Todos' ? statusFilter : undefined,
+      },
+      filtered,
+      (b: any) => {
+        if (b.tableId !== undefined && b.batteryPercentage !== undefined) return b as IoTDevice;
+        const bat = Number(b.bateria ?? 100);
+        return {
+          id: b.id,
+          name:
+            b.nombre ||
+            `Botón de Mesa ${b.mesaNumero ? (b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero) : ''}`.trim(),
+          tableId:
+            b.mesaId ||
+            (b.mesaNumero ? `M${b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero}` : ''),
+          batteryPercentage: bat,
+          status:
+            b.estado === 'Sin conexión'
+              ? 'Sin conexión'
+              : bat <= 10
+                ? 'Batería crítica'
+                : bat <= 25
+                  ? 'Batería baja'
+                  : b.estado === 'ONLINE' || b.estado === 'En línea'
+                    ? 'En línea'
+                    : 'Sin conexión',
+          lastConnection: b.estado === 'Sin conexión' ? 'Sin señal' : 'En línea',
+        };
+      }
+    ).then((res) => {
+      if (activo) {
+        setServerPage({
+          content: res.content,
+          totalPages: res.totalPages,
+          totalElements: res.totalElements,
+        });
+      }
+    });
+    return () => {
+      activo = false;
+    };
+  }, [paginaActual, search, statusFilter, iotDevices]);
+
+  const totalElements = serverPage ? serverPage.totalElements : filtered.length;
+  const totalPaginas = serverPage
+    ? serverPage.totalPages
+    : Math.ceil(filtered.length / filasPorPagina) || 1;
+  const elementosPaginados = serverPage
+    ? serverPage.content
+    : filtered.slice(
+        (paginaActual - 1) * filasPorPagina,
+        paginaActual * filasPorPagina
+      );
 
   const getStatusBadge = (status: IoTDevice['status']) => {
     switch (status) {
@@ -210,7 +272,10 @@ export const BotonesAvisoView: React.FC = () => {
                   type="text"
                   placeholder="Buscar por identificador o mesa..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPaginaActual(1);
+                  }}
                   className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
                 />
               </div>
@@ -219,7 +284,10 @@ export const BotonesAvisoView: React.FC = () => {
                 <span className="text-[#8C7D73] font-semibold">Estado:</span>
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPaginaActual(1);
+                  }}
                   className="bg-white border border-[#D5C7BA] rounded-xl px-3 py-2 text-xs font-bold text-[#1E110A] focus:outline-none"
                 >
                   <option value="Todos">Todos</option>
@@ -246,7 +314,7 @@ export const BotonesAvisoView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black text-[#1E110A]">Dispositivos registrados</h2>
                 <span className="text-xs font-bold text-[#8C7D73] bg-[#FAF8F5] border border-[#E5DCD3] px-2.5 py-0.5 rounded-lg">
-                  {filtered.length} botones
+                  {totalElements} botones
                 </span>
               </div>
               <span className="text-xs font-semibold text-[#DF7B1B]">

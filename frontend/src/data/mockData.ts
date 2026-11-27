@@ -444,7 +444,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     hasAlert: false,
     currentOrder: {
       id: 'ord-102',
-      folio: 1037,
+      folio: 1036,
       tableId: 'M02',
       waiterId: 'u-2',
       waiterName: 'Gael Ortiz',
@@ -480,7 +480,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     alertType: 'Solicitud de cuenta',
     currentOrder: {
       id: 'ord-104',
-      folio: 1039,
+      folio: 1037,
       tableId: 'M04',
       waiterId: 'u-2',
       waiterName: 'Gael Ortiz',
@@ -512,7 +512,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     hasAlert: false,
     currentOrder: {
       id: 'ord-105',
-      folio: 1040,
+      folio: 1038,
       tableId: 'M05',
       waiterId: 'u-4',
       waiterName: 'Sarai Luna',
@@ -537,7 +537,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     hasAlert: false,
     currentOrder: {
       id: 'ord-106',
-      folio: 1041,
+      folio: 1039,
       tableId: 'M06',
       waiterId: 'u-1',
       waiterName: 'David Huerta',
@@ -563,7 +563,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     alertType: 'Llamada de cliente',
     currentOrder: {
       id: 'ord-107',
-      folio: 1042,
+      folio: 1040,
       tableId: 'M07',
       waiterId: 'u-5',
       waiterName: 'Melissa Huerta',
@@ -598,7 +598,7 @@ export const INITIAL_TABLES: TableInfo[] = [
     hasAlert: false,
     currentOrder: {
       id: 'ord-109',
-      folio: 1043,
+      folio: 1041,
       tableId: 'M09',
       waiterId: 'u-4',
       waiterName: 'Sarai Luna',
@@ -618,7 +618,7 @@ export const INITIAL_TABLES: TableInfo[] = [
 export const INITIAL_KITCHEN_TICKETS: KitchenTicket[] = [
   {
     id: 'k-1',
-    orderFolio: 1037,
+    orderFolio: 1036,
     tableId: 'M02',
     waiterName: 'Gael Ortiz',
     createdAt: '14:22',
@@ -632,7 +632,7 @@ export const INITIAL_KITCHEN_TICKETS: KitchenTicket[] = [
   },
   {
     id: 'k-2',
-    orderFolio: 1043,
+    orderFolio: 1041,
     tableId: 'M09',
     waiterName: 'Sarai Luna',
     createdAt: '14:29',
@@ -647,7 +647,7 @@ export const INITIAL_KITCHEN_TICKETS: KitchenTicket[] = [
   },
   {
     id: 'k-3',
-    orderFolio: 1040,
+    orderFolio: 1038,
     tableId: 'M05',
     waiterName: 'Sarai Luna',
     createdAt: '14:00',
