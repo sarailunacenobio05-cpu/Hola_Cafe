@@ -4,7 +4,7 @@ import { UsuarioPerfilNavbar } from "../components/UsuarioPerfilNavbar";
 import logoImg from "../img/logo.png";
 import manitaPedidoListoImg from "../img/ManitaPedidoListo.jpg";
 import manitaNoIngredientesImg from "../img/ManitaNoIngredientes.jpg";
-import { Bell, CheckCircle2, ChevronRight, Clock, LogOut, Trash2, UtensilsCrossed } from "lucide-react";
+import { Bell, CheckCircle2, Clock, LogOut, Trash2, UtensilsCrossed } from "lucide-react";
 import Swal from "sweetalert2";
 import { KitchenTicket } from "../types";
 
@@ -307,8 +307,6 @@ export const CocinaKDSView = () => {
         </div>
 
         <nav className="kds-breadcrumb" aria-label="Migas de pan">
-          <span>Panel Principal</span>
-          <ChevronRight className="w-3.5 h-3.5 text-white/60" />
           <strong>Cocina</strong>
         </nav>
 

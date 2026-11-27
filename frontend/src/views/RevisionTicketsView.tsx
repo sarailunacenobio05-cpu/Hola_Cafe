@@ -320,8 +320,6 @@ export const RevisionTicketsView: React.FC = () => {
         {/* Header */}
         <header className="bg-white border-b border-[#E7DDD3] px-8 py-3.5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-[#8C7D73] font-medium">Panel Principal</span>
-            <span className="text-[#A8988D] font-bold">›</span>
             <span className="text-[#1E110A] font-bold">Revisión de tickets</span>
           </div>
           <div className="flex items-center gap-4">
