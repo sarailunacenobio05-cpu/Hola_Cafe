@@ -31,6 +31,16 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/rol")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<UsuarioResponse> actualizarRol(
+            @PathVariable String id,
+            @RequestParam Integer rolId,
+            Authentication authentication) {
+        String correoAdmin = (authentication != null) ? authentication.getName() : null;
+        return ResponseEntity.ok(usuarioService.actualizarRol(id, rolId, correoAdmin));
+    }
+
     @PatchMapping ("/{id}/estado")
     @PreAuthorize ("hasAuthority ('ROLE_ADMINISTRADOR')")
     public ResponseEntity<UsuarioResponse> alternarEstado(@PathVariable String id){

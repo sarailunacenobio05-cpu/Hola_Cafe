@@ -123,6 +123,7 @@ interface AppContextType {
   productoAEliminar: MenuItem | null;
 
   login: (correo: string, password: string, remember?: boolean) => Promise<boolean>;
+  loginWithGoogle: (credential: string, remember?: boolean) => Promise<boolean>;
   logout: () => void;
   setActiveView: (view: ActiveView) => void;
   selectTable: (tableId: string | null) => void;
@@ -144,9 +145,10 @@ interface AppContextType {
     discount: number,
     tipPercent: number,
     method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
-    customTipAmount?: number
+    customTipAmount?: number,
+    redondeoAmount?: number
   ) => TicketRegistrado | null;
-  procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi', customTipAmount?: number) => void;
+  procesarPagoYLiberar: (tableId: string, discount: number, tipPercent: number, method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi', customTipAmount?: number, redondeoAmount?: number) => void;
   liberarMesaDirectamente: (tableId: string) => void;
   realizarCorteCaja: () => CorteCajaItem | null;
 
@@ -168,6 +170,7 @@ interface AppContextType {
   mostrarAddUserModal: () => void;
   cerrarAddUserModal: () => void;
   guardarUser: (userData: Partial<User> & { password?: string }) => Promise<void>;
+  actualizarRolUsuario: (userId: string, newRole: User['role']) => Promise<void>;
   mostrarConfirmBajaModal: (user: User) => void;
   cerrarConfirmBajaModal: () => void;
   confirmarBajaUser: () => Promise<void>;
@@ -234,6 +237,8 @@ function adaptarUsuarioBackend(backendUser: UsuarioDTO): User {
     lastAccess: 'En línea',
     status: backendUser.estado === 'ACTIVO' ? 'ACTIVO' : 'BAJA',
     avatar: backendUser.avatarUrl || '/img/admin-avatar.jpg',
+    authMethod: backendUser.metodoAcceso?.toUpperCase() === 'GOOGLE' ? 'Google' : 'Correo',
+    registeredAt: backendUser.fechaRegistro || '—',
   };
 }
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -838,6 +843,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const loginWithGoogle = async (credential: string, remember: boolean = true): Promise<boolean> => {
+    try {
+      const response = await authService.loginWithGoogle(credential, remember);
+      const mappedUser = adaptarUsuarioBackend(response.usuario);
+
+      setCurrentUser(mappedUser);
+
+      if (mappedUser.role === 'Cocinero') {
+        setActiveView('cocina');
+      } else if (mappedUser.role === 'Administrador') {
+        setActiveView('caja');
+      } else {
+        setActiveView('mapa-mesas');
+      }
+
+      return true;
+    } catch (error: any) {
+      const mensaje =
+        error?.message ||
+        error?.response?.data?.message ||
+        'No se pudo iniciar sesión con Google';
+      Swal.fire({
+        imageUrl: manitaTiteImg,
+        imageWidth: 130,
+        imageHeight: 130,
+        imageAlt: 'Manita triste',
+        title: 'Error de Inicio de Sesión',
+        text: mensaje,
+        confirmButtonText: 'Intentar de nuevo',
+        confirmButtonColor: '#D98A1A',
+        background: '#FFFFFF',
+        color: '#1E110A',
+        customClass: {
+          popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+          image: 'mx-auto mb-2 object-contain',
+          title: 'text-[#1E110A] font-extrabold text-xl',
+          confirmButton: 'rounded-xl px-6 py-2.5 font-bold',
+        },
+      });
+      return false;
+    }
+  };
+
   const logout = () => {
     Swal.fire({
       imageUrl: manitaDudaImg,
@@ -1205,7 +1253,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     discount: number,
     tipPercent: number,
     method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
-    customTipAmount?: number
+    customTipAmount?: number,
+    redondeoAmount: number = 0
   ): TicketRegistrado | null => {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.currentOrder || table.currentOrder.items.length === 0) return null;
@@ -1235,7 +1284,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const propinaMonto = Number(
       (typeof customTipAmount === 'number' ? customTipAmount : (base * tipPercent) / 100).toFixed(2)
     );
-    const totalCobrado = Number((base + propinaMonto).toFixed(2));
+    const redondeoSeguro = Number((redondeoAmount > 0 ? redondeoAmount : 0).toFixed(2));
+    const totalCobrado = Number((base + propinaMonto + redondeoSeguro).toFixed(2));
 
     const pagoNormalizado: 'Efectivo' | 'Tarjeta' | 'Transferencia' =
       method === 'Efectivo en Mesa'
@@ -1249,9 +1299,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fechaClave = aClaveFechaLocal(ahora);
     const folioNum = table.currentOrder.folio;
 
+    const folioStr = `#${folioNum}`;
+    const yaExiste = ticketsRegistrados.some(
+      (t) => t.folio === folioStr && t.fechaClave === fechaClave && !t.corteId
+    );
+    if (yaExiste) {
+      return ticketsRegistrados.find(
+        (t) => t.folio === folioStr && t.fechaClave === fechaClave && !t.corteId
+      ) || null;
+    }
+
     const nuevoTicket: TicketRegistrado = {
       id: `tkt-${folioNum}-${Date.now()}`,
-      folio: `#${folioNum}`,
+      folio: folioStr,
       fechaClave,
       hora,
       pago: pagoNormalizado,
@@ -1275,9 +1335,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     discount: number,
     tipPercent: number,
     method: 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
-    customTipAmount?: number
+    customTipAmount?: number,
+    redondeoAmount: number = 0
   ) => {
-    registrarTicketCobro(tableId, discount, tipPercent, method, customTipAmount);
+    registrarTicketCobro(tableId, discount, tipPercent, method, customTipAmount, redondeoAmount);
 
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
@@ -1660,6 +1721,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const actualizarRolUsuario = async (userId: string, newRole: User['role']) => {
+    try {
+      const rolId = newRole === 'Administrador' ? 1 : newRole === 'Cocinero' ? 3 : 2;
+      const { data } = await api.patch<UsuarioDTO>(`/usuarios/${userId}/rol`, null, {
+        params: { rolId },
+      });
+      const actualizado = adaptarUsuarioBackend(data);
+      setUsers((prev) => prev.map((u) => (u.id === userId ? actualizado : u)));
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Rol actualizado a ${actualizado.role}`,
+        text: actualizado.name,
+        showConfirmButton: false,
+        timer: 2400,
+        background: '#FAF8F5',
+        color: '#1E110A',
+      });
+    } catch (error: any) {
+      Swal.fire('Error', error.message || 'No se pudo actualizar el rol del usuario', 'error');
+    }
+  };
+
   const mostrarConfirmBajaModal = (user: User) => {
     setUsuarioBaja(user);
     setIsConfirmBajaModalOpen(true);
@@ -1813,6 +1899,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isConfirmEliminarModalOpen,
         productoAEliminar,
         login,
+        loginWithGoogle,
         logout,
         setActiveView,
         selectTable,
@@ -1846,6 +1933,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mostrarAddUserModal,
         cerrarAddUserModal,
         guardarUser,
+        actualizarRolUsuario,
         mostrarConfirmBajaModal,
         cerrarConfirmBajaModal,
         confirmarBajaUser,

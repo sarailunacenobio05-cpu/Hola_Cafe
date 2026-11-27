@@ -14,6 +14,8 @@ export interface UsuarioDTO {
   rol: string;
   estado: string;
   avatarUrl?: string;
+  metodoAcceso?: string;
+  fechaRegistro?: string;
 }
 export interface AuthResponse {
   token: string;
@@ -37,6 +39,20 @@ export const authService = {
       localStorage.setItem(REMEMBERED_EMAIL_KEY, payload.correo.trim().toLowerCase());
     } else {
       localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+    return data;
+  },
+  async loginWithGoogle(credential: string, remember: boolean = true): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>("/auth/google", { credential });
+    const storage = remember ? localStorage : sessionStorage;
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(USER_STORAGE_KEY);
+    storage.setItem(TOKEN_STORAGE_KEY, data.token);
+    storage.setItem(USER_STORAGE_KEY, JSON.stringify(data.usuario));
+    if (remember && data.usuario?.correo) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, data.usuario.correo.trim().toLowerCase());
     }
     return data;
   },

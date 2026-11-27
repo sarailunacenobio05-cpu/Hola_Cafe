@@ -16,4 +16,6 @@ public class UsuarioResponse {
     private String rol;
     private String estado;
     private String avatarUrl;
+    private String metodoAcceso;
+    private String fechaRegistro;
 }

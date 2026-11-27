@@ -8,6 +8,7 @@ import { AlertaBarraPopover } from '../AlertaBarraPopover';
 import { UsuarioPerfilNavbar } from '../UsuarioPerfilNavbar';
 import { ReceiptPrinter, type ReceiptPrinterStage } from '../ui/ReceiptPrinter';
 import logoImg from '../../img/logo.png';
+import manitaTicketImg from '../../img/ManitaTicket.jpg';
 import {
   LogOut,
   ArrowLeft,
@@ -21,7 +22,6 @@ import {
   CheckCircle2,
   Percent,
   ChevronDown,
-  DoorOpen,
   Send,
 } from 'lucide-react';
 
@@ -97,7 +97,6 @@ export const CobroRapidoModal: React.FC = () => {
     isCobroModalOpen,
     cerrarCobroModal,
     registrarTicketCobro,
-    procesarPagoYLiberar,
     liberarMesaDirectamente,
     activeTableId,
     tables,
@@ -106,9 +105,10 @@ export const CobroRapidoModal: React.FC = () => {
     logout,
   } = useApp();
 
-  const [propinaPct, setPropinaPct] = useState(10);
+  const [propinaPct, setPropinaPct] = useState(0);
   const [esPropinaPersonalizada, setEsPropinaPersonalizada] = useState(false);
   const [propinaPersonalizadaMonto, setPropinaPersonalizadaMonto] = useState('');
+  const [redondear, setRedondear] = useState(false);
   const [descuentoPct, setDescuentoPct] = useState(0);
   const [menuDescuentoAbierto, setMenuDescuentoAbierto] = useState(false);
   const [metodo, setMetodo] = useState<MetodoId>('terminal');
@@ -148,8 +148,10 @@ export const CobroRapidoModal: React.FC = () => {
       setPrinterStage('processing');
       setMostrarWhatsApp(false);
       setTelefonoWhatsApp('');
+      setPropinaPct(0);
       setEsPropinaPersonalizada(false);
       setPropinaPersonalizadaMonto('');
+      setRedondear(false);
     }
   }, [isCobroModalOpen]);
 
@@ -194,15 +196,54 @@ export const CobroRapidoModal: React.FC = () => {
     const propina = esPropinaPersonalizada
       ? Math.round((parseFloat(propinaPersonalizadaMonto) || 0) * 100)
       : Math.round((base * propinaPct) / 100);
-    return { subtotalOriginal, ahorroProductos, subtotal, descuento, base, propina, total: base + propina };
-  }, [comanda.items, descuentoPct, propinaPct, esPropinaPersonalizada, propinaPersonalizadaMonto]);
+    const totalSinRedondeo = base + propina;
+    const centavosSobrantes = totalSinRedondeo % 100;
+    const redondeoPotencial = centavosSobrantes > 0 ? 100 - centavosSobrantes : 0;
+    const redondeo = redondear ? redondeoPotencial : 0;
+    return {
+      subtotalOriginal,
+      ahorroProductos,
+      subtotal,
+      descuento,
+      base,
+      propina,
+      redondeoPotencial,
+      redondeo,
+      total: totalSinRedondeo + redondeo,
+    };
+  }, [comanda.items, descuentoPct, propinaPct, esPropinaPersonalizada, propinaPersonalizadaMonto, redondear]);
 
   const etiquetaPropina = esPropinaPersonalizada ? 'Propina (Personalizada)' : `Propina (${propinaPct}%)`;
 
   const lineas = comanda.items.length;
   const articulos = comanda.items.reduce((s, it) => s + it.cantidad, 0);
 
-  const handleProcesarPago = () => {
+  const handleProcesarPago = async () => {
+    const confirm = await Swal.fire({
+      imageUrl: manitaTicketImg,
+      imageWidth: 135,
+      imageHeight: 135,
+      imageAlt: 'Manita generando ticket',
+      title: '¿Estás seguro de generar el ticket?',
+      text: 'Una vez generado el ticket no podrás regresar a modificar la comanda ni agregar más productos. Solo podrás imprimirlo o enviarlo por WhatsApp, y al hacerlo la mesa se liberará automáticamente.',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, generar ticket',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#7B3F00',
+      cancelButtonColor: '#786B63',
+      reverseButtons: true,
+      background: '#FFFFFF',
+      color: '#1E110A',
+      customClass: {
+        popup: 'rounded-2xl shadow-xl border border-[#EFE6DA]',
+        image: 'mx-auto mb-2 object-contain',
+        title: 'text-[#1E110A] font-extrabold text-xl',
+        confirmButton: 'rounded-xl px-5 py-2.5 font-bold',
+        cancelButton: 'rounded-xl px-5 py-2.5 font-bold',
+      },
+    });
+    if (!confirm.isConfirmed) return;
+
     setMenuDescuentoAbierto(false);
     setFechaPago(formatFechaTicket());
     if (!ticketRegistrado && activeTableId && activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
@@ -211,12 +252,20 @@ export const CobroRapidoModal: React.FC = () => {
         descuentoPct,
         propinaPct,
         metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
-        totales.propina / 100
+        totales.propina / 100,
+        totales.redondeo / 100
       );
       setTicketRegistrado(true);
     }
     setPagoActivo(true);
     setPrintRun((n) => n + 1);
+  };
+
+  const liberarMesaYCerrar = () => {
+    if (activeTableId) {
+      liberarMesaDirectamente(activeTableId);
+    }
+    handleCerrar();
   };
 
   const handleCerrar = () => {
@@ -273,6 +322,11 @@ export const CobroRapidoModal: React.FC = () => {
     const propinaRow =
       totales.propina > 0
         ? `<tr class="muted"><td>${escapeHtml(etiquetaPropina)}</td><td class="amt">${escapeHtml(fmt(totales.propina))}</td></tr>`
+        : '';
+
+    const redondeoRow =
+      totales.redondeo > 0
+        ? `<tr class="muted"><td>Redondeo</td><td class="amt">+${escapeHtml(fmt(totales.redondeo))}</td></tr>`
         : '';
 
     const html = `<!doctype html>
@@ -373,6 +427,7 @@ export const CobroRapidoModal: React.FC = () => {
         <tr class="muted"><td>Subtotal</td><td class="amt">${escapeHtml(fmt(totales.subtotal))}</td></tr>
         ${descuentoRow}
         ${propinaRow}
+        ${redondeoRow}
         <tr class="total"><td>Total pagado</td><td class="amt">${escapeHtml(fmt(totales.total))}</td></tr>
       </tbody>
     </table>
@@ -408,11 +463,23 @@ export const CobroRapidoModal: React.FC = () => {
       const win = iframe.contentWindow;
       if (!win) {
         cleanup();
+        liberarMesaYCerrar();
         return;
       }
       win.onafterprint = cleanup;
       win.focus();
       win.print();
+      liberarMesaYCerrar();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Ticket impreso · Mesa ${comanda.mesa} liberada`,
+        showConfirmButton: false,
+        timer: 2600,
+        background: '#ECFDF5',
+        color: '#065F46',
+      });
       setTimeout(cleanup, 60000);
     };
 
@@ -450,6 +517,7 @@ export const CobroRapidoModal: React.FC = () => {
       `Subtotal: ${fmt(totales.subtotal)}`,
       ...(descuentoPct > 0 ? [`Descuento (${descuentoPct}%): -${fmt(totales.descuento)}`] : []),
       ...(totales.propina > 0 ? [`${etiquetaPropina}: ${fmt(totales.propina)}`] : []),
+      ...(totales.redondeo > 0 ? [`Redondeo: +${fmt(totales.redondeo)}`] : []),
       `*Total pagado: ${fmt(totales.total)} MXN*`,
       `*Pagado con:* ${metodoActual.titulo}`,
       '──────────────────',
@@ -522,8 +590,8 @@ export const CobroRapidoModal: React.FC = () => {
           icon: 'success',
           title:
             data?.modo === 'pdf'
-              ? `Ticket PDF enviado por WhatsApp (${data.destino})`
-              : `Ticket enviado por WhatsApp (${data.destino})`,
+              ? `Ticket PDF enviado · Mesa ${comanda.mesa} liberada`
+              : `Ticket enviado · Mesa ${comanda.mesa} liberada`,
           showConfirmButton: false,
           timer: 3200,
           background: '#ECFDF5',
@@ -531,6 +599,7 @@ export const CobroRapidoModal: React.FC = () => {
         });
         setMostrarWhatsApp(false);
         setTelefonoWhatsApp('');
+        liberarMesaYCerrar();
       } else {
         const res = await Swal.fire({
           icon: 'info',
@@ -545,6 +614,7 @@ export const CobroRapidoModal: React.FC = () => {
         });
         if (res.isConfirmed) {
           abrirWaMe();
+          liberarMesaYCerrar();
         }
       }
     } catch (error: any) {
@@ -559,27 +629,11 @@ export const CobroRapidoModal: React.FC = () => {
       });
       if (res.isConfirmed) {
         abrirWaMe();
+        liberarMesaYCerrar();
       }
     } finally {
       setEnviandoWhatsApp(false);
     }
-  };
-
-  const handleLiberarMesa = () => {
-    if (activeTableId) {
-      if (!ticketRegistrado && activeTable?.currentOrder && activeTable.currentOrder.items.length > 0) {
-        procesarPagoYLiberar(
-          activeTableId,
-          descuentoPct,
-          propinaPct,
-          metodoActual.titulo as 'Terminal Bancaria' | 'Efectivo en Mesa' | 'Transferencia QR / CoDi',
-          totales.propina / 100
-        );
-      } else {
-        liberarMesaDirectamente(activeTableId);
-      }
-    }
-    handleCerrar();
   };
 
   if (!isCobroModalOpen) return null;
@@ -612,14 +666,16 @@ export const CobroRapidoModal: React.FC = () => {
       {/* 2. BARRA DE CONTEXTO */}
       <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 max-w-[1600px] w-full mx-auto">
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleCerrar}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#D5C7BA] hover:border-[#DF7B1B] hover:text-[#DF7B1B] text-xs font-bold text-[#1E110A] transition-all shadow-2xs"
-            title="Volver al mapa de mesas"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#DF7B1B]" />
-            <span>Mesas</span>
-          </button>
+          {!bloqueado && (
+            <button
+              onClick={handleCerrar}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#D5C7BA] hover:border-[#DF7B1B] hover:text-[#DF7B1B] text-xs font-bold text-[#1E110A] transition-all shadow-2xs"
+              title="Volver al mapa de mesas"
+            >
+              <ArrowLeft className="w-4 h-4 text-[#DF7B1B]" />
+              <span>Mesas</span>
+            </button>
+          )}
 
           <span className="bg-[#7B3F00] text-white text-sm font-black px-3 py-1 rounded-lg">Mesa {comanda.mesa}</span>
         </div>
@@ -776,6 +832,12 @@ export const CobroRapidoModal: React.FC = () => {
                 <span className="text-[#786B63]">{etiquetaPropina}</span>
                 <span className="font-bold">{fmt(totales.propina)}</span>
               </div>
+              {totales.redondeo > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#059669] font-semibold">Redondeo</span>
+                  <span className="font-bold text-[#059669]">+{fmt(totales.redondeo)}</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -836,6 +898,36 @@ export const CobroRapidoModal: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Opción para redondear centavos a peso entero */}
+            <button
+              type="button"
+              disabled={bloqueado || totales.redondeoPotencial === 0}
+              onClick={() => setRedondear((v) => !v)}
+              className={`w-full px-3.5 py-2.5 rounded-xl border flex items-center justify-between gap-3 transition-all disabled:opacity-55 disabled:cursor-not-allowed ${
+                redondear && totales.redondeoPotencial > 0
+                  ? 'bg-[#ECFDF5] border-[#6EE7B7] text-[#065F46]'
+                  : 'bg-[#FAF8F5] border-[#E5DCD3] text-[#1E110A] hover:border-[#D5C7BA]'
+              }`}
+            >
+              <div className="text-left">
+                <span className="block text-xs font-extrabold">Redondear centavos</span>
+                <span className="block text-[10px] text-[#786B63] font-medium">
+                  {totales.redondeoPotencial > 0
+                    ? `Sube +${fmt(totales.redondeoPotencial)} para cerrar en ${fmt(totales.base + totales.propina + totales.redondeoPotencial)}`
+                    : 'El total actual ya es un número entero'}
+                </span>
+              </div>
+              <span
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black shrink-0 ${
+                  redondear && totales.redondeoPotencial > 0
+                    ? 'bg-[#059669] text-white'
+                    : 'bg-white border border-[#D5C7BA] text-[#6E5A4E]'
+                }`}
+              >
+                {redondear && totales.redondeoPotencial > 0 ? 'Activado' : 'Redondear'}
+              </span>
+            </button>
 
             <div className="bg-[#FAF8F5] border border-[#E5DCD3] rounded-2xl p-4 flex items-center justify-between" aria-live="polite">
               <div>
@@ -999,6 +1091,12 @@ export const CobroRapidoModal: React.FC = () => {
                             <dd>{fmt(totales.propina)}</dd>
                           </div>
                         )}
+                        {totales.redondeo > 0 && (
+                          <div className="flex justify-between gap-4 text-[#059669] font-medium">
+                            <dt>Redondeo</dt>
+                            <dd>+{fmt(totales.redondeo)}</dd>
+                          </div>
+                        )}
                         <div className="flex justify-between gap-4 font-semibold pt-1">
                           <dt>Total pagado</dt>
                           <dd>{fmt(totales.total)}</dd>
@@ -1120,16 +1218,9 @@ export const CobroRapidoModal: React.FC = () => {
                   </form>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleLiberarMesa}
-                  disabled={!pagado}
-                  title={pagado ? '' : 'Primero genera el ticket'}
-                  className="w-full py-2.5 px-3 bg-[#EDE3D8] hover:bg-[#E3D5C6] rounded-xl text-xs font-bold text-[#7B3F00] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <DoorOpen className="w-4 h-4" />
-                  Liberar Mesa {comanda.mesa}
-                </button>
+                <p className="text-[11px] text-center text-[#786B63] font-medium pt-0.5">
+                  Al imprimir el ticket físico o enviarlo por WhatsApp, la Mesa {comanda.mesa} se liberará automáticamente.
+                </p>
               </div>
             )}
           </section>

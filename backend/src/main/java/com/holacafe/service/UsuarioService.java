@@ -5,15 +5,18 @@ import com.holacafe.exception.ResourceNotFoundException;
 import com.holacafe.model.CorteCaja;
 import com.holacafe.model.Mesa;
 import com.holacafe.model.OrdenComanda;
+import com.holacafe.model.Rol;
 import com.holacafe.model.Usuario;
 import com.holacafe.repositories.CorteCajaRepository;
 import com.holacafe.repositories.MesaRepository;
 import com.holacafe.repositories.OrdenComandaRepository;
+import com.holacafe.repositories.RolRepository;
 import com.holacafe.repositories.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -21,6 +24,7 @@ import java.util.List;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final RolRepository rolRepository;
     private final MesaRepository mesaRepository;
     private final OrdenComandaRepository ordenComandaRepository;
     private final CorteCajaRepository corteCajaRepository;
@@ -81,6 +85,24 @@ public class UsuarioService {
         usuarioRepository.delete(usuario);
     }
 
+    @Transactional
+    public UsuarioResponse actualizarRol(String id, Integer rolId, String correoAdminActual) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
+
+        if (correoAdminActual != null
+                && usuario.getCorreo().equalsIgnoreCase(correoAdminActual)
+                && !Integer.valueOf(1).equals(rolId)) {
+            throw new IllegalArgumentException("No puedes cambiar tu propio rol de administrador mientras tienes la sesión activa.");
+        }
+
+        Rol nuevoRol = rolRepository.findById(rolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con ID: " + rolId));
+
+        usuario.setRol(nuevoRol);
+        return mapearUsuario(usuarioRepository.save(usuario));
+    }
+
     @Transactional 
     public UsuarioResponse alternarEstado(String id){
         Usuario usuario = usuarioRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
@@ -90,13 +112,21 @@ public class UsuarioService {
     }
 
     private UsuarioResponse mapearUsuario(Usuario usuario) {
+        String metodo = (usuario.getMetodoAcceso() != null && !usuario.getMetodoAcceso().isBlank())
+                ? usuario.getMetodoAcceso()
+                : "CORREO";
+        String fechaReg = (usuario.getFechaRegistro() != null)
+                ? usuario.getFechaRegistro().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : "—";
         return new UsuarioResponse(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getCorreo(),
                 usuario.getRol().getNombre(),
                 usuario.getEstado(),
-                usuario.getAvatarUrl()
+                usuario.getAvatarUrl(),
+                metodo,
+                fechaReg
         );
     }
 }

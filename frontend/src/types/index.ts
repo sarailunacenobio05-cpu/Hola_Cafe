@@ -10,6 +10,8 @@ export interface User {
   lastAccess: string;
   status: 'ACTIVO' | 'BAJA';
   avatar?: string;
+  authMethod?: 'Google' | 'Correo';
+  registeredAt?: string;
 }
 
 export type TableStatus = 

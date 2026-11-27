@@ -1,6 +1,7 @@
 package com.holacafe.controller;
 
 import com.holacafe.dto.AuthResponse;
+import com.holacafe.dto.GoogleLoginRequest;
 import com.holacafe.dto.LoginRequest;
 import com.holacafe.dto.RecuperarPasswordRequest;
 import com.holacafe.dto.RegistroUsuarioRequest;
@@ -29,6 +30,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         UsuarioResponse usuario = authService.autenticar(request);
+        String token = jwtService.generarToken(usuario.getCorreo(), usuario.getRol());
+        return ResponseEntity.ok(new AuthResponse(token, usuario));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginConGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        UsuarioResponse usuario = authService.autenticarConGoogle(request.getCredential());
         String token = jwtService.generarToken(usuario.getCorreo(), usuario.getRol());
         return ResponseEntity.ok(new AuthResponse(token, usuario));
     }

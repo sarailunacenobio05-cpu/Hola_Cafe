@@ -38,4 +38,10 @@ public class Usuario {
 
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
+
+    @Column(name = "metodo_acceso", nullable = false, length = 30)
+    private String metodoAcceso = "CORREO";
+
+    @Column(name = "fecha_registro", nullable = false)
+    private LocalDateTime fechaRegistro = LocalDateTime.now();
 }
