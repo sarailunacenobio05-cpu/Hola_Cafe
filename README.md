@@ -234,7 +234,7 @@ La interfaz de usuario estará disponible en: `http://localhost:3000`
 
 ## Enlaces del Proyecto
 * **Tablero de GitHub Projects:** [Enlace a GitHub Projects](https://github.com/users/sarailunacenobio05-cpu/projects/3)
-* **Prototipo Navegable en Figma:** [Enlace a Figma](https://www.figma.com/proto/SpSkMYMPmkKvtXkX2g9LoV/PrograWeb?node-id=42-1047&p=f&t=T4PO96IxY48eLIyl-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=42%3A1047&show-proto-sidebar=1)
+* **Prototipo en Figma:** [Enlace a Figma]([https://www.figma.com/proto/SpSkMYMPmkKvtXkX2g9LoV/PrograWeb?node-id=42-1047&p=f&t=T4PO96IxY48eLIyl-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=42%3A1047&show-proto-sidebar=1](https://www.figma.com/design/SpSkMYMPmkKvtXkX2g9LoV/PrograWeb?node-id=0-1&t=KeYYcRslrWU8rTgC-1))
 * **URL Base de la API (Producción VPS):** `https://holacafe.tech/api`
 * **URL de la Aplicación (Producción VPS):** [Enlace al sistema](https://holacafe.tech)
 
