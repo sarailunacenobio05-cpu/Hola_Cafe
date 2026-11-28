@@ -1,0 +1,734 @@
+opencollection: 1.0.0
+info:
+  name: Hola_Cafe_APIs
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ''
+      port: ''
+      auth:
+        username: ''
+        password: ''
+      bypassProxy: ''
+  environments:
+    - name: VPS
+      variables:
+        - name: baseUrl
+          value: https://holacafe.tech/api
+        - name: token
+          secret: true
+items:
+  - info:
+      name: Autenticación
+      type: folder
+      seq: 1
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Cerrar_Sesión
+          type: http
+          seq: 4
+        http:
+          method: POST
+          url: '{{baseUrl}}/auth/logout'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Inicio_Sesión
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: '{{baseUrl}}/auth/login'
+          body:
+            type: json
+            data: |-
+              {
+                "correo": "admin@holacafe.com",
+                "password": "HolaCafe#2026"
+              }
+        runtime:
+          scripts:
+            - type: after-response
+              code: |-
+                if (res.status === 200 && res.body.token) {
+                  bru.setEnvVar("token", res.body.token);
+                }
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Recuperacion_Contraseña_Solicitud
+          type: http
+          seq: 3
+        http:
+          method: POST
+          url: '{{baseUrl}}/auth/recuperar-password'
+          body:
+            type: json
+            data: |-
+              {
+                "correo": "dmartinezvillalobos23@gmail.com"
+              }
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Registrar_Nuevo_Usuario
+          type: http
+          seq: 2
+        http:
+          method: POST
+          url: '{{baseUrl}}/auth/registro'
+          body:
+            type: json
+            data: |-
+              {
+                "nombre": "Dante",
+                "correo": "dmartinezvillalobos23@gmail.com",
+                "password": "HolaCafe#2026",
+                "rolId": 2
+              }
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Contrasenia_Invalida
+          type: http
+          seq: 4
+        http:
+          method: POST
+          url: '{{baseUrl}}/auth/registro'
+          body:
+            type: json
+            data: |-
+              {
+                "nombre": "Usuario Prueba",
+                "correo": "prueba@holacafe.com",
+                "password": "123",
+                "rolId": 2
+              }
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Acceso_Sin_Token
+          type: http
+          seq: 4
+        http:
+          method: GET
+          url: '{{baseUrl}}/comandas/tickets-dia'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: Usuarios
+      type: folder
+      seq: 3
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Usuarios
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: '{{baseUrl}}/usuarios/paginado?page=1&size=5&search=&estado=Todos'
+          params:
+            - name: page
+              value: '1'
+              type: query
+            - name: size
+              value: '5'
+              type: query
+            - name: search
+              value: ''
+              type: query
+            - name: estado
+              value: Todos
+              type: query
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Cambiar_ROl
+          type: http
+          seq: 2
+        http:
+          method: PATCH
+          url: '{{baseUrl}}/usuarios/u-1/rol?rolId=2'
+          params:
+            - name: rolId
+              value: '2'
+              type: query
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Usuario_Activo_Baja
+          type: http
+          seq: 3
+        http:
+          method: PATCH
+          url: '{{baseUrl}}/usuarios/u-1/estado'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Eliminar_Usuario
+          type: http
+          seq: 4
+        http:
+          method: DELETE
+          url: '{{baseUrl}}/usuarios/'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: Mesas_Botones_Mesas
+      type: folder
+      seq: 4
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Mapa_Mesas
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: '{{baseUrl}}/mesas'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Listar_Botones
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: '{{baseUrl}}/mesas/botones/paginado?page=1&size=8&search=&estado=Todos'
+          params:
+            - name: page
+              value: '1'
+              type: query
+            - name: size
+              value: '8'
+              type: query
+            - name: search
+              value: ''
+              type: query
+            - name: estado
+              value: Todos
+              type: query
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Nuevo_Boton
+          type: http
+          seq: 3
+        http:
+          method: POST
+          url: '{{baseUrl}}/mesas/botones'
+          body:
+            type: json
+            data: |-
+              {
+                "id": "BOT-M10",
+                "nombre": "Botón de Terraza 10",
+                "mesaId": "M08",
+                "bateria": 100,
+                "estado": "En línea"
+              }
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Eliminar_Boton
+          type: http
+          seq: 4
+        http:
+          method: DELETE
+          url: '{{baseUrl}}/mesas/botones/BOT-M10'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Pulsacion_Boton
+          type: http
+          seq: 5
+        http:
+          method: POST
+          url: '{{baseUrl}}/mesas/M03/llamar'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Listar_Alertas_Activas
+          type: http
+          seq: 6
+        http:
+          method: GET
+          url: '{{baseUrl}}/mesas/alertas'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Marcar_Alerta_Atendida
+          type: http
+          seq: 7
+        http:
+          method: PATCH
+          url: '{{baseUrl}}/mesas/alertas/28/atender'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: Cortes_Caja
+      type: folder
+      seq: 6
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Cortes_Caja_Paginados
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: '{{baseUrl}}/cortes-caja/paginado?page=1&size=5'
+          params:
+            - name: page
+              value: '1'
+              type: query
+            - name: size
+              value: '5'
+              type: query
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Todos_Cortes_Caja
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: '{{baseUrl}}/cortes-caja'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Nuevo_Corte_Caja
+          type: http
+          seq: 3
+        http:
+          method: POST
+          url: '{{baseUrl}}/cortes-caja'
+          body:
+            type: json
+            data: |-
+              {
+                "montoEfectivo": 3450.00,
+                "montoTarjeta": 5120.00,
+                "montoTransferenciaQr": 1280.00,
+                "observaciones": "Corte de turno sin diferencias en efectivo"
+              }
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: Productos_Menu
+      type: folder
+      seq: 2
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: ActualizarProducto
+          type: http
+          seq: 6
+        http:
+          method: PUT
+          url: '{{baseUrl}}/productos/prod-1'
+          body:
+            type: json
+            data: |-
+              {
+                "nombre": "Grilled Cheese Artesanal",
+                "descripcion": "Pan masa madre dorado a la plancha con mezcla de quesos fundidos",
+                "precio": 115.00,
+                "categoriaNombre": "Alimentos Salados",
+                "estado": "DISPONIBLE",
+                "permiteNotasCocina": true,
+                "opciones": []
+              }
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: CategoríasMenú
+          type: http
+          seq: 3
+        http:
+          method: GET
+          url: '{{baseUrl}}/productos/categorias'
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: CrearNuevoProducto
+          type: http
+          seq: 5
+        http:
+          method: POST
+          url: '{{baseUrl}}/productos'
+          body:
+            type: json
+            data: |-
+              {
+                "nombre": "Affogato Artesanal",
+                "descripcion": "Helado de vainilla artesanal bañado con shot doble de espresso caliente",
+                "precio": 85.00,
+                "categoriaNombre": "Dulces",
+                "estado": "DISPONIBLE",
+                "permiteNotasCocina": true,
+                "opciones": [
+                  "Con bola extra",
+                  "Descafeinado"
+                ]
+              }
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: EliminarProducto
+          type: http
+          seq: 7
+        http:
+          method: DELETE
+          url: '{{baseUrl}}/productos/prod-28'
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: ListarProductos
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: '{{baseUrl}}/productos/paginado?page=3&size=10&search=&categoria=Todas&estado=Todos'
+          params:
+            - name: page
+              value: '3'
+              type: query
+            - name: size
+              value: '10'
+              type: query
+            - name: search
+              value: ''
+              type: query
+            - name: categoria
+              value: Todas
+              type: query
+            - name: estado
+              value: Todos
+              type: query
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: ListarProductosFiltro
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: '{{baseUrl}}/productos?search=Crepa&estado=DISPONIBLE'
+          params:
+            - name: search
+              value: Crepa
+              type: query
+            - name: estado
+              value: DISPONIBLE
+              type: query
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Producto_Por_ID
+          type: http
+          seq: 4
+        http:
+          method: GET
+          url: '{{baseUrl}}/productos/prod-1'
+          auth: inherit
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: Comandas y Tickets
+      type: folder
+      seq: 5
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Tikcet_Revisado
+          type: http
+          seq: 2
+        http:
+          method: PATCH
+          url: '{{baseUrl}}/comandas/ord-101/revisar'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Tikcets
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: '{{baseUrl}}/comandas/tickets-dia'
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+      - info:
+          name: Platillo_Completado_Cocina
+          type: http
+          seq: 3
+        http:
+          method: PATCH
+          url: '{{baseUrl}}/comandas/detalles/1/completar?completado=true'
+          params:
+            - name: completado
+              value: 'true'
+              type: query
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+  - info:
+      name: WhatssApp
+      type: folder
+      seq: 7
+    request:
+      auth: inherit
+    items:
+      - info:
+          name: Ticket_WhatssApp
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: '{{baseUrl}}/notificaciones/whatsapp'
+          body:
+            type: json
+            data: |-
+              {
+                "telefono": "9511931409",
+                "mensaje": "Ticket #1035 de ¡Hola, Café!",
+                "folio": 1036,
+                "mesa": "01",
+                "mesero": "David Huerta",
+                "fecha": "27 NOV 2026 · 12:00",
+                "metodoPago": "Terminal Bancaria",
+                "subtotal": 260.00,
+                "descuento": 0.00,
+                "propina": 26.00,
+                "etiquetaPropina": "Propina (10%)",
+                "total": 286.00,
+                "items": [
+                  {
+                    "cantidad": 2,
+                    "nombre": "Latte Especial",
+                    "precioUnitario": 75.00,
+                    "importe": 150.00,
+                    "detalle": "Leche de Avena"
+                  },
+                  {
+                    "cantidad": 2,
+                    "nombre": "Croissant de Mantequilla",
+                    "precioUnitario": 55.00,
+                    "importe": 110.00,
+                    "detalle": "Repostería y Pan"
+                  }
+                ]
+              }
+          auth:
+            type: bearer
+            token: '{{token}}'
+        settings:
+          encodeUrl: true
+          timeout: 0
+          followRedirects: true
+          maxRedirects: 5
+          forwardAuthorizationHeader: false
+bundled: true
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
+    exportedAt: '2026-11-28T03:50:05.452Z'
+    exportedUsing: Bruno
