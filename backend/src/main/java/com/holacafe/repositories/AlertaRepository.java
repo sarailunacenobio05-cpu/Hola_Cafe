@@ -11,4 +11,6 @@ public interface AlertaRepository extends JpaRepository<Alerta, Integer> {
     List<Alerta> findByEstadoTrue();
 
     List<Alerta> findByMesaId(String mesaId);
+
+    List<Alerta> findByMesaIdAndEstadoTrue(String mesaId);
 }

@@ -476,8 +476,8 @@ export const INITIAL_TABLES: TableInfo[] = [
     waiterId: 'u-2',
     waiterName: 'Gael Ortiz',
     status: 'Pidiendo Cuenta',
-    hasAlert: true,
-    alertType: 'Solicitud de cuenta',
+    hasAlert: false,
+    alertType: undefined,
     currentOrder: {
       id: 'ord-104',
       folio: 1037,
@@ -559,8 +559,8 @@ export const INITIAL_TABLES: TableInfo[] = [
     waiterId: 'u-5',
     waiterName: 'Melissa Huerta',
     status: 'Atendido',
-    hasAlert: true,
-    alertType: 'Llamada de cliente',
+    hasAlert: false,
+    alertType: undefined,
     currentOrder: {
       id: 'ord-107',
       folio: 1040,

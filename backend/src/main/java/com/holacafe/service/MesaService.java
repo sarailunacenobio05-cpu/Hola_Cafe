@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -170,6 +171,13 @@ public class MesaService {
     public AlertaResponse atenderAlerta(Integer alertaId) {
         Alerta alerta = alertaRepository.findById(alertaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Alerta no encontrada con ID: " + alertaId));
+        if (alerta.getMesa() != null) {
+            List<Alerta> activasMesa = alertaRepository.findByMesaIdAndEstadoTrue(alerta.getMesa().getId());
+            if (!activasMesa.isEmpty()) {
+                activasMesa.forEach(a -> a.setEstado(false));
+                alertaRepository.saveAll(activasMesa);
+            }
+        }
         alerta.setEstado(false);
         return mapearAlerta(alertaRepository.save(alerta));
     }
@@ -181,10 +189,18 @@ public class MesaService {
         Boton boton = botonRepository.findByMesaId(mesaId)
                 .orElseThrow(() -> new ResourceNotFoundException("No hay botón IoT asignado a la mesa: " + mesaId));
 
+        List<Alerta> activas = alertaRepository.findByMesaIdAndEstadoTrue(mesa.getId());
+        if (!activas.isEmpty()) {
+            Alerta existente = activas.get(0);
+            existente.setFecha(LocalDateTime.now());
+            return mapearAlerta(alertaRepository.save(existente));
+        }
+
         Alerta alerta = new Alerta();
         alerta.setBoton(boton);
         alerta.setMesa(mesa);
         alerta.setEstado(true);
+        alerta.setFecha(LocalDateTime.now());
         return mapearAlerta(alertaRepository.save(alerta));
     }
 
@@ -235,10 +251,19 @@ public class MesaService {
         boton.setEstado("En línea");
         botonRepository.save(boton);
 
+        // Agrupar alertas: si la mesa ya tiene una alerta activa pendiente, no duplicar
+        List<Alerta> activas = alertaRepository.findByMesaIdAndEstadoTrue(mesa.getId());
+        if (!activas.isEmpty()) {
+            Alerta existente = activas.get(0);
+            existente.setFecha(LocalDateTime.now());
+            return mapearAlerta(alertaRepository.save(existente));
+        }
+
         Alerta alerta = new Alerta();
         alerta.setBoton(boton);
         alerta.setMesa(mesa);
         alerta.setEstado(true);
+        alerta.setFecha(LocalDateTime.now());
         return mapearAlerta(alertaRepository.save(alerta));
     }
 
@@ -295,7 +320,8 @@ public class MesaService {
                 mesaId,
                 mesaNumero,
                 usuarioId,
-                alerta.getEstado()
+                alerta.getEstado(),
+                alerta.getFecha()
         );
     }
 }

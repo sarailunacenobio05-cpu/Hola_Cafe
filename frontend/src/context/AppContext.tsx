@@ -695,6 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(resAlertas.data)) {
           const nuevasAlertas: BarAlert[] = [];
           const mesasConAlerta = new Set<string>();
+          const horasPorAlerta = new Map<string, string>();
 
           resAlertas.data.forEach((a: any) => {
             if (!a.estado) return;
@@ -704,6 +705,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (!tableId) return;
 
             const alertId = `db-al-${a.id}`;
+            const horaFormateada = (a.fecha ? new Date(a.fecha) : new Date()).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            horasPorAlerta.set(alertId, horaFormateada);
+
             if (!notifiedAlertIdsRef.current.has(alertId)) {
               notifiedAlertIdsRef.current.add(alertId);
               mesasConAlerta.add(tableId);
@@ -712,7 +719,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 dbId: a.id,
                 tableId,
                 message: 'Llamada desde botón físico de mesa',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                time: horaFormateada,
                 tipo: 'boton',
               });
             }
@@ -742,19 +749,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             );
 
             const reciente = nuevasAlertas[0];
-            Swal.fire({
-              toast: true,
-              position: 'top-end',
-              icon: 'warning',
-              title: `${reciente.tableId.replace('M', 'Mesa ')} presionó el botón`,
-              text: reciente.message,
-              showConfirmButton: false,
-              timer: 4000,
-              timerProgressBar: true,
-              background: '#FFF5F5',
-              color: '#1E110A',
-            });
+            if (currentUser.role === 'Mesero') {
+              Swal.fire({
+                toast: true,
+                position: 'top-end',
+                html: `
+                  <div style="display:flex;align-items:center;gap:10px;text-align:left;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:#FEE2E2;color:#D32F2F;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    </div>
+                    <div style="min-width:0;">
+                      <div style="font-size:13px;font-weight:800;color:#991B1B;line-height:1.25;">${reciente.tableId.replace('M', 'Mesa ')} presionó el botón</div>
+                      <div style="font-size:11.5px;color:#374151;margin-top:2px;line-height:1.3;">${reciente.message}</div>
+                    </div>
+                  </div>
+                `,
+                showConfirmButton: false,
+                timer: 4500,
+                timerProgressBar: true,
+                background: '#FFF5F5',
+                color: '#1E110A',
+                customClass: {
+                  popup: 'rounded-2xl shadow-xl border border-[#FECACA] !p-3 !w-auto !max-w-sm',
+                  htmlContainer: '!m-0 !p-0',
+                },
+              });
+            }
           }
+
+          // Sincronizar bajas y actualizar hora si se volvió a presionar el botón sin duplicar alerta
+          const idsActivosEnBd = new Set(
+            resAlertas.data.filter((a: any) => a.estado).map((a: any) => `db-al-${a.id}`)
+          );
+          setBarAlerts((prev) => {
+            let cambio = false;
+            const next = prev
+              .filter((a) => {
+                const mantener = !a.id.startsWith('db-al-') || idsActivosEnBd.has(a.id);
+                if (!mantener) cambio = true;
+                return mantener;
+              })
+              .map((a) => {
+                const nuevaHora = horasPorAlerta.get(a.id);
+                if (nuevaHora && a.time !== nuevaHora) {
+                  cambio = true;
+                  return { ...a, time: nuevaHora };
+                }
+                return a;
+              });
+            return cambio ? next : prev;
+          });
         }
       } catch {
         // Silenciar errores transitorios de red en polling
@@ -779,10 +823,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     } catch { }
-    return [
-      { id: 'al-1', tableId: 'M01', message: 'Mesa 01 presionó el botón de aviso', time: '14:31' },
-      { id: 'al-2', tableId: 'M05', message: 'Mesa 05 solicita atención del mesero', time: '14:28' },
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -1632,8 +1673,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const descartarAlertaBarra = (id: string) => {
     const alerta = barAlerts.find(a => a.id === id);
     if (alerta) {
-      if (alerta.dbId && authService.getToken()) {
-        api.patch(`/mesas/alertas/${alerta.dbId}/atender`).catch(() => {});
+      if (authService.getToken()) {
+        if (alerta.dbId) {
+          api.patch(`/mesas/alertas/${alerta.dbId}/atender`).catch(() => {});
+        }
+        barAlerts
+          .filter((a) => a.tableId === alerta.tableId && a.dbId && a.id !== id)
+          .forEach((a) => {
+            api.patch(`/mesas/alertas/${a.dbId}/atender`).catch(() => {});
+          });
       }
       const esEntregaCocina = alerta.tipo === 'cocina';
       setMesasAtendidas(prev => ({ ...prev, [alerta.tableId]: true }));
@@ -1666,6 +1714,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           )
         );
       }
+      const esBoton = !alerta.tipo || alerta.tipo === 'boton';
+      setBarAlerts(prev =>
+        prev.filter(a => {
+          if (a.id === id) return false;
+          if (esBoton && a.tableId === alerta.tableId && (!a.tipo || a.tipo === 'boton')) return false;
+          return true;
+        })
+      );
+      return;
     }
     setBarAlerts(prev => prev.filter(a => a.id !== id));
   };

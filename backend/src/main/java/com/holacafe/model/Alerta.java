@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "alertas")
@@ -30,4 +31,7 @@ public class Alerta {
 
     @Column(nullable = false)
     private Boolean estado = true;
+
+    @Column(nullable = false)
+    private LocalDateTime fecha = LocalDateTime.now();
 }

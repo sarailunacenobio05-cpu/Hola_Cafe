@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import { useApp, esAlertaParaMesero } from '../context/AppContext';
 
 export const AlertaBarraPopover: React.FC = () => {
-  const { barAlerts, currentUser, descartarAlertaBarra, activarAlertaBarra } = useApp();
+  const { barAlerts, currentUser, descartarAlertaBarra } = useApp();
   const [abierto, setAbierto] = useState(false);
 
   const visibleAlerts = barAlerts.filter((a) => esAlertaParaMesero(a, currentUser));
@@ -26,12 +26,6 @@ export const AlertaBarraPopover: React.FC = () => {
       background: '#FAF8F5',
       color: '#1E110A',
     });
-  };
-
-  const handleSimularBoton = () => {
-    const mesas = ['M02', 'M04', 'M07', 'M08'];
-    const mesaRandom = mesas[Math.floor(Math.random() * mesas.length)];
-    activarAlertaBarra(mesaRandom, `${mesaRandom.replace('M', 'Mesa ')} solicita atención del mesero`);
   };
 
   return (
@@ -138,13 +132,6 @@ export const AlertaBarraPopover: React.FC = () => {
 
           <div className="p-2.5 bg-white border-t border-[#E5DCD3] flex justify-between items-center">
             <span className="text-[10px] text-[#8C7D73] font-medium">Botones IoT en tiempo real</span>
-            <button
-              type="button"
-              onClick={handleSimularBoton}
-              className="text-[11px] font-bold text-[#8B4513] hover:text-[#DF7B1B] px-2 py-1 rounded-lg bg-[#FAF8F5] border border-[#E5DCD3] transition-colors"
-            >
-              + Simular presión
-            </button>
           </div>
         </div>
       )}

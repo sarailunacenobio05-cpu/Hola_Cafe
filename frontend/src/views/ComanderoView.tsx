@@ -19,6 +19,7 @@ import {
   MessageSquarePlus,
   CheckCircle2,
   X,
+  Bell,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import manitaComandaImg from '../img/ManitaComanda.jpg';
@@ -35,6 +36,7 @@ const normalizeText = (value: string) =>
 export const ComanderoView: React.FC = () => {
   const {
     tables,
+    barAlerts,
     menuItems,
     currentUser,
     activeTableId,
@@ -48,6 +50,7 @@ export const ComanderoView: React.FC = () => {
     enviarOrdenACocina,
     mostrarCobroModal,
     liberarMesaDirectamente,
+    marcarMesaAtendida,
   } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
@@ -350,19 +353,32 @@ export const ComanderoView: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1 flex-wrap">
-                {tables.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => selectTable(t.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${t.id === currentTableId
-                      ? 'bg-[#7B3F00] text-white shadow-2xs'
-                      : 'bg-white border border-[#E5DCD3] text-[#6E5A4E] hover:text-[#1E110A]'
+                {tables.map((t) => {
+                  const tieneAlerta =
+                    t.hasAlert ||
+                    barAlerts.some(
+                      (a) => a.tableId === t.id && (!a.tipo || a.tipo === 'boton')
+                    );
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => selectTable(t.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all inline-flex items-center gap-1 ${
+                        t.id === currentTableId
+                          ? tieneAlerta
+                            ? 'bg-[#D32F2F] text-white shadow-sm ring-2 ring-[#FECACA]'
+                            : 'bg-[#7B3F00] text-white shadow-2xs'
+                          : tieneAlerta
+                            ? 'bg-[#FFF5F5] border-2 border-[#D32F2F] text-[#D32F2F] animate-pulse shadow-xs'
+                            : 'bg-white border border-[#E5DCD3] text-[#6E5A4E] hover:text-[#1E110A]'
                       }`}
-                  >
-                    {t.id}
-                  </button>
-                ))}
+                    >
+                      {tieneAlerta && <Bell className="w-3 h-3 shrink-0" />}
+                      <span>{t.id}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -380,12 +396,25 @@ export const ComanderoView: React.FC = () => {
         </div>
 
         {/* RIGHT SIDEBAR: Comanda Activa de la mesa seleccionada */}
-        <aside className="w-full lg:w-[380px] bg-white rounded-2xl border border-[#E5DCD3] shadow-sm flex flex-col justify-between overflow-hidden shrink-0">
+        {(() => {
+          const mesaConAlerta =
+            Boolean(activeTable?.hasAlert) ||
+            barAlerts.some(
+              (a) => a.tableId === currentTableId && (!a.tipo || a.tipo === 'boton')
+            );
+          return (
+        <aside
+          className={`w-full lg:w-[380px] bg-white rounded-2xl shadow-sm flex flex-col justify-between overflow-hidden shrink-0 transition-all ${
+            mesaConAlerta
+              ? 'border-2 border-[#D32F2F] ring-2 ring-[#FECACA]'
+              : 'border border-[#E5DCD3]'
+          }`}
+        >
           <div>
             {/* Dark brown Header */}
-            <div className="bg-[#7B3F00] text-white p-4">
+            <div className={`text-white p-4 transition-colors ${mesaConAlerta ? 'bg-[#B71C1C]' : 'bg-[#7B3F00]'}`}>
               <div className="flex items-center justify-between pb-1">
-                <span className="text-[10px] font-black text-amber-300 uppercase tracking-widest bg-[#5E2F00] px-2 py-0.5 rounded">
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${mesaConAlerta ? 'bg-white text-[#B71C1C]' : 'text-amber-300 bg-[#5E2F00]'}`}>
                   MESA {numeroMesaFormateado}
                 </span>
                 <span className="text-[10px] font-medium text-stone-300">
@@ -399,6 +428,22 @@ export const ComanderoView: React.FC = () => {
               <p className="text-xs text-stone-300 mt-0.5">
                 Mesero: {meseroActual}
               </p>
+
+              {mesaConAlerta && (
+                <div className="mt-2.5 px-2.5 py-1.5 rounded-xl bg-white/15 border border-white/25 flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white">
+                    <Bell className="w-3.5 h-3.5 animate-bounce" />
+                    Llamado activo en mesa
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => marcarMesaAtendida(currentTableId)}
+                    className="px-2.5 py-1 rounded-lg bg-white text-[#B71C1C] hover:bg-rose-50 text-[10px] font-black transition-colors"
+                  >
+                    Atender
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Items List: separados en "Por enviar a cocina" y "Ya enviados a cocina" */}
@@ -675,6 +720,8 @@ export const ComanderoView: React.FC = () => {
             </div>
           </div>
         </aside>
+          );
+        })()}
       </div>
 
       {notaItemEditando && (
