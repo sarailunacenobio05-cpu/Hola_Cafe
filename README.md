@@ -5,6 +5,7 @@ Aplicación web full-stack para la gestión integral de cafeterías y restaurant
 ---
 
 ## Datos del Equipo
+* **Equipo:** 9
 * **Integrantes:** Martínez Villalobos Dante, Luna Cenobio Sarai y Ortíz Peréz Gael Fernando
 * **Materia:** Programación Web
 
@@ -21,14 +22,12 @@ Aplicación web full-stack para la gestión integral de cafeterías y restaurant
 
 ---
 
-## Credenciales de Prueba para Evaluación
-
-Según lo estipulado en la rúbrica, se proporcionan credenciales fijas para que el evaluador ingrese directamente:
+## Credenciales 
 
 | Rol | Correo Electrónico | Contraseña | Nivel de Acceso |
 | :--- | :--- | :--- | :--- |
 | **Administrador** | `admin@holacafe.com` | `HolaCafe#2026` | Acceso total, gestión de usuarios, catálogo, cortes y métricas |
-| **Mesero** | `dhuerta@holacafe.com` | `HolaCafe#2026` | Comandero, asignación de mesas y atención de alertas |
+| **Mesero** | `gortiz@holacafe.com` | `HolaCafe#2026` | Comandero, asignación de mesas y atención de alertas |
 | **Cocinero** | `cocina@holacafe.com` | `HolaCafe#2026` | Pantalla de producción y marcado de platillos |
 
 
@@ -36,7 +35,7 @@ Según lo estipulado en la rúbrica, se proporcionan credenciales fijas para que
 
 ## Modelo Entidad-Relación (Base de Datos MySQL)
 
-El modelo cuenta con **14 tablas normalizadas**, incluyendo la relación de muchos a muchos ($N:M$) entre órdenes y productos resuelta a través de la tabla `DETALLES_ORDEN`.
+El modelo cuenta con **15 tablas normalizadas**, incluyendo la relación de muchos a muchos ($N:M$) entre órdenes y productos resuelta a través de la tabla `DETALLES_ORDEN`.
 
 ```mermaid
 erDiagram
@@ -52,6 +51,8 @@ erDiagram
         string correo
         string password_hash
         string estado
+        string metodo_acceso
+        datetime fecha_registro
         datetime ultimo_acceso
         string avatar_url
     }
@@ -78,7 +79,7 @@ erDiagram
         string mesero_id FK
     }
 
-    DISPOSITIVOS_IOT {
+    BOTONES {
         string id PK
         string nombre
         string mesa_id FK
@@ -92,6 +93,7 @@ erDiagram
         string mesa_id FK
         string usuario_id FK
         boolean estado
+        datetime fecha
     }
 
     CATEGORIAS_MENU {
@@ -167,6 +169,13 @@ erDiagram
         datetime fecha
     }
 
+    ESTADO_OPERATIVO {
+        string clave PK
+        string valor
+        bigint version
+        datetime actualizado_en
+    }
+
     ROLES ||--o{ USUARIOS : "asigna perfil"
     USUARIOS ||--o{ TOKENS_RECUPERACION : "solicita"
 
@@ -175,11 +184,11 @@ erDiagram
     USUARIOS ||--o{ ALERTAS : "atiende alerta"
     USUARIOS ||--o{ CORTES_CAJA : "cierra turno"
 
-    MESAS ||--o| DISPOSITIVOS_IOT : "tiene instalado"
+    MESAS ||--o| BOTONES : "tiene instalado"
     MESAS ||--o{ ORDENES_COMANDAS : "recibe comanda"
     MESAS ||--o{ ALERTAS : "origina evento"
 
-    DISPOSITIVOS_IOT ||--o{ ALERTAS : "transmite señal"
+    BOTONES ||--o{ ALERTAS : "transmite señal"
 
     CATEGORIAS_MENU ||--o{ PRODUCTOS_MENU : "agrupa"
     PRODUCTOS_MENU ||--o{ OPCIONES_PRODUCTO : "ofrece variantes"
@@ -211,7 +220,7 @@ cd backend
 # Compilar y arrancar la aplicación
 mvn spring-boot:run
 ```
-La API estará disponible en: 
+La API estará disponible en: `http://localhost:4000/api`
 
 ### 3. Frontend (React + Vite)
 ```bash
@@ -219,12 +228,29 @@ cd frontend
 npm install
 npm run dev
 ```
-La interfaz de usuario estará disponible en:
+La interfaz de usuario estará disponible en: `http://localhost:3000` 
 
 ---
 
 ## Enlaces del Proyecto
 * **Tablero de GitHub Projects:** [Enlace a GitHub Projects](https://github.com/users/sarailunacenobio05-cpu/projects/3)
-* **Prototipo Navegable en Figma:** [Enlace a Figma](Pendiente)
-* **URL Base de la API (Producción VPS):** `Pendiente`
-* **URL de la Aplicación (Producción VPS):** `Pendiente`
+* **Prototipo Navegable en Figma:** [Enlace a Figma](https://www.figma.com/proto/SpSkMYMPmkKvtXkX2g9LoV/PrograWeb?node-id=42-1047&p=f&t=T4PO96IxY48eLIyl-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=42%3A1047&show-proto-sidebar=1)
+* **URL Base de la API (Producción VPS):** `https://holacafe.tech/api`
+* **URL de la Aplicación (Producción VPS):** `https://holacafe.tech`
+
+---
+
+## Capturas de Pantalla
+
+
+* **Inicio de Sesión:**
+  [Inicio de Sesión](Capturas%20README/login.png) 
+
+* **Mapa de Mesas y Comandero (Mesero):**
+  [Mapa de Mesas](Capturas%20README/mesas.png) 
+
+* **Pantalla de Cocina (KDS):**
+  [Cocina KDS](Capturas%20README/cocina.png) 
+
+* **Panel de Administrador y Botones IoT:**
+  [Panel Administrador](Capturas%20README/admin.png) 
