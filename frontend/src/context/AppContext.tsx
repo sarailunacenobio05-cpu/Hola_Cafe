@@ -321,6 +321,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Math.max(ultimoGuardado, maxEnMesas);
   };
 
+  // --- Sincronización multi-dispositivo en tiempo real vía Backend (/api/sync) ---
+  const syncVersionRef = useRef<number>(0);
+  const isApplyingRemoteSyncRef = useRef<boolean>(false);
+  const hasHydratedFromServerRef = useRef<boolean>(false);
+  const pendingSyncChangesRef = useRef<Record<string, string>>({});
+  const syncFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const encolarCambioSync = (clave: string, valor: unknown) => {
+    if (!authService.getToken() || !hasHydratedFromServerRef.current || isApplyingRemoteSyncRef.current) {
+      return;
+    }
+    try {
+      pendingSyncChangesRef.current[clave] =
+        typeof valor === 'string' ? valor : JSON.stringify(valor);
+      if (syncFlushTimerRef.current) clearTimeout(syncFlushTimerRef.current);
+      syncFlushTimerRef.current = setTimeout(async () => {
+        const batch = { ...pendingSyncChangesRef.current };
+        pendingSyncChangesRef.current = {};
+        if (Object.keys(batch).length === 0 || !authService.getToken()) return;
+        try {
+          const { data } = await api.put<{ maxVersion?: number }>('/sync', { cambios: batch });
+          if (typeof data?.maxVersion === 'number' && data.maxVersion > syncVersionRef.current) {
+            syncVersionRef.current = data.maxVersion;
+          }
+        } catch { }
+      }, 150);
+    } catch { }
+  };
+
   const [tables, setTables] = useState<TableInfo[]>(() => {
     try {
       const saved = localStorage.getItem(TABLES_STORAGE_KEY);
@@ -360,6 +389,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(tables));
     } catch { }
+    encolarCambioSync('tables', tables);
   }, [tables]);
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
@@ -382,6 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(COCINA_TICKETS_STORAGE_KEY, JSON.stringify(CocinaTickets));
     } catch { }
+    encolarCambioSync('cocinaTickets', CocinaTickets);
   }, [CocinaTickets]);
 
   // Sincronización en tiempo real entre pestañas (ej. Mesero en una pestaña y Cocina en otra)
@@ -515,12 +546,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(CORTES_CAJA_STORAGE_KEY, JSON.stringify(cortesCaja));
     } catch { }
+    encolarCambioSync('cortesCaja', cortesCaja);
   }, [cortesCaja]);
 
   useEffect(() => {
     try {
       localStorage.setItem(TICKETS_REGISTRADOS_STORAGE_KEY, JSON.stringify(ticketsRegistrados));
     } catch { }
+    encolarCambioSync('ticketsRegistrados', ticketsRegistrados);
   }, [ticketsRegistrados]);
 
   const ticketsPendientesList = ticketsRegistrados.filter(
@@ -842,6 +875,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(BAR_ALERTS_STORAGE_KEY, JSON.stringify(barAlerts));
     } catch { }
+    encolarCambioSync('barAlerts', barAlerts);
   }, [barAlerts]);
 
   const notifiedAlertIdsRef = useRef<Set<string>>(new Set());
@@ -928,7 +962,115 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(MESAS_ATENDIDAS_STORAGE_KEY, JSON.stringify(mesasAtendidas));
     } catch { }
+    encolarCambioSync('mesasAtendidas', mesasAtendidas);
   }, [mesasAtendidas]);
+
+  // Hidratación inicial y polling ligero cada 2.5s para sincronizar todos los dispositivos en simultáneo
+  useEffect(() => {
+    if (!currentUser || !authService.getToken()) {
+      hasHydratedFromServerRef.current = false;
+      syncVersionRef.current = 0;
+      return;
+    }
+
+    let activo = true;
+
+    const aplicarCambiosRemotos = (cambios: Record<string, string>) => {
+      if (!cambios || Object.keys(cambios).length === 0) return;
+      isApplyingRemoteSyncRef.current = true;
+      try {
+        if (cambios.tables) {
+          const parsed = JSON.parse(cambios.tables);
+          if (Array.isArray(parsed)) {
+            setTables((prev) => (JSON.stringify(prev) === cambios.tables ? prev : parsed));
+          }
+        }
+        if (cambios.cocinaTickets) {
+          const parsed = JSON.parse(cambios.cocinaTickets);
+          if (Array.isArray(parsed)) {
+            setCocinaTickets((prev) => (JSON.stringify(prev) === cambios.cocinaTickets ? prev : parsed));
+          }
+        }
+        if (cambios.barAlerts) {
+          const parsed = JSON.parse(cambios.barAlerts);
+          if (Array.isArray(parsed)) {
+            setBarAlerts((prev) => (JSON.stringify(prev) === cambios.barAlerts ? prev : parsed));
+          }
+        }
+        if (cambios.mesasAtendidas) {
+          const parsed = JSON.parse(cambios.mesasAtendidas);
+          if (parsed && typeof parsed === 'object') {
+            setMesasAtendidas((prev) => (JSON.stringify(prev) === cambios.mesasAtendidas ? prev : parsed));
+          }
+        }
+        if (cambios.cortesCaja) {
+          const parsed = JSON.parse(cambios.cortesCaja);
+          if (Array.isArray(parsed)) {
+            setCortesCaja((prev) => (JSON.stringify(prev) === cambios.cortesCaja ? prev : parsed));
+          }
+        }
+        if (cambios.ticketsRegistrados) {
+          const parsed = JSON.parse(cambios.ticketsRegistrados);
+          if (Array.isArray(parsed)) {
+            const normalizados = normalizarSecuenciaTickets(parsed);
+            setTicketsRegistrados((prev) =>
+              JSON.stringify(prev) === JSON.stringify(normalizados) ? prev : normalizados
+            );
+          }
+        }
+        if (cambios.descuentos) {
+          const descuentos: Record<string, number> = JSON.parse(cambios.descuentos);
+          try {
+            localStorage.setItem('holacafe_product_discounts_v1', JSON.stringify(descuentos));
+          } catch { }
+          setMenuItems((prev) =>
+            prev.map((p) => ({ ...p, discountPercent: descuentos[p.id] || 0 }))
+          );
+        }
+        if (cambios.ultimoFolio) {
+          try {
+            localStorage.setItem(TICKET_FOLIO_STORAGE_KEY, cambios.ultimoFolio);
+          } catch { }
+        }
+        if (cambios.menuVersion) {
+          cargarDatosBackend();
+        }
+      } catch { } finally {
+        setTimeout(() => {
+          isApplyingRemoteSyncRef.current = false;
+        }, 0);
+      }
+    };
+
+    const consultarSync = async (inicial: boolean) => {
+      if (!activo || !authService.getToken()) return;
+      if (!inicial && Object.keys(pendingSyncChangesRef.current).length > 0) return;
+      try {
+        const since = inicial ? 0 : syncVersionRef.current;
+        const { data } = await api.get<{ maxVersion?: number; cambios?: Record<string, string> }>('/sync', {
+          params: { sinceVersion: since },
+        });
+        if (!activo) return;
+        if (data?.cambios && Object.keys(data.cambios).length > 0) {
+          aplicarCambiosRemotos(data.cambios);
+        }
+        if (typeof data?.maxVersion === 'number' && data.maxVersion > syncVersionRef.current) {
+          syncVersionRef.current = data.maxVersion;
+        }
+      } catch { } finally {
+        if (inicial && activo) {
+          hasHydratedFromServerRef.current = true;
+        }
+      }
+    };
+
+    consultarSync(true);
+    const intervalId = window.setInterval(() => consultarSync(false), 2500);
+    return () => {
+      activo = false;
+      window.clearInterval(intervalId);
+    };
+  }, [currentUser]);
 
   const ADMIN_NOTIFS_DISMISSED_KEY = 'holacafe_admin_notifs_leidas';
   const ADMIN_NOTIFS_CUSTOM_KEY = 'holacafe_admin_notifs_custom';
@@ -1130,6 +1272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem(TICKET_FOLIO_STORAGE_KEY, String(siguiente));
     } catch { }
+    encolarCambioSync('ultimoFolio', String(siguiente));
     return siguiente;
   };
 
@@ -1851,6 +1994,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem('holacafe_menu_updated_v1', String(Date.now()));
       } catch {}
+      encolarCambioSync('menuVersion', String(Date.now()));
       cerrarProductModal();
     } catch (error: any) {
       Swal.fire('Error', error.message || 'No se pudo guardar el producto en la base de datos', 'error');
@@ -1891,6 +2035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         delete actuales[productId];
       }
       localStorage.setItem('holacafe_product_discounts_v1', JSON.stringify(actuales));
+      encolarCambioSync('descuentos', actuales);
     } catch {}
     setMenuItems(prev => {
       const prod = prev.find(p => p.id === productId);
