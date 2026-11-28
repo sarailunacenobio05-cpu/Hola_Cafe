@@ -1,4 +1,4 @@
-respaldo_holacafe.sql
+-- respaldo_holacafe.sql
 
 -- HOLA CAFÉ - RESPALDO COMPLETO DE BASE DE DATOS (MYSQL DUMP)
 -- Incluye DDL y DML.
