@@ -242,15 +242,14 @@ La interfaz de usuario estará disponible en: `http://localhost:3000`
 
 ## Capturas de Pantalla
 
+### Inicio de Sesión
+![Inicio de Sesión](Capturas%20README/login.png)
 
-* **Inicio de Sesión:**
-  [Inicio de Sesión](Capturas%20README/login.png) 
+### Mapa de Mesas y Comandero (Mesero)
+![Mapa de Mesas](Capturas%20README/mesas.png)
 
-* **Mapa de Mesas y Comandero (Mesero):**
-  [Mapa de Mesas](Capturas%20README/mesas.png) 
+### Pantalla de Cocina (KDS)
+![Cocina KDS](Capturas%20README/cocina.png)
 
-* **Pantalla de Cocina (KDS):**
-  [Cocina KDS](Capturas%20README/cocina.png) 
-
-* **Panel de Administrador y Botones IoT:**
-  [Panel Administrador](Capturas%20README/admin.png) 
+### Panel de Administrador y Botones IoT
+![Panel Administrador](Capturas%20README/admin.png)
