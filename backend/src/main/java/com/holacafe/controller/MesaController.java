@@ -3,6 +3,7 @@ package com.holacafe.controller;
 import com.holacafe.dto.AlertaResponse;
 import com.holacafe.dto.BotonResponse;
 import com.holacafe.dto.GuardarBotonRequest;
+import com.holacafe.dto.IoTEventoRequest;
 import com.holacafe.dto.MesaResponse;
 import com.holacafe.service.MesaService;
 import jakarta.validation.Valid;
@@ -89,6 +90,12 @@ public class MesaController {
     @PostMapping("/{id}/llamar")
     public ResponseEntity<AlertaResponse> registrarLlamada(@PathVariable String id) {
         return ResponseEntity.ok(mesaService.registrarLlamada(id));
+    }
+
+    // Endpoint público para botones físicos ESP32 (envía alerta + porcentaje de batería)
+    @PostMapping("/iot/evento")
+    public ResponseEntity<AlertaResponse> registrarEventoIoT(@RequestBody IoTEventoRequest request) {
+        return ResponseEntity.ok(mesaService.registrarEventoIoT(request));
     }
 }
 

@@ -38,6 +38,7 @@ public class SecurityConfig {
                         // Rutas públicas: login, registro y catálogo de consulta rápida
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/productos/**", "/categorias/**").permitAll()
+                        .requestMatchers("/mesas/iot/**").permitAll()
                         // Todo lo demás requiere autenticación
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

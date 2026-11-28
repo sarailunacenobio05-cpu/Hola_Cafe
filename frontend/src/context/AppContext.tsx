@@ -28,6 +28,7 @@ import {
 
 export interface BarAlert {
   id: string;
+  dbId?: number;
   tableId: string;
   message: string;
   time: string;
@@ -645,6 +646,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     cargarDatosBackend();
+  }, [currentUser]);
+
+  // Sincronización periódica de alertas físicas (ESP32) y batería de botones IoT
+  useEffect(() => {
+    if (!currentUser || !authService.getToken()) return;
+    if (currentUser.role !== 'Administrador' && currentUser.role !== 'Mesero') return;
+
+    let activo = true;
+
+    const sincronizarIoT = async () => {
+      try {
+        const [resAlertas, resBotones] = await Promise.all([
+          api.get('/mesas/alertas'),
+          api.get('/mesas/botones'),
+        ]);
+
+        if (!activo) return;
+
+        if (Array.isArray(resBotones.data)) {
+          const nextBotones: IoTDevice[] = resBotones.data.map((b: any) => ({
+            id: b.id,
+            name:
+              b.nombre ||
+              `Botón de Mesa ${b.mesaNumero ? (b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero) : ''}`.trim(),
+            tableId:
+              b.mesaId ||
+              (b.mesaNumero ? `M${b.mesaNumero < 10 ? `0${b.mesaNumero}` : b.mesaNumero}` : ''),
+            batteryPercentage: Number(b.bateria ?? 100),
+            status:
+              b.estado === 'Sin conexión'
+                ? 'Sin conexión'
+                : Number(b.bateria ?? 100) <= 10
+                  ? 'Batería crítica'
+                  : Number(b.bateria ?? 100) <= 25
+                    ? 'Batería baja'
+                    : b.estado === 'ONLINE' || b.estado === 'En línea'
+                      ? 'En línea'
+                      : 'Sin conexión',
+            lastConnection: b.estado === 'Sin conexión' ? 'Sin señal' : 'En línea',
+          }));
+
+          setIotDevices((prev) =>
+            JSON.stringify(prev) === JSON.stringify(nextBotones) ? prev : nextBotones
+          );
+        }
+
+        if (Array.isArray(resAlertas.data)) {
+          const nuevasAlertas: BarAlert[] = [];
+          const mesasConAlerta = new Set<string>();
+
+          resAlertas.data.forEach((a: any) => {
+            if (!a.estado) return;
+            const tableId = a.mesaNumero
+              ? `M${a.mesaNumero < 10 ? `0${a.mesaNumero}` : a.mesaNumero}`
+              : a.mesaId;
+            if (!tableId) return;
+
+            const alertId = `db-al-${a.id}`;
+            if (!notifiedAlertIdsRef.current.has(alertId)) {
+              notifiedAlertIdsRef.current.add(alertId);
+              mesasConAlerta.add(tableId);
+              nuevasAlertas.push({
+                id: alertId,
+                dbId: a.id,
+                tableId,
+                message: 'Llamada desde botón físico de mesa',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                tipo: 'boton',
+              });
+            }
+          });
+
+          if (nuevasAlertas.length > 0) {
+            setBarAlerts((prev) => {
+              const idsExistentes = new Set(prev.map((x) => x.id));
+              const filtradas = nuevasAlertas.filter((n) => !idsExistentes.has(n.id));
+              return filtradas.length > 0 ? [...filtradas, ...prev] : prev;
+            });
+
+            setMesasAtendidas((prev) => {
+              const next = { ...prev };
+              mesasConAlerta.forEach((tid) => {
+                next[tid] = false;
+              });
+              return next;
+            });
+
+            setTables((prev) =>
+              prev.map((t) =>
+                mesasConAlerta.has(t.id)
+                  ? { ...t, hasAlert: true, alertType: 'Llamada de cliente' }
+                  : t
+              )
+            );
+
+            const reciente = nuevasAlertas[0];
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'warning',
+              title: `${reciente.tableId.replace('M', 'Mesa ')} presionó el botón`,
+              text: reciente.message,
+              showConfirmButton: false,
+              timer: 4000,
+              timerProgressBar: true,
+              background: '#FFF5F5',
+              color: '#1E110A',
+            });
+          }
+        }
+      } catch {
+        // Silenciar errores transitorios de red en polling
+      }
+    };
+
+    sincronizarIoT();
+    const intervalId = window.setInterval(sincronizarIoT, 3000);
+    return () => {
+      activo = false;
+      window.clearInterval(intervalId);
+    };
   }, [currentUser]);
 
   const [barAlerts, setBarAlerts] = useState<BarAlert[]>(() => {
@@ -1510,6 +1632,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const descartarAlertaBarra = (id: string) => {
     const alerta = barAlerts.find(a => a.id === id);
     if (alerta) {
+      if (alerta.dbId && authService.getToken()) {
+        api.patch(`/mesas/alertas/${alerta.dbId}/atender`).catch(() => {});
+      }
       const esEntregaCocina = alerta.tipo === 'cocina';
       setMesasAtendidas(prev => ({ ...prev, [alerta.tableId]: true }));
       setTables(prev => prev.map(t =>
@@ -1546,6 +1671,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const marcarMesaAtendida = (tableId: string) => {
+    if (authService.getToken()) {
+      barAlerts
+        .filter((a) => a.tableId === tableId && a.dbId)
+        .forEach((a) => {
+          api.patch(`/mesas/alertas/${a.dbId}/atender`).catch(() => {});
+        });
+    }
     const tienePedidoListo =
       barAlerts.some(a => a.tableId === tableId && a.tipo === 'cocina') ||
       CocinaTickets.some(k => k.tableId === tableId && k.status === 'Listas');

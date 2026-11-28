@@ -3,6 +3,7 @@ package com.holacafe.service;
 import com.holacafe.dto.AlertaResponse;
 import com.holacafe.dto.BotonResponse;
 import com.holacafe.dto.GuardarBotonRequest;
+import com.holacafe.dto.IoTEventoRequest;
 import com.holacafe.dto.MesaResponse;
 import com.holacafe.exception.ResourceNotFoundException;
 import com.holacafe.model.Alerta;
@@ -179,6 +180,60 @@ public class MesaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con ID: " + mesaId));
         Boton boton = botonRepository.findByMesaId(mesaId)
                 .orElseThrow(() -> new ResourceNotFoundException("No hay botón IoT asignado a la mesa: " + mesaId));
+
+        Alerta alerta = new Alerta();
+        alerta.setBoton(boton);
+        alerta.setMesa(mesa);
+        alerta.setEstado(true);
+        return mapearAlerta(alertaRepository.save(alerta));
+    }
+
+    @Transactional
+    public AlertaResponse registrarEventoIoT(IoTEventoRequest request) {
+        if (request == null || (request.getMesa() == null && request.getBotonId() == null)) {
+            throw new IllegalArgumentException("Se requiere el número o ID de mesa (o botonId).");
+        }
+
+        Mesa mesa = null;
+        if (request.getMesa() != null && !request.getMesa().isBlank()) {
+            String rawMesa = request.getMesa().trim();
+            if (rawMesa.matches("\\d+")) {
+                mesa = mesaRepository.findByNumero(Integer.parseInt(rawMesa))
+                        .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con número: " + rawMesa));
+            } else {
+                mesa = mesaRepository.findById(rawMesa).orElse(null);
+                if (mesa == null && rawMesa.toUpperCase().startsWith("M") && rawMesa.substring(1).matches("\\d+")) {
+                    mesa = mesaRepository.findByNumero(Integer.parseInt(rawMesa.substring(1))).orElse(null);
+                }
+                if (mesa == null) {
+                    throw new ResourceNotFoundException("Mesa no encontrada: " + rawMesa);
+                }
+            }
+        }
+
+        Boton boton = null;
+        if (request.getBotonId() != null && !request.getBotonId().isBlank()) {
+            boton = botonRepository.findById(request.getBotonId().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException("Botón no encontrado con ID: " + request.getBotonId()));
+            if (mesa == null) {
+                mesa = boton.getMesa();
+            }
+        } else if (mesa != null) {
+            final String mesaIdFinal = mesa.getId();
+            boton = botonRepository.findByMesaId(mesaIdFinal)
+                    .orElseThrow(() -> new ResourceNotFoundException("No hay botón IoT asignado a la mesa: " + mesaIdFinal));
+        }
+
+        if (mesa == null || boton == null) {
+            throw new ResourceNotFoundException("No se pudo asociar mesa y botón IoT para la alerta.");
+        }
+
+        if (request.getBateria() != null) {
+            int bateriaSegura = Math.max(0, Math.min(100, request.getBateria()));
+            boton.setBateria(bateriaSegura);
+        }
+        boton.setEstado("En línea");
+        botonRepository.save(boton);
 
         Alerta alerta = new Alerta();
         alerta.setBoton(boton);
