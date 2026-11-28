@@ -18,7 +18,6 @@ public class EstadoOperativo {
     @Column(length = 64)
     private String clave;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String valor;
 
