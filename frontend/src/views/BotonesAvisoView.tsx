@@ -6,8 +6,6 @@ import { AdminNotificacionesBell } from '../components/AdminNotificacionesBell';
 import { UsuarioPerfilNavbar } from '../components/UsuarioPerfilNavbar';
 import {
   Radio,
-  Wifi,
-  WifiOff,
   BatteryWarning,
   RefreshCw,
   Plus,
@@ -41,15 +39,12 @@ export const BotonesAvisoView: React.FC = () => {
   };
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Metrics
   const totalBotones = iotDevices.length;
-  const conectadosCount = iotDevices.filter(d => d.status !== 'Sin conexión').length;
   const bateriaBajaCount = iotDevices.filter(d => d.batteryPercentage <= 25).length;
   const criticosCount = iotDevices.filter(d => d.batteryPercentage <= 10).length;
-  const sinConexionCount = iotDevices.filter(d => d.status === 'Sin conexión').length;
 
   const [paginaActual, setPaginaActual] = useState(1);
   const filasPorPagina = 8;
@@ -65,8 +60,7 @@ export const BotonesAvisoView: React.FC = () => {
     const matchSearch = dev.id.toLowerCase().includes(search.toLowerCase()) ||
       dev.name.toLowerCase().includes(search.toLowerCase()) ||
       dev.tableId.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'Todos' || dev.status === statusFilter;
-    return matchSearch && matchStatus;
+    return matchSearch;
   });
 
   const [serverPage, setServerPage] = useState<{
@@ -83,7 +77,6 @@ export const BotonesAvisoView: React.FC = () => {
         page: paginaActual,
         size: filasPorPagina,
         search: search.trim() || undefined,
-        estado: statusFilter !== 'Todos' ? statusFilter : undefined,
       },
       filtered,
       (b: any) => {
@@ -123,7 +116,7 @@ export const BotonesAvisoView: React.FC = () => {
     return () => {
       activo = false;
     };
-  }, [paginaActual, search, statusFilter, iotDevices]);
+  }, [paginaActual, search, iotDevices]);
 
   const totalElements = serverPage ? serverPage.totalElements : filtered.length;
   const totalPaginas = serverPage
@@ -135,39 +128,6 @@ export const BotonesAvisoView: React.FC = () => {
         (paginaActual - 1) * filasPorPagina,
         paginaActual * filasPorPagina
       );
-
-  const getStatusBadge = (status: IoTDevice['status']) => {
-    switch (status) {
-      case 'En línea':
-        return (
-          <span className="flex items-center gap-1.5 text-[#059669] font-bold text-xs">
-            <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            En línea
-          </span>
-        );
-      case 'Batería baja':
-        return (
-          <span className="flex items-center gap-1.5 text-[#D97706] font-bold text-xs">
-            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-            Batería baja
-          </span>
-        );
-      case 'Batería crítica':
-        return (
-          <span className="flex items-center gap-1.5 text-[#DC2626] font-bold text-xs animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-            Batería crítica
-          </span>
-        );
-      case 'Sin conexión':
-        return (
-          <span className="flex items-center gap-1.5 text-[#8C7D73] font-bold text-xs">
-            <span className="w-2 h-2 rounded-full bg-[#A8988D]" />
-            Sin conexión
-          </span>
-        );
-    }
-  };
 
   const getBatteryBarColor = (percent: number) => {
     if (percent <= 10) return 'bg-[#DC2626]';
@@ -224,8 +184,8 @@ export const BotonesAvisoView: React.FC = () => {
             </button>
           </div>
 
-          {/* 4 Metrics Cards (Botones Registrados | Conectados | Batería Baja | Sin Conexión) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 2 Metrics Cards (Botones Registrados | Batería Baja) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#8C7D73] uppercase tracking-wider">BOTONES REGISTRADOS</span>
@@ -237,33 +197,15 @@ export const BotonesAvisoView: React.FC = () => {
 
             <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-[#8C7D73] uppercase tracking-wider">CONECTADOS</span>
-                <Wifi className="w-4 h-4 text-[#059669]" />
-              </div>
-              <p className="text-2xl font-black text-[#1E110A] mt-2">{conectadosCount} / {totalBotones}</p>
-              <span className="text-[11px] text-[#059669] font-semibold mt-1">En comunicación con el sistema</span>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#8C7D73] uppercase tracking-wider">BATERÍA BAJA</span>
                 <BatteryWarning className="w-4 h-4 text-[#DF7B1B]" />
               </div>
               <p className="text-2xl font-black text-[#DF7B1B] mt-2">{bateriaBajaCount}</p>
               <span className="text-[11px] text-[#8C7D73] mt-1">{criticosCount} crítico · {bateriaBajaCount - criticosCount} por reemplazar</span>
             </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-[#8C7D73] uppercase tracking-wider">SIN CONEXIÓN</span>
-                <WifiOff className="w-4 h-4 text-[#DC2626]" />
-              </div>
-              <p className="text-2xl font-black text-[#DC2626] mt-2">{sinConexionCount}</p>
-              <span className="text-[11px] text-[#8C7D73] mt-1">Botón pendiente de revisión</span>
-            </div>
           </div>
 
-          {/* Search, Filter & Refresh toolbar */}
+          {/* Search & Refresh toolbar */}
           <div className="bg-white p-4 rounded-2xl border border-[#E5DCD3] shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
               <div className="relative flex-1 max-w-md">
@@ -278,24 +220,6 @@ export const BotonesAvisoView: React.FC = () => {
                   }}
                   className="w-full pl-9 pr-3 py-2 bg-white border border-[#D5C7BA] rounded-xl text-xs font-semibold text-[#1E110A] focus:outline-none"
                 />
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#8C7D73] font-semibold">Estado:</span>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPaginaActual(1);
-                  }}
-                  className="bg-white border border-[#D5C7BA] rounded-xl px-3 py-2 text-xs font-bold text-[#1E110A] focus:outline-none"
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="En línea">En línea</option>
-                  <option value="Batería baja">Batería baja</option>
-                  <option value="Batería crítica">Batería crítica</option>
-                  <option value="Sin conexión">Sin conexión</option>
-                </select>
               </div>
             </div>
 
@@ -329,7 +253,6 @@ export const BotonesAvisoView: React.FC = () => {
                     <th className="py-3.5 px-6">DISPOSITIVO</th>
                     <th className="py-3.5 px-6">MESA ASIGNADA</th>
                     <th className="py-3.5 px-6">BATERÍA</th>
-                    <th className="py-3.5 px-6">ESTADO</th>
                     <th className="py-3.5 px-6 text-right">ACCIONES</th>
                   </tr>
                 </thead>
@@ -363,9 +286,6 @@ export const BotonesAvisoView: React.FC = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        {getStatusBadge(device.status)}
-                      </td>
                       <td className="py-4 px-6 text-right">
                         <div className="inline-flex items-center justify-end gap-2">
                           <button
@@ -394,11 +314,8 @@ export const BotonesAvisoView: React.FC = () => {
               </table>
             </div>
 
-            {/* Informative Footer */}
-            <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#8C7D73]">
-              <span>
-                Última actualización: 14:32:10 · Batería baja: 25% o menos · Crítica: 10% o menos.
-              </span>
+            {/* Pagination Footer */}
+            <div className="p-4 bg-[#FAF8F5] border-t border-[#E5DCD3] flex items-center justify-end gap-2 text-xs text-[#8C7D73]">
               <div className="flex items-center gap-3">
                 <span>Filas por página: {filasPorPagina}</span>
                 <div className="flex items-center gap-1">

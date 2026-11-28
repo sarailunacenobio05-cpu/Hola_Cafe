@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -190,9 +191,10 @@ public class MesaService {
                 .orElseThrow(() -> new ResourceNotFoundException("No hay botón IoT asignado a la mesa: " + mesaId));
 
         List<Alerta> activas = alertaRepository.findByMesaIdAndEstadoTrue(mesa.getId());
+        LocalDateTime ahoraMx = LocalDateTime.now(ZoneId.of("America/Mexico_City"));
         if (!activas.isEmpty()) {
             Alerta existente = activas.get(0);
-            existente.setFecha(LocalDateTime.now());
+            existente.setFecha(ahoraMx);
             return mapearAlerta(alertaRepository.save(existente));
         }
 
@@ -200,7 +202,7 @@ public class MesaService {
         alerta.setBoton(boton);
         alerta.setMesa(mesa);
         alerta.setEstado(true);
-        alerta.setFecha(LocalDateTime.now());
+        alerta.setFecha(ahoraMx);
         return mapearAlerta(alertaRepository.save(alerta));
     }
 
@@ -236,8 +238,17 @@ public class MesaService {
             }
         } else if (mesa != null) {
             final String mesaIdFinal = mesa.getId();
-            boton = botonRepository.findByMesaId(mesaIdFinal)
-                    .orElseThrow(() -> new ResourceNotFoundException("No hay botón IoT asignado a la mesa: " + mesaIdFinal));
+            final Integer numMesa = mesa.getNumero();
+            boton = botonRepository.findByMesaId(mesaIdFinal).orElse(null);
+            if (boton == null) {
+                String autoId = String.format("BOT-M%02d", numMesa);
+                boton = botonRepository.findById(autoId).orElseGet(Boton::new);
+                boton.setId(autoId);
+                if (boton.getNombre() == null || boton.getNombre().isBlank()) {
+                    boton.setNombre(String.format("Botón de Mesa %02d", numMesa));
+                }
+                boton.setMesa(mesa);
+            }
         }
 
         if (mesa == null || boton == null) {
@@ -253,9 +264,10 @@ public class MesaService {
 
         // Agrupar alertas: si la mesa ya tiene una alerta activa pendiente, no duplicar
         List<Alerta> activas = alertaRepository.findByMesaIdAndEstadoTrue(mesa.getId());
+        LocalDateTime ahoraMx = LocalDateTime.now(ZoneId.of("America/Mexico_City"));
         if (!activas.isEmpty()) {
             Alerta existente = activas.get(0);
-            existente.setFecha(LocalDateTime.now());
+            existente.setFecha(ahoraMx);
             return mapearAlerta(alertaRepository.save(existente));
         }
 
@@ -263,7 +275,7 @@ public class MesaService {
         alerta.setBoton(boton);
         alerta.setMesa(mesa);
         alerta.setEstado(true);
-        alerta.setFecha(LocalDateTime.now());
+        alerta.setFecha(ahoraMx);
         return mapearAlerta(alertaRepository.save(alerta));
     }
 

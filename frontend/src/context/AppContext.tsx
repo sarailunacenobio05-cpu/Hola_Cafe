@@ -649,6 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser]);
 
   // Sincronización periódica de alertas físicas (ESP32) y batería de botones IoT
+  const lastToastFechaByAlertIdRef = useRef<Map<string, string>>(new Map());
   useEffect(() => {
     if (!currentUser || !authService.getToken()) return;
     if (currentUser.role !== 'Administrador' && currentUser.role !== 'Mesero') return;
@@ -694,6 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (Array.isArray(resAlertas.data)) {
           const nuevasAlertas: BarAlert[] = [];
+          const toastAlertas: BarAlert[] = [];
           const mesasConAlerta = new Set<string>();
           const horasPorAlerta = new Map<string, string>();
 
@@ -705,23 +707,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (!tableId) return;
 
             const alertId = `db-al-${a.id}`;
+            const fechaKey = a.fecha ? String(a.fecha) : '';
             const horaFormateada = (a.fecha ? new Date(a.fecha) : new Date()).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             });
             horasPorAlerta.set(alertId, horaFormateada);
 
+            const alertaObj: BarAlert = {
+              id: alertId,
+              dbId: a.id,
+              tableId,
+              message: 'Llamada desde botón físico de mesa',
+              time: horaFormateada,
+              tipo: 'boton',
+            };
+
             if (!notifiedAlertIdsRef.current.has(alertId)) {
               notifiedAlertIdsRef.current.add(alertId);
+              if (fechaKey) lastToastFechaByAlertIdRef.current.set(alertId, fechaKey);
               mesasConAlerta.add(tableId);
-              nuevasAlertas.push({
-                id: alertId,
-                dbId: a.id,
-                tableId,
-                message: 'Llamada desde botón físico de mesa',
-                time: horaFormateada,
-                tipo: 'boton',
-              });
+              nuevasAlertas.push(alertaObj);
+              toastAlertas.push(alertaObj);
+            } else if (fechaKey && lastToastFechaByAlertIdRef.current.get(alertId) !== fechaKey) {
+              lastToastFechaByAlertIdRef.current.set(alertId, fechaKey);
+              toastAlertas.push(alertaObj);
             }
           });
 
@@ -747,34 +757,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   : t
               )
             );
+          }
 
-            const reciente = nuevasAlertas[0];
-            if (currentUser.role === 'Mesero') {
-              Swal.fire({
-                toast: true,
-                position: 'top-end',
-                html: `
-                  <div style="display:flex;align-items:center;gap:10px;text-align:left;">
-                    <div style="width:36px;height:36px;border-radius:10px;background:#FEE2E2;color:#D32F2F;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                    </div>
-                    <div style="min-width:0;">
-                      <div style="font-size:13px;font-weight:800;color:#991B1B;line-height:1.25;">${reciente.tableId.replace('M', 'Mesa ')} presionó el botón</div>
-                      <div style="font-size:11.5px;color:#374151;margin-top:2px;line-height:1.3;">${reciente.message}</div>
-                    </div>
+          if (toastAlertas.length > 0 && currentUser.role === 'Mesero') {
+            const reciente = toastAlertas[0];
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              html: `
+                <div style="display:flex;align-items:center;gap:10px;text-align:left;">
+                  <div style="width:36px;height:36px;border-radius:10px;background:#FEE2E2;color:#D32F2F;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                   </div>
-                `,
-                showConfirmButton: false,
-                timer: 4500,
-                timerProgressBar: true,
-                background: '#FFF5F5',
-                color: '#1E110A',
-                customClass: {
-                  popup: 'rounded-2xl shadow-xl border border-[#FECACA] !p-3 !w-auto !max-w-sm',
-                  htmlContainer: '!m-0 !p-0',
-                },
-              });
-            }
+                  <div style="min-width:0;">
+                    <div style="font-size:13px;font-weight:800;color:#991B1B;line-height:1.25;">${reciente.tableId.replace('M', 'Mesa ')} presionó el botón</div>
+                    <div style="font-size:11.5px;color:#374151;margin-top:2px;line-height:1.3;">${reciente.message}</div>
+                  </div>
+                </div>
+              `,
+              showConfirmButton: false,
+              timer: 4500,
+              timerProgressBar: true,
+              background: '#FFF5F5',
+              color: '#1E110A',
+              customClass: {
+                popup: 'rounded-2xl shadow-xl border border-[#FECACA] !p-3 !w-auto !max-w-sm',
+                htmlContainer: '!m-0 !p-0',
+              },
+            });
           }
 
           // Sincronizar bajas y actualizar hora si se volvió a presionar el botón sin duplicar alerta
