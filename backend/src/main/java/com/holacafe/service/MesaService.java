@@ -172,15 +172,18 @@ public class MesaService {
     public AlertaResponse atenderAlerta(Integer alertaId) {
         Alerta alerta = alertaRepository.findById(alertaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Alerta no encontrada con ID: " + alertaId));
+        alerta.setEstado(false);
+        AlertaResponse respuesta = mapearAlerta(alerta);
         if (alerta.getMesa() != null) {
             List<Alerta> activasMesa = alertaRepository.findByMesaIdAndEstadoTrue(alerta.getMesa().getId());
             if (!activasMesa.isEmpty()) {
-                activasMesa.forEach(a -> a.setEstado(false));
-                alertaRepository.saveAll(activasMesa);
+                alertaRepository.deleteAll(activasMesa);
             }
         }
-        alerta.setEstado(false);
-        return mapearAlerta(alertaRepository.save(alerta));
+        if (alertaRepository.existsById(alertaId)) {
+            alertaRepository.deleteById(alertaId);
+        }
+        return respuesta;
     }
 
     @Transactional

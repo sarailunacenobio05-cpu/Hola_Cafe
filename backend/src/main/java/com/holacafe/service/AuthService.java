@@ -78,6 +78,22 @@ public class AuthService {
         return mapearUsuario(usuario);
     }
 
+    private String generarSiguienteIdUsuario() {
+        int max = usuarioRepository.findAll().stream()
+                .map(Usuario::getId)
+                .filter(id -> id != null && id.startsWith("u-"))
+                .mapToInt(id -> {
+                    try {
+                        return Integer.parseInt(id.substring(2));
+                    } catch (NumberFormatException e) {
+                        return 0;
+                    }
+                })
+                .max()
+                .orElse(5);
+        return "u-" + (max + 1);
+    }
+
     @Transactional
     public UsuarioResponse autenticarConGoogle(String idToken) {
         if (idToken == null || idToken.isBlank()) {
@@ -119,7 +135,7 @@ public class AuthService {
                                     .orElseThrow(() -> new ResourceNotFoundException("Rol Mesero no encontrado")));
 
                     Usuario nuevo = new Usuario();
-                    nuevo.setId(UUID.randomUUID().toString());
+                    nuevo.setId(generarSiguienteIdUsuario());
                     nuevo.setNombre(nombreGoogle.isBlank() ? correo.split("@")[0] : nombreGoogle);
                     nuevo.setCorreo(correo);
                     nuevo.setPasswordHash(passwordEncoder.encode("GOOGLE-" + UUID.randomUUID()));
@@ -171,7 +187,7 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con ID: " + request.getRolId()));
 
         Usuario nuevo = new Usuario();
-        nuevo.setId(UUID.randomUUID().toString());
+        nuevo.setId(generarSiguienteIdUsuario());
         nuevo.setNombre(request.getNombre());
         nuevo.setCorreo(request.getCorreo());
         nuevo.setPasswordHash(passwordEncoder.encode(request.getPassword()));

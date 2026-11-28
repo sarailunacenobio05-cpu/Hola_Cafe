@@ -731,6 +731,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               toastAlertas.push(alertaObj);
             } else if (fechaKey && lastToastFechaByAlertIdRef.current.get(alertId) !== fechaKey) {
               lastToastFechaByAlertIdRef.current.set(alertId, fechaKey);
+              mesasConAlerta.add(tableId);
+              nuevasAlertas.push(alertaObj);
               toastAlertas.push(alertaObj);
             }
           });
@@ -2062,8 +2064,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const guardarBoton = async (botonData: Partial<IoTDevice>) => {
     try {
+      const maxBotonNum = iotDevices.reduce((max, d) => {
+        const match = d.id.match(/(\d+)$/);
+        const num = match ? parseInt(match[1], 10) : 0;
+        return Number.isFinite(num) ? Math.max(max, num) : max;
+      }, 3);
+      const siguienteBotonId = `BOT-M${String(maxBotonNum + 1).padStart(2, '0')}`;
+      const idPorMesa = botonData.tableId
+        ? `BOT-${botonData.tableId.trim().toUpperCase()}`
+        : siguienteBotonId;
       const payload = {
-        id: (botonEditando ? botonEditando.id : (botonData.id || `BOT-M${Math.floor(10 + Math.random() * 89)}`)).trim().toUpperCase(),
+        id: (botonEditando ? botonEditando.id : (botonData.id || idPorMesa)).trim().toUpperCase(),
         nombre: (botonData.name || 'Botón de Mesa').trim(),
         mesaId: botonData.tableId || null,
         bateria: botonEditando ? botonEditando.batteryPercentage : 100,

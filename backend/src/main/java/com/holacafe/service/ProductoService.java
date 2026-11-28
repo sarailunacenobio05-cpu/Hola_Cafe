@@ -105,11 +105,27 @@ public class ProductoService {
                                 .toList();
         }
 
+        private String generarSiguienteIdProducto() {
+                int max = productoMenuRepository.findAll().stream()
+                                .map(ProductoMenu::getId)
+                                .filter(id -> id != null && id.startsWith("prod-"))
+                                .mapToInt(id -> {
+                                        try {
+                                                return Integer.parseInt(id.substring(5));
+                                        } catch (NumberFormatException e) {
+                                                return 0;
+                                        }
+                                })
+                                .max()
+                                .orElse(28);
+                return "prod-" + (max + 1);
+        }
+
         @Transactional
         public ProductoResponse crearProducto(GuardarProductoRequest request) {
                 CategoriaMenu categoria = resolverCategoria(request.getCategoriaNombre());
                 ProductoMenu nuevo = new ProductoMenu();
-                nuevo.setId("prod-" + UUID.randomUUID().toString().substring(0, 8));
+                nuevo.setId(generarSiguienteIdProducto());
                 nuevo.setNombre(request.getNombre());
                 nuevo.setDescripcion(request.getDescripcion());
                 nuevo.setPrecio(request.getPrecio());
